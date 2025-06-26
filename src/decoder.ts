@@ -176,11 +176,11 @@ export class WavStreamDecoder {
         return {
             state: this.state,
             format: {...this.format},
+            errors: [...this.errors],
             effectiveFormat: this.effectiveFormat,
             bytesDecoded: this.bytesDecoded,
             bytesRemaining: this.bytesRemaining,
             totalBytes: this.totalBytes,
-            errors: [...this.errors],
             progress: this.totalBytes > 0 ? (this.totalBytes - this.bytesRemaining) / this.totalBytes : 0,
             parsedChunks: [...this.parsedChunks],
             unhandledChunks: [...this.unhandledChunks]
@@ -200,7 +200,7 @@ export class WavStreamDecoder {
         const table = new Float32Array(256);
 
         for (let i = 0; i < 256; i++) {
-            let muVal = ~i & 0xff; // bitwise NOT and mask
+            let muVal = ~i & 0xff;
             let sign = (muVal & 0x80) ? -1 : 1;
             let exponent = (muVal & 0x70) >> 4;
             let mantissa = muVal & 0x0f;
@@ -258,7 +258,6 @@ export class WavStreamDecoder {
 
         try {
             if (this.state === State.UNINIT) {
-                // Accumulate header bytes progressively
                 if (this.pendingHeaderData.length + chunk.length > WavStreamDecoder.MAX_HEADER_SIZE) {
                     this.state = State.ERROR;
                     return this.createErrorResult('Header size exceeds maximum limit.');
@@ -268,9 +267,20 @@ export class WavStreamDecoder {
                 combined.set(chunk, this.pendingHeaderData.length);
                 this.pendingHeaderData = combined;
 
-                if (!this.tryParseHeader()) {
-                    // Header incomplete, wait for more data
+                this.tryParseHeader();
+
+                // Check the state *after* the parsing attempt.
+                if (this.state === State.UNINIT) {
+                    // Not an error, just needs more data.
                     return this.createEmptyResult();
+                } else if (this.state === State.ERROR) {
+                    // A fatal error occurred during parsing.
+                    return {
+                        channelData: [],
+                        samplesDecoded: 0,
+                        sampleRate: 0,
+                        errors: [...this.errors]
+                    };
                 }
             } else {
                 if (this.audioBuffer.write(chunk) < chunk.length) {
@@ -376,11 +386,10 @@ export class WavStreamDecoder {
         };
     }
 
-// Replace the existing tryParseHeader method in src/decoder.ts with this one:
     private tryParseHeader(): boolean {
         const headerData = this.pendingHeaderData;
-        if (headerData.length < 36) {
-            return false; // Not enough for a minimum RIFF header
+        if (headerData.length < 12) { // Minimum size for RIFF/WAVE tags
+            return false;
         }
 
         const tempView = new DataView(headerData.buffer, headerData.byteOffset, headerData.byteLength);
@@ -391,12 +400,16 @@ export class WavStreamDecoder {
         };
 
         const riff = readString(0, 4);
+        if (riff !== 'RIFF' && riff !== 'RIFX') {
+            this.state = State.ERROR;
+            this.errors.push(this.createError('Invalid WAV file'));
+            return false;
+        }
         this.isLittleEndian = riff === 'RIFF';
-        if (riff !== 'RIFF' && riff !== 'RIFX') return false;
 
         if (readString(8, 4) !== 'WAVE') {
             this.state = State.ERROR;
-            this.errors.push(this.createError('Invalid WAV file: Missing "WAVE" identifier.'));
+            this.errors.push(this.createError('Invalid WAV file'));
             return false;
         }
 
@@ -414,7 +427,6 @@ export class WavStreamDecoder {
             const id = readString(offset, 4);
             const size = getUint32(offset + 4);
 
-            // To parse the header. We can break and proceed.
             if (id === 'data') {
                 dataChunk = {id, size, offset};
                 parsedChunks.push(dataChunk);
@@ -422,9 +434,8 @@ export class WavStreamDecoder {
             }
 
             const chunkEnd = offset + 8 + size + (size % 2);
-            // For any other chunk, it must be fully present in the header data.
             if (chunkEnd > headerData.length) {
-                return false; // Header incomplete, wait for more data
+                return false;
             }
 
             const chunkInfo = {id, size, offset};
@@ -483,7 +494,6 @@ export class WavStreamDecoder {
             blockAlign: view.getUint16(o + 12, this.isLittleEndian),
             bitsPerSample: view.getUint16(o + 14, this.isLittleEndian)
         };
-
         this.effectiveFormat = this.format.formatTag;
 
         if (this.format.formatTag === WAVE_FORMAT_EXTENSIBLE && chunk.size >= 40 && o + 40 <= headerData.length) {
@@ -590,7 +600,6 @@ export class WavStreamDecoder {
                 } else {
                     val = (b0 << 16) | (b1 << 8) | b2;
                 }
-                // Sign extend 24-bit integer
                 if (val & 0x800000) {
                     val |= 0xFF000000;
                 }
@@ -622,6 +631,7 @@ export class WavStreamDecoder {
         return WavStreamDecoder.MULAW_TABLE[view.getUint8(off)] || 0;
     }
 
+
     private arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
         if (a.length !== b.length) return false;
         for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
@@ -638,13 +648,12 @@ export class WavStreamDecoder {
     }
 
     private createErrorResult(msg: string): DecodedAudio {
-        const error = this.createError(msg);
-        this.errors.push(error);
+        this.errors.push(this.createError(msg));
         return {
             channelData: [],
             samplesDecoded: 0,
             sampleRate: this.format.sampleRate || 0,
-            errors: [...this.errors.splice(0)]
+            errors: [...this.errors]
         };
     }
 
