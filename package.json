@@ -21,6 +21,7 @@
   },
   "types": "./dist/index.d.ts",
   "scripts": {
+    "format": "prettier --write .",
     "test:watch": "vitest",
     "dev": "vitest",
     "build": "tsup",
@@ -33,13 +34,14 @@
     "bench": "vitest bench --run --reporter verbose"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@changesets/cli": "^2.29.5",
     "@playwright/test": "^1.53.1",
     "@types/node": "^24.0.4",
     "@vitest/browser": "^3.2.4",
     "happy-dom": "^18.0.1",
+    "prettier": "^3.6.1",
     "tsup": "^8.5.0",
+    "typescript": "^5",
     "vitest": "^3.2.4"
   }
 }
