@@ -1,20 +1,45 @@
 {
-  "name": "wav-stream-decoder",
-  "module": "src/index.ts",
-  "type": "module",
-  "peerDependencies": {
-    "typescript": "^5"
+  "name": "@dekzer/wav-stream-decoder",
+  "description": "A robust, dependency-free, streaming WAV audio decoder for any JavaScript environment.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maikeleckelboom/wav-stream-decoder.git"
   },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "vitest"
+    "dev": "vitest",
+    "build": "tsup",
+    "release": "pnpm build && changeset publish",
+    "test": "vitest run",
+    "test:node": "vitest run --environment node",
+    "test:dom": "vitest run --environment happy-dom",
+    "test:browser": "vitest run --browser",
+    "test:all": "pnpm test:node && pnpm test:dom && pnpm test:browser",
+    "bench": "vitest bench --run --reporter verbose"
   },
   "devDependencies": {
+    "typescript": "^5",
+    "@changesets/cli": "^2.29.5",
     "@playwright/test": "^1.53.1",
     "@types/node": "^24.0.4",
     "@vitest/browser": "^3.2.4",
     "happy-dom": "^18.0.1",
+    "tsup": "^8.5.0",
     "vitest": "^3.2.4"
   }
 }

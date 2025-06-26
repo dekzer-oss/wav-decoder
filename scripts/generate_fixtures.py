@@ -2,45 +2,29 @@ import math
 import os
 import struct
 
-# --- Configuration ---
 OUTPUT_DIR = "../tests/fixtures"
 DURATION_SECONDS = 1
 RATE = 44100
 AMPLITUDE = 0.8
 FREQUENCY = 440.0
 
-# This list defines every WAV file we want to generate.
-# codec: 'pcm', 'float', 'alaw', 'ulaw'
-# endian: 'little', 'big'
 TEST_CONFIGS = [
-    # --- PCM Little Endian (RIFF) ---
     {'codec': 'pcm', 'bit_depth': 8, 'channels': 1, 'endian': 'little'},
     {'codec': 'pcm', 'bit_depth': 16, 'channels': 2, 'endian': 'little'},
     {'codec': 'pcm', 'bit_depth': 24, 'channels': 1, 'endian': 'little'},
     {'codec': 'pcm', 'bit_depth': 32, 'channels': 2, 'endian': 'little'},
-
-    # --- PCM Big Endian (RIFX) ---
     {'codec': 'pcm', 'bit_depth': 16, 'channels': 1, 'endian': 'big'},
-    {'codec': 'pcm', 'bit_depth': 24, 'channels': 2, 'endian': 'big'},  # Critical test case for your fix!
-
-    # --- IEEE Float Little Endian (RIFF) ---
+    {'codec': 'pcm', 'bit_depth': 24, 'channels': 2, 'endian': 'big'},
     {'codec': 'float', 'bit_depth': 32, 'channels': 1, 'endian': 'little'},
     {'codec': 'float', 'bit_depth': 64, 'channels': 2, 'endian': 'little'},
-
-    # --- IEEE Float Big Endian (RIFX) ---
     {'codec': 'float', 'bit_depth': 32, 'channels': 2, 'endian': 'big'},
-
-    # --- A-Law and µ-Law (G.711) ---
     {'codec': 'alaw', 'bit_depth': 8, 'channels': 1, 'endian': 'little'},
     {'codec': 'ulaw', 'bit_depth': 8, 'channels': 2, 'endian': 'little'},
 ]
 
 
-# --- A-Law / µ-Law Conversion Functions (Standard G.711 algorithms) ---
-# These are needed to convert our generated linear PCM samples into the companded formats.
 def linear_to_alaw(pcm_val):
-    """Converts a 16-bit linear PCM value to 8-bit A-law."""
-    SIGN_BIT = 0x80
+    _SIGN_BIT = 0x80
     pcm_val = pcm_val >> 3
     mask = 0
     if pcm_val >= 0:
@@ -70,7 +54,6 @@ def linear_to_alaw(pcm_val):
 
 
 def linear_to_ulaw(pcm_val):
-    """Converts a 16-bit linear PCM value to 8-bit µ-law."""
     BIAS = 0x84
     MAX = 32635
     if pcm_val > MAX: pcm_val = MAX
@@ -84,20 +67,15 @@ def linear_to_ulaw(pcm_val):
 
 
 def generate_wav(config):
-    """Generates a single WAV file based on a configuration dictionary."""
-
-    # --- Unpack config ---
     codec = config['codec']
     bit_depth = config['bit_depth']
     channels = config['channels']
     endian = config['endian']
 
-    # --- Filename ---
     ch_str = 'mono' if channels == 1 else 'stereo'
     file_prefix = f"{codec}_d{bit_depth}_{'le' if endian == 'little' else 'be'}_{ch_str}"
     filename = os.path.join(OUTPUT_DIR, f"{file_prefix}.wav")
 
-    # --- Determine Format Tag ---
     if codec == 'pcm':
         format_tag = 0x0001
     elif codec == 'float':
@@ -109,13 +87,11 @@ def generate_wav(config):
     else:
         raise ValueError(f"Unknown codec: {codec}")
 
-    # --- Derived Values ---
     sample_width_bytes = bit_depth // 8
     num_samples = int(RATE * DURATION_SECONDS)
     endian_char = '<' if endian == 'little' else '>'
     riff_tag = b'RIFF' if endian == 'little' else b'RIFX'
 
-    # --- Chunks setup ---
     block_align = channels * sample_width_bytes
     byte_rate = RATE * block_align
     fmt_chunk_id = b'fmt '
@@ -128,59 +104,50 @@ def generate_wav(config):
     data_chunk_size = num_samples * block_align
     file_size = 4 + (8 + fmt_chunk_size) + (8 + data_chunk_size)
 
-    # --- Write to file ---
     with open(filename, 'wb') as f:
-        # RIFF Header
         f.write(riff_tag)
         f.write(struct.pack(f'{endian_char}I', file_size))
         f.write(b'WAVE')
 
-        # Format Chunk
         f.write(fmt_chunk_id)
         f.write(struct.pack(f'{endian_char}I', fmt_chunk_size))
         f.write(fmt_chunk_data)
 
-        # Data Chunk
         f.write(data_chunk_id)
         f.write(struct.pack(f'{endian_char}I', data_chunk_size))
 
-        # Write audio data samples
         for i in range(num_samples):
             for ch in range(channels):
                 angle = 2 * math.pi * i * FREQUENCY / RATE
                 sample_float = math.sin(angle) * AMPLITUDE
 
                 if codec == 'pcm':
-                    # Convert float to signed integer for PCM
                     max_amplitude = (2 ** (bit_depth - 1) - 1) if bit_depth > 8 else 255
-                    if bit_depth == 8:  # 8-bit PCM is unsigned
+                    if bit_depth == 8:
                         sample_val = int((sample_float + 1.0) / 2.0 * max_amplitude)
                         f.write(struct.pack('B', sample_val))
-                    else:  # 16, 24, 32 bit are signed
+                    else:
                         sample_val = int(sample_float * max_amplitude)
-                        if sample_width_bytes == 3:  # 24-bit manual packing
+                        if sample_width_bytes == 3:
                             f.write(sample_val.to_bytes(3, byteorder=endian, signed=True))
-                        else:  # 16, 32-bit struct packing
+                        else:
                             type_char = {2: 'h', 4: 'i'}[sample_width_bytes]
                             f.write(struct.pack(f'{endian_char}{type_char}', sample_val))
 
                 elif codec == 'float':
-                    # Pack float or double directly
                     type_char = {4: 'f', 8: 'd'}[sample_width_bytes]
                     f.write(struct.pack(f'{endian_char}{type_char}', sample_float))
 
                 elif codec in ['alaw', 'ulaw']:
-                    # Convert to 16-bit linear first, then to A/µ-Law
                     sample_16bit = int(sample_float * (2 ** 15 - 1))
                     if codec == 'alaw':
                         f.write(struct.pack('B', linear_to_alaw(sample_16bit)))
-                    else:  # ulaw
+                    else:
                         f.write(struct.pack('B', linear_to_ulaw(sample_16bit)))
 
     print(f"Generated: {filename}")
 
 
-# --- Main Execution ---
 if __name__ == "__main__":
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
