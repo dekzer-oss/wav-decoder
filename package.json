@@ -1,0 +1,19 @@
+{
+  "name": "wav-stream-decoder",
+  "module": "src/index.ts",
+  "type": "module",
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.53.1",
+    "@types/node": "^24.0.4",
+    "@vitest/browser": "^3.2.4",
+    "happy-dom": "^18.0.1",
+    "vitest": "^3.2.4"
+  }
+}
