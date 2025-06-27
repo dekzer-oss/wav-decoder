@@ -1,11 +1,24 @@
 {
-  "name": "@dekzer/wav-stream-decoder",
-  "description": "A robust, dependency-free, streaming WAV audio decoder for any JavaScript environment.",
+  "name": "@dekzer/wav-decoder",
+  "description": "A robust, streaming-capable WAV audio decoder with full PCM and float support — zero dependencies, works anywhere JavaScript runs.",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/maikeleckelboom/wav-stream-decoder.git"
   },
+  "keywords": [
+    "wav",
+    "streaming",
+    "audio",
+    "pcm",
+    "decoder",
+    "javascript",
+    "browser",
+    "nodejs"
+  ],
+  "homepage": "https://github.com/maikeleckelboom/wav-stream-decoder#readme",
+  "version": "1.0.0",
+  "author": "Maikel Eckelboom",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -21,27 +34,29 @@
   },
   "types": "./dist/index.d.ts",
   "scripts": {
-    "format": "prettier --write .",
-    "test:watch": "vitest",
     "dev": "vitest",
-    "build": "tsup",
-    "release": "pnpm build && changeset publish",
+    "demo": "vite",
+    "format": "prettier --write .",
     "test": "vitest run",
+    "test:watch": "vitest",
     "test:node": "vitest run --environment node",
     "test:dom": "vitest run --environment happy-dom",
     "test:browser": "vitest run --browser",
     "test:all": "pnpm test:node && pnpm test:dom && pnpm test:browser",
-    "bench": "vitest bench --run --reporter verbose"
+    "bench": "vitest bench --run --reporter verbose",
+    "build": "tsup",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^24.0.4",
     "@changesets/cli": "^2.29.5",
     "@playwright/test": "^1.53.1",
-    "@types/node": "^24.0.4",
     "@vitest/browser": "^3.2.4",
     "happy-dom": "^18.0.1",
     "prettier": "^3.6.1",
     "tsup": "^8.5.0",
-    "typescript": "^5",
+    "vite": "^7.0.0",
     "vitest": "^3.2.4"
   }
 }

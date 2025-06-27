@@ -1,9 +1,9 @@
-import type { DecodedAudio, DecodeError, WavFormat } from './types';
-import { CircularBuffer } from './CircularBuffer';
+import type { WavDecodedAudio, DecodeError, WavFormat } from './types';
+import { RingBuffer } from './RingBuffer.ts';
 
 /**
- * @file WavStreamDecoder.ts
- * @module wav-stream-decoder
+ * @file WavDecoder.ts
+ * @module @dekzer/wav-decoder
  * @description A robust, dependency-free, streaming WAV audio decoder for JavaScript.
  */
 
@@ -39,19 +39,19 @@ const KSDATAFORMAT_SUBTYPE_IEEE_FLOAT = new Uint8Array([
  * It supports PCM (8, 16, 24, 32-bit), IEEE Float (32, 64-bit), A-Law, and µ-Law formats.
  * It is designed to be highly resilient to malformed files and can be used in any JavaScript environment.
  */
-export class WavStreamDecoder {
-  private static readonly MAX_HEADER_SIZE = 1024 * 1024;
+export class WavDecoder {
+  private static readonly MAX_HEADER_SIZE = 2 * 1024 * 1024;
   private static readonly MAX_AUDIO_BUFFER_SIZE = 16 * 1024 * 1024;
   private static readonly MAX_CHANNELS = 32;
   private static readonly MAX_SAMPLE_RATE = 384000;
 
-  private static readonly ALAW_TABLE: Float32Array = WavStreamDecoder.buildAlawTable();
-  private static readonly MULAW_TABLE: Float32Array = WavStreamDecoder.buildMulawTable();
+  private static readonly ALAW_TABLE: Float32Array = WavDecoder.buildAlawTable();
+  private static readonly MULAW_TABLE: Float32Array = WavDecoder.buildMulawTable();
 
   private readonly errors: DecodeError[] = [];
 
   private state = State.UNINIT;
-  private audioBuffer: CircularBuffer;
+  private audioBuffer: RingBuffer;
   private format = {} as WavFormat;
   private bytesRemaining = 0;
   private totalBytes = 0;
@@ -64,7 +64,7 @@ export class WavStreamDecoder {
   private pendingHeaderData = new Uint8Array(0);
 
   constructor() {
-    this.audioBuffer = new CircularBuffer(WavStreamDecoder.MAX_AUDIO_BUFFER_SIZE);
+    this.audioBuffer = new RingBuffer(WavDecoder.MAX_AUDIO_BUFFER_SIZE);
   }
 
   public get info() {
@@ -146,14 +146,14 @@ export class WavStreamDecoder {
     this.pendingHeaderData = new Uint8Array(0);
   }
 
-  public decode(chunk: Uint8Array): DecodedAudio {
+  public decode(chunk: Uint8Array): WavDecodedAudio {
     if (this.state === State.ENDED || this.state === State.ERROR) {
       return this.createErrorResult('Decoder is in a terminal state.');
     }
 
     try {
       if (this.state === State.UNINIT) {
-        if (this.pendingHeaderData.length + chunk.length > WavStreamDecoder.MAX_HEADER_SIZE) {
+        if (this.pendingHeaderData.length + chunk.length > WavDecoder.MAX_HEADER_SIZE) {
           this.state = State.ERROR;
           return this.createErrorResult('Header size exceeds maximum limit.');
         }
@@ -164,12 +164,9 @@ export class WavStreamDecoder {
 
         this.tryParseHeader();
 
-        // Check the state *after* the parsing attempt.
         if (this.state === State.UNINIT) {
-          // Not an error, just needs more data.
           return this.createEmptyResult();
         } else if (this.state === State.ERROR) {
-          // A fatal error occurred during parsing.
           return {
             channelData: [],
             samplesDecoded: 0,
@@ -184,7 +181,7 @@ export class WavStreamDecoder {
         }
       }
 
-      return this.processBufferedFrames();
+      return this.processBufferedBlocks();
     } catch (err) {
       this.state = State.ERROR;
       const message = err instanceof Error ? err.message : String(err);
@@ -193,37 +190,37 @@ export class WavStreamDecoder {
     }
   }
 
-  public decodeFrame(frame: Uint8Array): DecodedAudio {
+  public decodeAligned(block: Uint8Array): WavDecodedAudio {
     if (this.state !== State.DECODING) {
-      return this.createErrorResult('Decoder must be initialized before decodeFrame().');
+      return this.createErrorResult('Decoder must be initialized before decodeAligned().');
     }
-    if (frame.length === 0) {
+    if (block.length === 0) {
       return this.createEmptyResult();
     }
-    if (this.format.blockAlign <= 0 || frame.length % this.format.blockAlign !== 0) {
-      return this.createErrorResult('Data for decodeFrame must be a multiple of the frame size (blockAlign).');
+    if (this.format.blockAlign <= 0 || block.length % this.format.blockAlign !== 0) {
+      return this.createErrorResult('Data for decodeAligned must be a multiple of the block size (blockAlign).');
     }
 
     try {
-      const decoded = this._processAudioData(frame);
-      this.bytesDecoded += frame.length;
-      this.bytesRemaining = Math.max(0, this.bytesRemaining - frame.length);
+      const decoded = this._processAudioData(block);
+      this.bytesDecoded += block.length;
+      this.bytesRemaining = Math.max(0, this.bytesRemaining - block.length);
       return decoded;
     } catch (err) {
       this.state = State.ERROR;
       const message = err instanceof Error ? err.message : String(err);
-      this.errors.push(this.createError(`Frame decode error: ${message}`));
-      return this.createErrorResult('Frame decode error');
+      this.errors.push(this.createError(`Block decode error: ${message}`));
+      return this.createErrorResult('Block decode error');
     }
   }
 
-  public async flush(): Promise<DecodedAudio | null> {
+  public async flush(): Promise<WavDecodedAudio | null> {
     if (this.state === State.ENDED || this.state === State.ERROR) return null;
 
-    const result = this.processBufferedFrames();
+    const result = this.processBufferedBlocks();
 
     if (this.audioBuffer.available > 0) {
-      this.errors.push(this.createError(`Discarded ${this.audioBuffer.available} bytes of incomplete final frame.`));
+      this.errors.push(this.createError(`Discarded ${this.audioBuffer.available} bytes of incomplete final block.`));
       this.bytesRemaining = Math.max(0, this.bytesRemaining - this.audioBuffer.available);
       this.audioBuffer.clear();
     }
@@ -232,7 +229,7 @@ export class WavStreamDecoder {
     return result.samplesDecoded > 0 ? result : null;
   }
 
-  private processBufferedFrames(): DecodedAudio {
+  private processBufferedBlocks(): WavDecodedAudio {
     if (
       this.state !== State.DECODING ||
       !this.format.blockAlign ||
@@ -241,9 +238,9 @@ export class WavStreamDecoder {
       return this.createEmptyResult();
     }
 
-    const frameSize = this.format.blockAlign;
-    const framesToProcess = Math.floor(this.audioBuffer.available / frameSize);
-    const bytesToProcess = framesToProcess * frameSize;
+    const blockSize = this.format.blockAlign;
+    const blocksToProcess = Math.floor(this.audioBuffer.available / blockSize);
+    const bytesToProcess = blocksToProcess * blockSize;
 
     const dataToProcess = this.audioBuffer.read(bytesToProcess);
     if (!dataToProcess) return this.createEmptyResult();
@@ -256,19 +253,19 @@ export class WavStreamDecoder {
     return decoded;
   }
 
-  private _processAudioData(data: Uint8Array): DecodedAudio {
-    const frameSize = this.format.blockAlign;
-    if (frameSize <= 0) return this.createEmptyResult();
+  private _processAudioData(data: Uint8Array): WavDecodedAudio {
+    const blockSize = this.format.blockAlign;
+    if (blockSize <= 0) return this.createEmptyResult();
 
-    const numFrames = Math.floor(data.length / frameSize);
-    const channels = Array.from({ length: this.format.channels }, () => new Float32Array(numFrames));
+    const numSamples = Math.floor(data.length / blockSize);
+    const channels = Array.from({ length: this.format.channels }, () => new Float32Array(numSamples));
     const view = new DataView(data.buffer, data.byteOffset, data.length);
     const bps = this.format.bitsPerSample / 8;
 
     for (let ch = 0; ch < this.format.channels; ch++) {
       const channelArray = channels[ch]!;
-      for (let i = 0; i < numFrames; i++) {
-        const offset = i * frameSize + ch * bps;
+      for (let i = 0; i < numSamples; i++) {
+        const offset = i * blockSize + ch * bps;
         if (offset + bps <= data.length) {
           channelArray[i] = this.readSample(view, offset, this.format.bitsPerSample, this.effectiveFormat);
         } else {
@@ -279,7 +276,7 @@ export class WavStreamDecoder {
 
     return {
       channelData: channels,
-      samplesDecoded: numFrames,
+      samplesDecoded: numSamples,
       sampleRate: this.format.sampleRate,
       errors: [...this.errors.splice(0)],
     };
@@ -288,7 +285,6 @@ export class WavStreamDecoder {
   private tryParseHeader(): boolean {
     const headerData = this.pendingHeaderData;
     if (headerData.length < 12) {
-      // Minimum size for RIFF/WAVE tags
       return false;
     }
 
@@ -348,7 +344,6 @@ export class WavStreamDecoder {
     }
 
     if (!fmtChunk || !dataChunk) {
-      // Header incomplete, essential chunks not found
       return false;
     }
 
@@ -419,16 +414,14 @@ export class WavStreamDecoder {
       return false;
     }
 
-    if (this.format.channels > WavStreamDecoder.MAX_CHANNELS) {
-      this.errors.push(
-        this.createError(`Too many channels: ${this.format.channels} (max ${WavStreamDecoder.MAX_CHANNELS})`)
-      );
+    if (this.format.channels > WavDecoder.MAX_CHANNELS) {
+      this.errors.push(this.createError(`Too many channels: ${this.format.channels} (max ${WavDecoder.MAX_CHANNELS})`));
       return false;
     }
 
-    if (this.format.sampleRate > WavStreamDecoder.MAX_SAMPLE_RATE) {
+    if (this.format.sampleRate > WavDecoder.MAX_SAMPLE_RATE) {
       this.errors.push(
-        this.createError(`Sample rate too high: ${this.format.sampleRate} (max ${WavStreamDecoder.MAX_SAMPLE_RATE})`)
+        this.createError(`Sample rate too high: ${this.format.sampleRate} (max ${WavDecoder.MAX_SAMPLE_RATE})`)
       );
       return false;
     }
@@ -532,11 +525,11 @@ export class WavStreamDecoder {
   }
 
   private readAlaw(view: DataView, off: number): number {
-    return WavStreamDecoder.ALAW_TABLE[view.getUint8(off)] || 0;
+    return WavDecoder.ALAW_TABLE[view.getUint8(off)] || 0;
   }
 
   private readMulaw(view: DataView, off: number): number {
-    return WavStreamDecoder.MULAW_TABLE[view.getUint8(off)] || 0;
+    return WavDecoder.MULAW_TABLE[view.getUint8(off)] || 0;
   }
 
   private arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
@@ -545,7 +538,7 @@ export class WavStreamDecoder {
     return true;
   }
 
-  private createEmptyResult(): DecodedAudio {
+  private createEmptyResult(): WavDecodedAudio {
     return {
       channelData: [],
       samplesDecoded: 0,
@@ -554,7 +547,7 @@ export class WavStreamDecoder {
     };
   }
 
-  private createErrorResult(msg: string): DecodedAudio {
+  private createErrorResult(msg: string): WavDecodedAudio {
     this.errors.push(this.createError(msg));
     return {
       channelData: [],
@@ -565,13 +558,13 @@ export class WavStreamDecoder {
   }
 
   private createError(message: string): DecodeError {
-    const frameSize = this.format.blockAlign || 0;
+    const blockSize = this.format.blockAlign || 0;
     return {
       message: message,
-      frameLength: frameSize,
-      frameNumber: frameSize > 0 ? Math.floor(this.bytesDecoded / frameSize) : 0,
+      blockSize: blockSize,
+      blockNumber: blockSize > 0 ? Math.floor(this.bytesDecoded / blockSize) : 0,
       inputBytes: this.bytesDecoded,
-      outputSamples: frameSize > 0 ? Math.floor(this.bytesDecoded / frameSize) : 0,
+      outputSamples: blockSize > 0 ? Math.floor(this.bytesDecoded / blockSize) : 0,
     };
   }
 }

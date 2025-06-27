@@ -7,12 +7,19 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     exclude: ['tests/**/*.bench.ts'],
     browser: {
-      enabled: true,
       provider: 'playwright',
+      enabled: true,
       headless: true,
+      screenshotFailures: false,
       instances: [
         {
           browser: 'chromium',
+        },
+        {
+          browser: 'firefox',
+        },
+        {
+          browser: 'webkit',
         },
       ],
     },

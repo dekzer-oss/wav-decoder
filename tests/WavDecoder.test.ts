@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, test } from 'vitest';
-import { type DecodedAudio, State, type WavFormat, WavStreamDecoder } from '../src';
-import { fixtureProperties } from './utils/fixtureMeta';
+import { type WavDecodedAudio, State, type WavFormat, WavDecoder } from '../src';
+import { fixtureProperties } from './utils/fixtures';
 import { findStringInUint8Array, loadFixture } from './utils/helpers';
 
 const loadedFixtures = new Map<string, Uint8Array>();
@@ -15,18 +15,18 @@ beforeAll(async () => {
   });
 });
 
-describe('WavStreamDecoder', () => {
-  let decoder: WavStreamDecoder;
+describe('WavDecoder', () => {
+  let decoder: WavDecoder;
 
   beforeEach(() => {
-    decoder = new WavStreamDecoder();
+    decoder = new WavDecoder();
   });
 
   test.each(Object.entries(fixtureProperties))(
     'should correctly decode %s in a single call',
     (fixtureName, expected) => {
       const audioData = loadedFixtures.get(fixtureName)!;
-      const result: DecodedAudio = decoder.decode(audioData);
+      const result: WavDecodedAudio = decoder.decode(audioData);
       const format = decoder.info.format as WavFormat;
 
       expect(result.errors, `File ${fixtureName} should have no errors`).toEqual([]);
@@ -68,7 +68,7 @@ describe('WavStreamDecoder', () => {
       if (framesInChunk === 0) continue;
 
       const frameData = chunk.subarray(0, framesInChunk * blockAlign);
-      const frameResult = decoder.decodeFrame(frameData);
+      const frameResult = decoder.decodeAligned(frameData);
       expect(frameResult.errors).toEqual([]);
       totalSamplesDecoded += frameResult.samplesDecoded;
     }

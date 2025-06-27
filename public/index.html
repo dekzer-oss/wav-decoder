@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Demo | wav-decoder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="favicon/favicon.svg" type="image/svg+xml">
+  <script src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+      @keyframes fadeIn {
+          from {
+              opacity: 0;
+              transform: translateY(10px);
+          }
+          to {
+              opacity: 1;
+              transform: translateY(0);
+          }
+      }
+
+      .animate-fade-in {
+          animation: fadeIn 0.2s ease-in-out;
+      }
+  </style>
+</head>
+<body class="font-sans bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
+<header
+  class="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10 border-b border-gray-200/80 dark:border-gray-700/80">
+  <div class="max-w-4xl mx-auto flex justify-end items-center p-3">
+    <a href="https://github.com/dekzer-oss/wav-decoder" target="_blank" rel="noopener noreferrer"
+       aria-label="View on GitHub"
+       class="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.91 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+      </svg>
+    </a>
+  </div>
+</header>
+<div class="max-w-4xl mx-auto py-4 px-3 md:py-8 md:px-6">
+  <div class="text-center mb-8">
+    <img src="favicon/favicon.svg" alt="Logo" class="max-w-full h-24 mx-auto mb-4">
+    <h2 class="text-xl font-bold mb-2">Progressive WAV Decoder — Demo</h2>
+    <p class="text-gray-600 dark:text-gray-400 text-balance max-w-lg mx-auto">
+      A minimal demo showcasing <strong>real-time, chunk-based WAV decoding</strong> in the browser.
+    </p>
+  </div>
+  <main>
+    <section class="upload-section mb-6 relative">
+      <div
+        class="border-2 bg-white dark:bg-gray-800 h-38 grid place-items-center border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 transition-all duration-150 rounded-lg p-8 text-center"
+        id="uploadZone"
+        role="button"
+        tabindex="0"
+        aria-label="Upload WAV file"
+      >
+        <div class="font-medium text-gray-700 dark:text-gray-300">
+          Drop a WAV file here, or click to select
+          <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Streamed processing handles large files with ease
+          </div>
+        </div>
+      </div>
+      <button id="resetButton"
+              class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition-all animate-fade-in">
+        Decode Another File
+      </button>
+      <input type="file" id="fileInput" class="hidden" accept=".wav,audio/wav">
+    </section>
+
+    <section id="resultsSection" class="results-section pt-8 hidden animate-fade-in">
+      <div class="mb-8">
+        <h2 class="flex items-center gap-2 font-bold text-lg text-gray-800 dark:text-gray-100 mb-4">
+          <span id="progressIndicator" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+          Decoding Progress
+        </h2>
+        <div class="relative w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full mb-6 overflow-hidden shadow-inner">
+          <div id="progressFill"
+               class="h-full bg-gradient-to-r from-blue-500 to-indigo-500 w-0 transition-all duration-75 ease-out shadow-sm"></div>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div
+            class="metric-card bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/50 dark:to-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800/80">
+            <div class="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">TTFA</div>
+            <div id="ttfaTime" class="font-bold text-xl text-blue-800 dark:text-blue-300 mt-1">-</div>
+          </div>
+          <div
+            class="metric-card bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/50 dark:to-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800/80">
+            <div class="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Bytes
+              Processed
+            </div>
+            <div id="bytesProcessed" class="font-bold text-xl text-green-800 dark:text-green-300 mt-1">-</div>
+          </div>
+          <div
+            class="metric-card bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/50 dark:to-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800/80">
+            <div class="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide">Samples
+              Decoded
+            </div>
+            <div id="samplesDecoded" class="font-bold text-xl text-purple-800 dark:text-purple-300 mt-1">-</div>
+          </div>
+          <div
+            class="metric-card bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/50 dark:to-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800/80">
+            <div class="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide">Throughput
+            </div>
+            <div id="decodingSpeed" class="font-bold text-xl text-orange-800 dark:text-orange-300 mt-1">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="mb-8">
+        <h2 class="flex items-center gap-2 font-bold text-lg text-gray-800 dark:text-gray-100 mb-4">
+          <span class="w-2 h-2 bg-indigo-500 rounded-full"></span>
+          Audio Specification
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
+            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Format</div>
+            <div id="formatInfo" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+          </div>
+          <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
+            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Sample Rate</div>
+            <div id="sampleRateInfo" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+          </div>
+          <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
+            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Channels</div>
+            <div id="channelsInfo" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+          </div>
+          <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
+            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Bit Depth</div>
+            <div id="bitDepthInfo" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+          </div>
+          <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
+            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Duration</div>
+            <div id="durationInfo" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2 class="flex items-center gap-2 font-bold text-lg text-gray-800 dark:text-gray-100 mb-4">
+          <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+          Event Telemetry
+        </h2>
+        <div
+          class="bg-gray-900 dark:bg-black/20 rounded-lg p-4 font-mono text-sm max-h-48 overflow-y-auto border border-gray-700/50 shadow-inner"
+          id="logSection"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script type="module">
+  import { WavDecoder } from '../dist/index.js';
+
+  class Logger {
+    constructor(container) {
+      this.container = container;
+    }
+
+    clear() {
+      this.container.innerHTML = '';
+    }
+
+    log(message, level = 'info') {
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const colorMap = {
+        info: 'text-gray-300',
+        success: 'text-green-400',
+        warning: 'text-yellow-400',
+        error: 'text-red-400',
+      };
+      const entry = document.createElement('div');
+      entry.className = `mb-1 ${colorMap[level] || colorMap.info}`;
+      entry.textContent = `[${timestamp}] ${message}`;
+      this.container.appendChild(entry);
+      this.container.scrollTop = this.container.scrollHeight;
+    }
+  }
+
+  class Metrics {
+    constructor() {
+      this.reset();
+    }
+
+    reset() {
+      this.startTime = null;
+      this.firstAudioTime = null;
+    }
+
+    markStart() {
+      this.startTime = performance.now();
+    }
+
+    markFirstAudio() {
+      if (!this.firstAudioTime && this.startTime) {
+        this.firstAudioTime = performance.now() - this.startTime;
+      }
+      return this.firstAudioTime;
+    }
+
+    getThroughput(bytesProcessed) {
+      if (!this.startTime) return 0;
+      const elapsed = (performance.now() - this.startTime) / 1000;
+      return bytesProcessed / 1048576 / elapsed;
+    }
+  }
+
+  class App {
+    constructor() {
+      this.elements = this.getElements();
+      this.metrics = new Metrics();
+      this.logger = new Logger(this.elements.logSection);
+      this.decoder = new WavDecoder();
+      this.setupEvents();
+    }
+
+    getElements() {
+      return [
+        'uploadZone', 'fileInput', 'resultsSection', 'progressFill', 'resetButton',
+        'progressIndicator', 'ttfaTime', 'bytesProcessed', 'samplesDecoded', 'decodingSpeed',
+        'formatInfo', 'sampleRateInfo', 'channelsInfo', 'bitDepthInfo',
+        'durationInfo', 'logSection',
+      ].reduce((els, id) => {
+        els[id] = document.getElementById(id);
+        return els;
+      }, {});
+    }
+
+    setupEvents() {
+      this.elements.uploadZone.addEventListener('click', () => this.elements.fileInput.click());
+      this.elements.resetButton.addEventListener('click', () => this.reset());
+
+      this.elements.fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          this.handleFile(e.target.files[0]);
+          e.target.value = '';
+        }
+      });
+
+      const handleDrag = (e) => {
+        e.preventDefault();
+        this.elements.uploadZone.classList.toggle('border-blue-400', e.type === 'dragover');
+      };
+      ['dragover', 'dragleave', 'drop'].forEach(event => this.elements.uploadZone.addEventListener(event, handleDrag));
+
+      this.elements.uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        this.elements.uploadZone.classList.remove('border-blue-400');
+        const file = Array.from(e.dataTransfer.files).find(f => f.type === 'audio/wav' || f.name.toLowerCase().endsWith('.wav'));
+        if (file) {
+          this.handleFile(file);
+        }
+      });
+    }
+
+    reset() {
+      this.logger.clear();
+      this.metrics.reset();
+      this.decoder.reset();
+
+      this.elements.resultsSection.classList.add('hidden');
+      this.elements.resetButton.classList.add('hidden');
+
+      // Re-enable the upload zone
+      this.elements.uploadZone.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+      this.elements.uploadZone.setAttribute('aria-disabled', 'false');
+      this.elements.uploadZone.setAttribute('tabindex', '0');
+
+
+      this.elements.progressIndicator.classList.add('animate-pulse');
+      this.elements.progressFill.style.width = '0%';
+
+      const resetIds = [
+        'ttfaTime', 'bytesProcessed', 'samplesDecoded', 'decodingSpeed',
+        'formatInfo', 'sampleRateInfo', 'channelsInfo', 'bitDepthInfo', 'durationInfo',
+      ];
+      resetIds.forEach(id => this.elements[id].textContent = '-');
+      this.logger.log('Ready. Please select a new file.', 'info');
+    }
+
+
+    updateProgress(progress) {
+      this.elements.progressFill.style.width = `${Math.min(progress * 100, 100)}%`;
+    }
+
+    updateMetrics(info, samplesDecoded) {
+      this.elements.bytesProcessed.textContent = `${(info.bytesDecoded / 1024).toFixed(1)} KB`;
+      this.elements.samplesDecoded.textContent = samplesDecoded.toLocaleString();
+      this.elements.decodingSpeed.textContent = `${this.metrics.getThroughput(info.bytesDecoded).toFixed(1)} MB/s`;
+    }
+
+    updateAudioInfo(format, estimatedSamples) {
+      const formats = { 1: 'PCM', 3: 'IEEE Float', 6: 'A-Law', 7: 'µ-Law', 65534: 'Extensible' };
+      this.elements.formatInfo.textContent = formats[format.formatTag] || `Unknown (${format.formatTag})`;
+      this.elements.sampleRateInfo.textContent = `${format.sampleRate.toLocaleString()} Hz`;
+      this.elements.channelsInfo.textContent = format.channels;
+      this.elements.bitDepthInfo.textContent = `${format.bitsPerSample}-bit`;
+      if (estimatedSamples > 0) {
+        const duration = estimatedSamples / format.sampleRate;
+        this.elements.durationInfo.textContent = `${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')}`;
+      }
+    }
+
+    async handleFile(file) {
+      if (!file) return;
+      this.reset();
+
+      // Disable the upload zone instead of hiding it
+      this.elements.uploadZone.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+      this.elements.uploadZone.setAttribute('aria-disabled', 'true');
+      this.elements.uploadZone.setAttribute('tabindex', '-1');
+
+      this.elements.resultsSection.classList.remove('hidden');
+
+      this.logger.log(`Processing "${file.name}" (${(file.size / 1048576).toFixed(2)} MB)`, 'info');
+      this.metrics.markStart();
+      try {
+        await this.processFile(file);
+      } catch (error) {
+        this.logger.log(`Error: ${error.message}`, 'error');
+      }
+    }
+
+    async processFile(file) {
+      const reader = file.stream().getReader();
+      let totalSamples = 0, hasFirstAudio = false, hasAudioInfo = false;
+
+      const processChunk = async ({ done, value }) => {
+        if (done) {
+          this.updateProgress(1);
+          try {
+            const finalResult = await this.decoder.flush();
+            if (finalResult?.samplesDecoded > 0) {
+              totalSamples += finalResult.samplesDecoded;
+              this.elements.samplesDecoded.textContent = totalSamples.toLocaleString();
+            }
+            const duration = (performance.now() - this.metrics.startTime) / 1000;
+            this.logger.log(`Completed in ${duration.toFixed(2)}s • ${totalSamples.toLocaleString()} samples`, 'success');
+          } catch (error) {
+            this.logger.log(`Finalization error: ${error.message}`, 'warning');
+          }
+
+          this.elements.progressIndicator.classList.remove('animate-pulse');
+          this.elements.resetButton.classList.remove('hidden');
+          return;
+        }
+
+        try {
+          const result = this.decoder.decode(value);
+          const info = this.decoder.info;
+
+          if (info.errors.length) {
+            this.logger.log(`Decoder error: ${info.errors[0].message}`, 'error');
+            return reader.cancel();
+          }
+
+          this.updateProgress(info.progress);
+          this.updateMetrics(info, totalSamples);
+
+          if (result.samplesDecoded > 0) {
+            totalSamples += result.samplesDecoded;
+            if (!hasFirstAudio) {
+              const ttfa = this.metrics.markFirstAudio();
+              this.elements.ttfaTime.textContent = `${ttfa.toFixed(1)}ms`;
+              hasFirstAudio = true;
+            }
+            if (!hasAudioInfo && info.format.sampleRate) {
+              this.updateAudioInfo(info.format, this.decoder.estimatedSamples);
+              this.logger.log(`Format: ${info.format.channels}ch ${info.format.sampleRate}Hz ${info.format.bitsPerSample}-bit`, 'info');
+              hasAudioInfo = true;
+            }
+          }
+          requestAnimationFrame(() => reader.read().then(processChunk));
+        } catch (error) {
+          this.logger.log(`Chunk error: ${error.message}`, 'error');
+          reader.cancel();
+        }
+      };
+      reader.read().then(processChunk);
+    }
+  }
+
+  try {
+    const app = new App();
+    app.logger.log('WAV Decoder initialized', 'success');
+  } catch (error) {
+    console.error('Initialization failed:', error);
+  }
+</script>
+</body>
+</html>

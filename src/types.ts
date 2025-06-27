@@ -1,12 +1,12 @@
 export interface DecodeError {
   message: string;
-  frameLength: number;
-  frameNumber: number;
+  blockSize: number;
+  blockNumber: number;
   inputBytes: number;
   outputSamples: number;
 }
 
-export interface DecodedAudio {
+export interface WavDecodedAudio {
   channelData: Float32Array[];
   samplesDecoded: number;
   sampleRate: number;

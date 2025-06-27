@@ -1,7 +1,7 @@
 /**
  * A lightweight, dependency-free circular buffer for managing streaming data efficiently.
  */
-export class CircularBuffer {
+export class RingBuffer {
   public readonly capacity: number;
   private readonly buffer: Uint8Array;
   private writePos = 0;
