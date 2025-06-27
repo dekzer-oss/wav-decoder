@@ -1,30 +1,34 @@
 {
-  "name": "@dekzer/wav-decoder",
+  "name": "streaming-wav-decoder",
+  "version": "1.0.0",
   "description": "A robust, streaming-capable WAV audio decoder with full PCM and float support — zero dependencies, works anywhere JavaScript runs.",
   "license": "MIT",
+  "author": "Maikel Eckelboom",
+  "homepage": "https://github.com/dekzer-oss/streaming-wav-decoder#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maikeleckelboom/wav-stream-decoder.git"
+    "url": "https://github.com/dekzer-oss/streaming-wav-decoder.git"
   },
   "keywords": [
     "wav",
-    "streaming",
     "audio",
-    "pcm",
+    "streaming",
     "decoder",
+    "pcm",
+    "ieee-float",
     "javascript",
     "browser",
-    "nodejs"
+    "nodejs",
+    "a-law",
+    "mu-law",
+    "waveform",
+    "real-time",
+    "audioworklet"
   ],
-  "homepage": "https://github.com/maikeleckelboom/wav-stream-decoder#readme",
-  "version": "1.0.0",
-  "author": "Maikel Eckelboom",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "files": [
-    "dist"
-  ],
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -32,7 +36,9 @@
       "require": "./dist/index.js"
     }
   },
-  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vitest",
     "demo": "vite",
@@ -48,14 +54,14 @@
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^24.0.4",
     "@changesets/cli": "^2.29.5",
     "@playwright/test": "^1.53.1",
+    "@types/node": "^24.0.4",
     "@vitest/browser": "^3.2.4",
     "happy-dom": "^18.0.1",
     "prettier": "^3.6.1",
     "tsup": "^8.5.0",
+    "typescript": "^5.0.0",
     "vite": "^7.0.0",
     "vitest": "^3.2.4"
   }

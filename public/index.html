@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Demo | wav-decoder</title>
+  <title>Demo | streaming-wav-decoder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="favicon/favicon.svg" type="image/svg+xml">
   <script src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -38,15 +38,17 @@
   </div>
 </header>
 <div class="max-w-4xl mx-auto py-4 px-3 md:py-8 md:px-6">
-  <div class="text-center mb-8">
-    <img src="favicon/favicon.svg" alt="Logo" class="max-w-full h-24 mx-auto mb-4">
-    <h2 class="text-xl font-bold mb-2">Progressive WAV Decoder — Demo</h2>
-    <p class="text-gray-600 dark:text-gray-400 text-balance max-w-lg mx-auto">
-      A minimal demo showcasing <strong>real-time, chunk-based WAV decoding</strong> in the browser.
-    </p>
-  </div>
   <main>
-    <section class="upload-section mb-6 relative">
+
+    <div class="text-center mb-8">
+      <img src="favicon/favicon.svg" alt="Logo" class="max-w-full h-24 mx-auto mb-4">
+      <h2 class="text-xl font-bold mb-2">Progressive WAV Decoder — Demo</h2>
+      <p class="text-gray-600 dark:text-gray-400 text-balance max-w-lg mx-auto">
+        A minimal demo showcasing <strong>real-time, chunk-based WAV decoding</strong> in the browser.
+      </p>
+    </div>
+
+    <div class="relative">
       <div
         class="border-2 bg-white dark:bg-gray-800 h-38 grid place-items-center border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 transition-all duration-150 rounded-lg p-8 text-center"
         id="uploadZone"
@@ -54,7 +56,7 @@
         tabindex="0"
         aria-label="Upload WAV file"
       >
-        <div class="font-medium text-gray-700 dark:text-gray-300">
+        <div class="font-medium text-gray-700 dark:text-gray-300 select-none">
           Drop a WAV file here, or click to select
           <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Streamed processing handles large files with ease
@@ -66,7 +68,7 @@
         Decode Another File
       </button>
       <input type="file" id="fileInput" class="hidden" accept=".wav,audio/wav">
-    </section>
+    </div>
 
     <section id="resultsSection" class="results-section pt-8 hidden animate-fade-in">
       <div class="mb-8">
@@ -86,10 +88,8 @@
           </div>
           <div
             class="metric-card bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/50 dark:to-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800/80">
-            <div class="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Bytes
-              Processed
-            </div>
-            <div id="bytesProcessed" class="font-bold text-xl text-green-800 dark:text-green-300 mt-1">-</div>
+            <div class="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Bytes Processed</div>
+            <div id="bytesProcessed" class="font-bold text-xl text-green-800 dark:text-green-300 mt-1" title="1024 bytes = 1 KiB">-</div>
           </div>
           <div
             class="metric-card bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/50 dark:to-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800/80">
@@ -100,9 +100,9 @@
           </div>
           <div
             class="metric-card bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/50 dark:to-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800/80">
-            <div class="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide">Throughput
+            <div class="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide">Throughput (MiB/s)
             </div>
-            <div id="decodingSpeed" class="font-bold text-xl text-orange-800 dark:text-orange-300 mt-1">-</div>
+            <div id="decodingSpeed" class="font-bold text-xl text-orange-800 dark:text-orange-300 mt-1" title="MiB = 1024 × 1024 bytes">-</div>
           </div>
         </div>
       </div>
@@ -150,6 +150,19 @@
 <script type="module">
   import { WavDecoder } from '../dist/index.js';
 
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 bytes';
+    const units = ['bytes', 'KiB', 'MiB', 'GiB'];
+    const i = Math.floor(Math.log2(bytes) / 10);
+    const value = bytes / Math.pow(1024, i);
+    return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+  }
+
+  function formatSpeed(bytesPerSecond) {
+    const mibPerSec = bytesPerSecond / 1048576;
+    return `${mibPerSec.toFixed(1)}`;
+  }
+
   class Logger {
     constructor(container) {
       this.container = container;
@@ -194,12 +207,6 @@
         this.firstAudioTime = performance.now() - this.startTime;
       }
       return this.firstAudioTime;
-    }
-
-    getThroughput(bytesProcessed) {
-      if (!this.startTime) return 0;
-      const elapsed = (performance.now() - this.startTime) / 1000;
-      return bytesProcessed / 1048576 / elapsed;
     }
   }
 
@@ -282,9 +289,12 @@
     }
 
     updateMetrics(info, samplesDecoded) {
-      this.elements.bytesProcessed.textContent = `${(info.bytesDecoded / 1024).toFixed(1)} KB`;
+      const elapsedSeconds = (performance.now() - this.metrics.startTime) / 1000;
+      this.elements.bytesProcessed.textContent = formatBytes(info.bytesDecoded);
       this.elements.samplesDecoded.textContent = samplesDecoded.toLocaleString();
-      this.elements.decodingSpeed.textContent = `${this.metrics.getThroughput(info.bytesDecoded).toFixed(1)} MB/s`;
+      if (elapsedSeconds > 0) {
+        this.elements.decodingSpeed.textContent = formatSpeed(info.bytesDecoded / elapsedSeconds);
+      }
     }
 
     updateAudioInfo(format, estimatedSamples) {
@@ -293,7 +303,7 @@
       this.elements.sampleRateInfo.textContent = `${format.sampleRate.toLocaleString()} Hz`;
       this.elements.channelsInfo.textContent = format.channels;
       this.elements.bitDepthInfo.textContent = `${format.bitsPerSample}-bit`;
-      if (estimatedSamples > 0) {
+      if (estimatedSamples > 0 && format.sampleRate > 0) {
         const duration = estimatedSamples / format.sampleRate;
         this.elements.durationInfo.textContent = `${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')}`;
       }
@@ -310,7 +320,7 @@
 
       this.elements.resultsSection.classList.remove('hidden');
 
-      this.logger.log(`Processing "${file.name}" (${(file.size / 1048576).toFixed(2)} MB)`, 'info');
+      this.logger.log(`Processing "${file.name}" (${formatBytes(file.size)})`, 'info');
       this.metrics.markStart();
       try {
         await this.processFile(file);
@@ -380,7 +390,7 @@
 
   try {
     const app = new App();
-    app.logger.log('WAV Decoder initialized', 'success');
+    app.logger.log('Decoder initialized', 'success');
   } catch (error) {
     console.error('Initialization failed:', error);
   }

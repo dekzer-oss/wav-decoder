@@ -1,2 +1,2 @@
-export { WavDecoder, State } from './WavDecoder';
-export type { WavDecodedAudio, DecodeError, WavFormat } from './types';
+export { WavStreamDecoder, DecoderState } from './WavStreamDecoder.ts';
+export type { WavDecodedAudio, DecodeError, WaveFormat } from './types';

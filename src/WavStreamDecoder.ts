@@ -1,22 +1,25 @@
-import type { WavDecodedAudio, DecodeError, WavFormat } from './types';
+import type { DecodeError, WavDecodedAudio, WaveFormat } from './types';
 import { RingBuffer } from './RingBuffer.ts';
 
-/**
- * @file WavDecoder.ts
- * @module @dekzer/wav-decoder
- * @description A robust, dependency-free, streaming WAV audio decoder for JavaScript.
- */
-
-export enum State {
+export enum DecoderState {
   UNINIT,
   DECODING,
   ENDED,
   ERROR,
 }
 
+/** @internal
+ * Represents a generic chunk in the WAV container format.
+ * Used for bookkeeping during progressive parsing.
+ */
 interface ChunkInfo {
+  /** The FourCC chunk ID, e.g. 'fmt ', 'data', 'LIST'. */
   id: string;
+
+  /** Size of the chunk's payload in bytes (not including header). */
   size: number;
+
+  /** Absolute byte offset where this chunk begins in the file. */
   offset: number;
 }
 
@@ -39,20 +42,20 @@ const KSDATAFORMAT_SUBTYPE_IEEE_FLOAT = new Uint8Array([
  * It supports PCM (8, 16, 24, 32-bit), IEEE Float (32, 64-bit), A-Law, and µ-Law formats.
  * It is designed to be highly resilient to malformed files and can be used in any JavaScript environment.
  */
-export class WavDecoder {
+export class WavStreamDecoder {
   private static readonly MAX_HEADER_SIZE = 2 * 1024 * 1024;
   private static readonly MAX_AUDIO_BUFFER_SIZE = 16 * 1024 * 1024;
   private static readonly MAX_CHANNELS = 32;
   private static readonly MAX_SAMPLE_RATE = 384000;
 
-  private static readonly ALAW_TABLE: Float32Array = WavDecoder.buildAlawTable();
-  private static readonly MULAW_TABLE: Float32Array = WavDecoder.buildMulawTable();
+  private static readonly ALAW_TABLE: Float32Array = WavStreamDecoder.buildAlawTable();
+  private static readonly MULAW_TABLE: Float32Array = WavStreamDecoder.buildMulawTable();
 
   private readonly errors: DecodeError[] = [];
 
-  private state = State.UNINIT;
+  private state = DecoderState.UNINIT;
   private audioBuffer: RingBuffer;
-  private format = {} as WavFormat;
+  private format = {} as WaveFormat;
   private bytesRemaining = 0;
   private totalBytes = 0;
   private bytesDecoded = 0;
@@ -64,9 +67,13 @@ export class WavDecoder {
   private pendingHeaderData = new Uint8Array(0);
 
   constructor() {
-    this.audioBuffer = new RingBuffer(WavDecoder.MAX_AUDIO_BUFFER_SIZE);
+    this.audioBuffer = new RingBuffer(WavStreamDecoder.MAX_AUDIO_BUFFER_SIZE);
   }
 
+  /**
+   * Provides current decoder state, format, statistics, and error history.
+   * Useful for diagnostics, UI feedback, or debugging.
+   */
   public get info() {
     return {
       state: this.state,
@@ -82,6 +89,10 @@ export class WavDecoder {
     };
   }
 
+  /**
+   * Estimates the total number of audio samples based on known data.
+   * Relies on the 'fact' chunk or derives it from byte size and block alignment.
+   */
   public get estimatedSamples(): number {
     if (this.factSamples > 0) return this.factSamples;
     if (this.totalBytes > 0 && this.format.blockAlign > 0) {
@@ -128,16 +139,25 @@ export class WavDecoder {
     return table;
   }
 
+  /**
+   * Frees internal resources and marks the decoder as ended.
+   * This should be called once decoding is finished or no longer needed.
+   */
   public free(): void {
     this.reset();
-    this.state = State.ENDED;
+    this.state = DecoderState.ENDED;
   }
 
+  /**
+   * Resets the decoder to its uninitialized state.
+   * Clears all internal buffers, errors, format state, and progress tracking.
+   * Useful for reusing the decoder instance.
+   */
   public reset(): void {
-    this.state = State.UNINIT;
+    this.state = DecoderState.UNINIT;
     this.audioBuffer.clear();
     this.errors.length = 0;
-    this.format = {} as WavFormat;
+    this.format = {} as WaveFormat;
     this.bytesRemaining = this.bytesDecoded = this.totalBytes = this.factSamples = 0;
     this.parsedChunks = [];
     this.unhandledChunks = [];
@@ -146,15 +166,22 @@ export class WavDecoder {
     this.pendingHeaderData = new Uint8Array(0);
   }
 
+  /**
+   * Decodes a new chunk of audio data. Accepts raw WAV bytes progressively.
+   * This method can be called with partial or full WAV chunks.
+   *
+   * @param chunk - A byte chunk of the WAV file.
+   * @returns Decoded audio data or an error result.
+   */
   public decode(chunk: Uint8Array): WavDecodedAudio {
-    if (this.state === State.ENDED || this.state === State.ERROR) {
+    if (this.state === DecoderState.ENDED || this.state === DecoderState.ERROR) {
       return this.createErrorResult('Decoder is in a terminal state.');
     }
 
     try {
-      if (this.state === State.UNINIT) {
-        if (this.pendingHeaderData.length + chunk.length > WavDecoder.MAX_HEADER_SIZE) {
-          this.state = State.ERROR;
+      if (this.state === DecoderState.UNINIT) {
+        if (this.pendingHeaderData.length + chunk.length > WavStreamDecoder.MAX_HEADER_SIZE) {
+          this.state = DecoderState.ERROR;
           return this.createErrorResult('Header size exceeds maximum limit.');
         }
         const combined = new Uint8Array(this.pendingHeaderData.length + chunk.length);
@@ -164,9 +191,9 @@ export class WavDecoder {
 
         this.tryParseHeader();
 
-        if (this.state === State.UNINIT) {
+        if (this.state === DecoderState.UNINIT) {
           return this.createEmptyResult();
-        } else if (this.state === State.ERROR) {
+        } else if (this.state === DecoderState.ERROR) {
           return {
             channelData: [],
             samplesDecoded: 0,
@@ -176,22 +203,30 @@ export class WavDecoder {
         }
       } else {
         if (this.audioBuffer.write(chunk) < chunk.length) {
-          this.state = State.ERROR;
+          this.state = DecoderState.ERROR;
           return this.createErrorResult('Audio buffer capacity exceeded.');
         }
       }
 
       return this.processBufferedBlocks();
     } catch (err) {
-      this.state = State.ERROR;
+      this.state = DecoderState.ERROR;
       const message = err instanceof Error ? err.message : String(err);
       this.errors.push(this.createError(`Decode error: ${message}`));
       return this.createErrorResult('Decode error');
     }
   }
 
+  /**
+   * Decodes a block-aligned chunk of audio data.
+   * This assumes the decoder is already initialized and the chunk size
+   * is an exact multiple of the format's `blockAlign`.
+   *
+   * @param block - A properly aligned block of WAV audio data.
+   * @returns Decoded audio data or an error result.
+   */
   public decodeAligned(block: Uint8Array): WavDecodedAudio {
-    if (this.state !== State.DECODING) {
+    if (this.state !== DecoderState.DECODING) {
       return this.createErrorResult('Decoder must be initialized before decodeAligned().');
     }
     if (block.length === 0) {
@@ -207,15 +242,21 @@ export class WavDecoder {
       this.bytesRemaining = Math.max(0, this.bytesRemaining - block.length);
       return decoded;
     } catch (err) {
-      this.state = State.ERROR;
+      this.state = DecoderState.ERROR;
       const message = err instanceof Error ? err.message : String(err);
       this.errors.push(this.createError(`Block decode error: ${message}`));
       return this.createErrorResult('Block decode error');
     }
   }
 
+  /**
+   * Finalizes the decoding process and flushes any remaining audio in the buffer.
+   * Returns any final decoded audio or null if there’s nothing to flush.
+   *
+   * @returns The final decoded audio data or null if no audio remains.
+   */
   public async flush(): Promise<WavDecodedAudio | null> {
-    if (this.state === State.ENDED || this.state === State.ERROR) return null;
+    if (this.state === DecoderState.ENDED || this.state === DecoderState.ERROR) return null;
 
     const result = this.processBufferedBlocks();
 
@@ -225,13 +266,13 @@ export class WavDecoder {
       this.audioBuffer.clear();
     }
 
-    this.state = State.ENDED;
+    this.state = DecoderState.ENDED;
     return result.samplesDecoded > 0 ? result : null;
   }
 
   private processBufferedBlocks(): WavDecodedAudio {
     if (
-      this.state !== State.DECODING ||
+      this.state !== DecoderState.DECODING ||
       !this.format.blockAlign ||
       this.audioBuffer.available < this.format.blockAlign
     ) {
@@ -297,14 +338,14 @@ export class WavDecoder {
 
     const riff = readString(0, 4);
     if (riff !== 'RIFF' && riff !== 'RIFX') {
-      this.state = State.ERROR;
+      this.state = DecoderState.ERROR;
       this.errors.push(this.createError('Invalid WAV file'));
       return false;
     }
     this.isLittleEndian = riff === 'RIFF';
 
     if (readString(8, 4) !== 'WAVE') {
-      this.state = State.ERROR;
+      this.state = DecoderState.ERROR;
       this.errors.push(this.createError('Invalid WAV file'));
       return false;
     }
@@ -349,7 +390,7 @@ export class WavDecoder {
 
     this.parseFormatChunk(fmtChunk, headerData);
     if (!this.validateFormat()) {
-      this.state = State.ERROR;
+      this.state = DecoderState.ERROR;
       return false;
     }
 
@@ -368,7 +409,7 @@ export class WavDecoder {
     if (leftover.length > 0) this.audioBuffer.write(leftover);
 
     this.pendingHeaderData = new Uint8Array(0);
-    this.state = State.DECODING;
+    this.state = DecoderState.DECODING;
     return true;
   }
 
@@ -414,14 +455,14 @@ export class WavDecoder {
       return false;
     }
 
-    if (this.format.channels > WavDecoder.MAX_CHANNELS) {
-      this.errors.push(this.createError(`Too many channels: ${this.format.channels} (max ${WavDecoder.MAX_CHANNELS})`));
+    if (this.format.channels > WavStreamDecoder.MAX_CHANNELS) {
+      this.errors.push(this.createError(`Too many channels: ${this.format.channels} (max ${WavStreamDecoder.MAX_CHANNELS})`));
       return false;
     }
 
-    if (this.format.sampleRate > WavDecoder.MAX_SAMPLE_RATE) {
+    if (this.format.sampleRate > WavStreamDecoder.MAX_SAMPLE_RATE) {
       this.errors.push(
-        this.createError(`Sample rate too high: ${this.format.sampleRate} (max ${WavDecoder.MAX_SAMPLE_RATE})`)
+        this.createError(`Sample rate too high: ${this.format.sampleRate} (max ${WavStreamDecoder.MAX_SAMPLE_RATE})`)
       );
       return false;
     }
@@ -525,11 +566,11 @@ export class WavDecoder {
   }
 
   private readAlaw(view: DataView, off: number): number {
-    return WavDecoder.ALAW_TABLE[view.getUint8(off)] || 0;
+    return WavStreamDecoder.ALAW_TABLE[view.getUint8(off)] || 0;
   }
 
   private readMulaw(view: DataView, off: number): number {
-    return WavDecoder.MULAW_TABLE[view.getUint8(off)] || 0;
+    return WavStreamDecoder.MULAW_TABLE[view.getUint8(off)] || 0;
   }
 
   private arraysEqual(a: Uint8Array, b: Uint8Array): boolean {

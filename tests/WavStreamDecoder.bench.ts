@@ -1,5 +1,5 @@
 import { beforeAll, bench, describe } from 'vitest';
-import { State, WavDecoder } from '../src';
+import { DecoderState, WavStreamDecoder } from '../src';
 import { fixtureProperties } from './utils/fixtures';
 import { loadFixture } from './utils/helpers';
 
@@ -14,24 +14,24 @@ beforeAll(async () => {
   });
 });
 
-describe('WavDecoder full decode() performance', () => {
+describe('WavStreamDecoder full decode() performance', () => {
   bench('8bit_mono.wav - decode', () => {
     const data = loadedFixtures.get('8bit_mono.wav')!;
-    const decoder = new WavDecoder();
+    const decoder = new WavStreamDecoder();
     decoder.decode(data);
     decoder.free();
   });
 
   bench('pcm_d16_le_stereo.wav - decode', () => {
     const data = loadedFixtures.get('pcm_d16_le_stereo.wav')!;
-    const decoder = new WavDecoder();
+    const decoder = new WavStreamDecoder();
     decoder.decode(data);
     decoder.free();
   });
 
   bench('pcm_d24_be_stereo.wav - decode', () => {
     const data = loadedFixtures.get('pcm_d24_be_stereo.wav')!;
-    const decoder = new WavDecoder();
+    const decoder = new WavStreamDecoder();
     decoder.decode(data);
     decoder.free();
   });
@@ -39,19 +39,19 @@ describe('WavDecoder full decode() performance', () => {
   // Add more benches here statically for each fixture you care about.
 });
 
-describe('WavDecoder API comparison under looping conditions', () => {
+describe('WavStreamDecoder API comparison under looping conditions', () => {
 
   // Benchmark 1: Using the specialized 'decodeAligned' method in a loop.
   bench('block-by-block (using decodeAligned)', () => {
     // This setup is repeated inside each bench to ensure fixtures are loaded.
     const fileData = loadedFixtures.get('pcm_d16_le_stereo.wav')!;
-    const decoder = new WavDecoder();
+    const decoder = new WavStreamDecoder();
 
     // Initialize the decoder
     const header = fileData.subarray(0, 100);
     decoder.decode(header);
 
-    if (decoder.info.state !== State.DECODING) {
+    if (decoder.info.state !== DecoderState.DECODING) {
       throw new Error('Decoder failed to initialize.');
     }
 
@@ -76,12 +76,12 @@ describe('WavDecoder API comparison under looping conditions', () => {
   bench('block-by-block (using decode)', () => {
     // The setup is identical to the one above.
     const fileData = loadedFixtures.get('pcm_d16_le_stereo.wav')!;
-    const decoder = new WavDecoder();
+    const decoder = new WavStreamDecoder();
 
     const header = fileData.subarray(0, 100);
     decoder.decode(header);
 
-    if (decoder.info.state !== State.DECODING) {
+    if (decoder.info.state !== DecoderState.DECODING) {
       throw new Error('Decoder failed to initialize.');
     }
 

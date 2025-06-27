@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, test } from 'vitest';
-import { type WavDecodedAudio, State, type WavFormat, WavDecoder } from '../src';
+import { type WavDecodedAudio, DecoderState, type WaveFormat, WavStreamDecoder } from '../src';
 import { fixtureProperties } from './utils/fixtures';
 import { findStringInUint8Array, loadFixture } from './utils/helpers';
 
@@ -15,11 +15,11 @@ beforeAll(async () => {
   });
 });
 
-describe('WavDecoder', () => {
-  let decoder: WavDecoder;
+describe('WavStreamDecoder', () => {
+  let decoder: WavStreamDecoder;
 
   beforeEach(() => {
-    decoder = new WavDecoder();
+    decoder = new WavStreamDecoder();
   });
 
   test.each(Object.entries(fixtureProperties))(
@@ -27,7 +27,7 @@ describe('WavDecoder', () => {
     (fixtureName, expected) => {
       const audioData = loadedFixtures.get(fixtureName)!;
       const result: WavDecodedAudio = decoder.decode(audioData);
-      const format = decoder.info.format as WavFormat;
+      const format = decoder.info.format as WaveFormat;
 
       expect(result.errors, `File ${fixtureName} should have no errors`).toEqual([]);
       expect(format.formatTag, `File: ${fixtureName} - formatTag`).toBe(expected.formatTag);
@@ -54,7 +54,7 @@ describe('WavDecoder', () => {
     const body = audioData.subarray(headerEndOffset);
 
     decoder.decode(header);
-    expect(decoder.info.state).toBe(State.DECODING);
+    expect(decoder.info.state).toBe(DecoderState.DECODING);
 
     const { blockAlign } = decoder.info.format;
     expect(blockAlign, `File ${fixtureName} must have a valid blockAlign`).toBeGreaterThan(0);
@@ -89,18 +89,18 @@ describe('WavDecoder', () => {
 
     expect(flushResult).toBeNull();
     expect(internalBuffer.available).toBe(0);
-    expect(decoder.info.state).toBe(State.ENDED);
+    expect(decoder.info.state).toBe(DecoderState.ENDED);
     expect(decoder.info.errors[0]?.message).toContain('Discarded 3 bytes');
   });
 
   it('should free resources and end the decoder', () => {
     const audioData = loadedFixtures.get('pcm_d8_le_mono.wav')!;
     decoder.decode(audioData.subarray(0, 128));
-    expect(decoder.info.state).toBe(State.DECODING);
+    expect(decoder.info.state).toBe(DecoderState.DECODING);
 
     decoder.free();
 
-    expect(decoder.info.state).toBe(State.ENDED);
+    expect(decoder.info.state).toBe(DecoderState.ENDED);
     expect(decoder.info.format).toEqual({});
   });
 
@@ -111,7 +111,7 @@ describe('WavDecoder', () => {
     const result = decoder.decode(audioData);
 
     expect(result.samplesDecoded).toBe(0);
-    expect(decoder.info.state).toBe(State.ERROR);
+    expect(decoder.info.state).toBe(DecoderState.ERROR);
     expect(decoder.info.errors[0]?.message).toBe('Invalid WAV file');
   });
 });
