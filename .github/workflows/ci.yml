@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [ main, dev ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   test:
@@ -46,8 +46,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Clear previous benchmark file
+        run: rm -f benchmarks.json
+
       - name: Run benchmarks
-        run: pnpm vitest bench --run --reporter json > benchmarks.json
+        run: pnpm vitest bench --run --reporter=default --outputFile=benchmarks.json
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
@@ -77,7 +80,8 @@ jobs:
 
       - name: Verify build artifacts
         run: |
+          echo "Verifying build artifacts:"
           ls -lh dist
-          [ -f dist/index.js ] || exit 1
-          [ -f dist/index.mjs ] || exit 1
-          [ -f dist/index.d.ts ] || exit 1
+          [ -f dist/index.js ] || (echo "Missing index.js" && exit 1)
+          [ -f dist/index.mjs ] || (echo "Missing index.mjs" && exit 1)
+          [ -f dist/index.d.ts ] || (echo "Missing index.d.ts" && exit 1)
