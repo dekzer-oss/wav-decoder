@@ -1,0 +1,8 @@
+{
+  "mode": "pre",
+  "tag": "beta",
+  "initialVersions": {
+    "streaming-wav-decoder": "1.0.0"
+  },
+  "changesets": []
+}
