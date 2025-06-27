@@ -50,7 +50,7 @@ jobs:
         run: pnpm vitest bench --run --reporter json > benchmarks.json
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
           path: benchmarks.json
