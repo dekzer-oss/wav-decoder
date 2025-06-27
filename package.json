@@ -52,7 +52,7 @@
     "test:node": "vitest run --project node",
     "test:browser": "vitest run --project browser --poolOptions.browser.isolate=false --poolOptions.browser.concurrent=3",
     "test:all": "pnpm exec playwright install && pnpm -r run test:node & pnpm -r run test:browser & wait",
-    "bench": "vitest bench --run --reporter verbose",
+    "bench": "vitest bench --run --project node --reporter=default --outputFile=benchmarks.json",
     "build": "tsup",
     "build:verify": "tsup && node --eval \"import('./dist/index.js').then(m => console.log('✓ Build verified'))\"",
     "release": "pnpm test:all && pnpm build && changeset publish"
