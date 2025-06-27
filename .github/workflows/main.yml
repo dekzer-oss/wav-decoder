@@ -9,9 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        environment: [node, dom, browser]
     steps:
       - uses: actions/checkout@v4
 
@@ -26,15 +23,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run tests (${{ matrix.environment }})
-        run: |
-          if [ "${{ matrix.environment }}" = "node" ]; then
-            pnpm test:node
-          elif [ "${{ matrix.environment }}" = "dom" ]; then
-            pnpm test:dom
-          else
-            pnpm test:browser
-          fi
+      - name: Install browsers for Playwright
+        run: pnpm exec playwright install
+
+      - name: Run all tests
+        run: pnpm test:all
 
   benchmarks:
     runs-on: ubuntu-latest
