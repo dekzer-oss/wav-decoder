@@ -2,26 +2,32 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    globals: true,
-    environment: 'happy-dom',
-    include: ['tests/**/*.test.ts'],
-    exclude: ['tests/**/*.bench.ts'],
-    browser: {
-      provider: 'playwright',
-      enabled: true,
-      headless: true,
-      screenshotFailures: false,
-      instances: [
-        {
-          browser: 'chromium',
+    projects: [
+      {
+        test: {
+          name: 'node',
+          environment: 'node',
+          globals: true,
+          include: ['tests/**/*.test.ts'],
+          exclude: ['tests/**/*.bench.ts'],
         },
-        {
-          browser: 'firefox',
+      },
+      {
+        test: {
+          name: 'browser',
+          environment: 'happy-dom',
+          globals: true,
+          include: ['tests/**/*.test.ts'],
+          exclude: ['tests/**/*.bench.ts'],
+          browser: {
+            provider: 'playwright',
+            enabled: true,
+            headless: true,
+            screenshotFailures: false,
+            instances: [{ browser: 'chromium' }, { browser: 'firefox' }, { browser: 'webkit' }],
+          },
         },
-        {
-          browser: 'webkit',
-        },
-      ],
-    },
+      },
+    ],
   },
 });

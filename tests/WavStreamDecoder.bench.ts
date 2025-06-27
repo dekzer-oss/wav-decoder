@@ -40,7 +40,6 @@ describe('WavStreamDecoder full decode() performance', () => {
 });
 
 describe('WavStreamDecoder API comparison under looping conditions', () => {
-
   // Benchmark 1: Using the specialized 'decodeAligned' method in a loop.
   bench('block-by-block (using decodeAligned)', () => {
     // This setup is repeated inside each bench to ensure fixtures are loaded.
@@ -70,7 +69,6 @@ describe('WavStreamDecoder API comparison under looping conditions', () => {
 
     decoder.free();
   });
-
 
   // Benchmark 2: Using the standard 'decode' method in the same loop.
   bench('block-by-block (using decode)', () => {

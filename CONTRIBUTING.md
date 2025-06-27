@@ -15,17 +15,20 @@ Supports PCM, IEEE float, A-law, µ-law — fully endianness-aware.
 ## 🚀 Getting Started
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/dekzer-oss/streaming-wav-decoder.git
    cd streaming-wav-decoder
    ```
 
 2. **Install dependencies**
+
    ```bash
    pnpm install
    ```
 
 3. **Run tests**
+
    ```bash
    pnpm test
    ```
@@ -34,24 +37,25 @@ Supports PCM, IEEE float, A-law, µ-law — fully endianness-aware.
    ```bash
    pnpm demo
    ```
+
 ---
 
 ## ✅ Contributing Guidelines
 
 ### ✨ Features & Fixes
 
-* Keep code modular and minimal.
-* Avoid adding runtime dependencies.
-* Write clear, typed, readable TypeScript.
+- Keep code modular and minimal.
+- Avoid adding runtime dependencies.
+- Write clear, typed, readable TypeScript.
 
 ### 🧪 Tests
 
-* All changes should include relevant tests (`vitest` is used).
-* Use `test:node`, `test:dom`, and `test:browser` as needed.
+- All changes should include relevant tests (`vitest` is used).
+- Use `test:node`, `test:dom`, and `test:browser` as needed.
 
 ### 🎨 Formatting
 
-* Run Prettier before committing:
+- Run Prettier before committing:
 
   ```bash
   pnpm format
@@ -79,9 +83,9 @@ Supports PCM, IEEE float, A-law, µ-law — fully endianness-aware.
 
 Feel free to open:
 
-* An [Issue](https://github.com/dekzer-oss/streaming-wav-decoder/issues)
-* A [Discussion](https://github.com/dekzer-oss/streaming-wav-decoder/discussions)
-* Or reach out directly.
+- An [Issue](https://github.com/dekzer-oss/streaming-wav-decoder/issues)
+- A [Discussion](https://github.com/dekzer-oss/streaming-wav-decoder/discussions)
+- Or reach out directly.
 
 ---
 

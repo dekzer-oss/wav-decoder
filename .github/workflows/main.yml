@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [node, dom, browser]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tests (${{ matrix.environment }})
+        run: |
+          if [ "${{ matrix.environment }}" = "node" ]; then
+            pnpm test:node
+          elif [ "${{ matrix.environment }}" = "dom" ]; then
+            pnpm test:dom
+          else
+            pnpm test:browser
+          fi
+
+  benchmarks:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run benchmarks
+        run: pnpm vitest bench --run --reporter json > benchmarks.json
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: benchmarks.json
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Verify build artifacts
+        run: |
+          ls -lh dist
+          [ -f dist/index.js ] || exit 1
+          [ -f dist/index.mjs ] || exit 1
+          [ -f dist/index.d.ts ] || exit 1

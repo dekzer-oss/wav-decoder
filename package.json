@@ -9,6 +9,9 @@
     "type": "git",
     "url": "https://github.com/dekzer-oss/streaming-wav-decoder.git"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "keywords": [
     "wav",
     "audio",
@@ -39,29 +42,30 @@
   "files": [
     "dist"
   ],
+  "sideEffects": false,
   "scripts": {
     "dev": "vitest",
     "demo": "vite",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:node": "vitest run --environment node",
-    "test:dom": "vitest run --environment happy-dom",
-    "test:browser": "vitest run --browser",
-    "test:all": "pnpm test:node && pnpm test:dom && pnpm test:browser",
+    "test:node": "vitest run --project node",
+    "test:browser": "vitest run --project browser --poolOptions.browser.isolate=false --poolOptions.browser.concurrent=3",
+    "test:all": "pnpm exec playwright install && pnpm -r run test:node & pnpm -r run test:browser & wait",
     "bench": "vitest bench --run --reporter verbose",
     "build": "tsup",
-    "release": "pnpm build && changeset publish"
+    "build:verify": "tsup && node --eval \"import('./dist/index.js').then(m => console.log('✓ Build verified'))\"",
+    "release": "pnpm test:all && pnpm build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "@playwright/test": "^1.53.1",
-    "@types/node": "^24.0.4",
+    "@types/node": "^24.0.5",
     "@vitest/browser": "^3.2.4",
     "happy-dom": "^18.0.1",
-    "prettier": "^3.6.1",
+    "prettier": "^3.6.2",
     "tsup": "^8.5.0",
-    "typescript": "^5.0.0",
+    "typescript": "^5.8.3",
     "vite": "^7.0.0",
     "vitest": "^3.2.4"
   }

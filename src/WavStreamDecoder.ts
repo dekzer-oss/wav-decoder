@@ -456,7 +456,9 @@ export class WavStreamDecoder {
     }
 
     if (this.format.channels > WavStreamDecoder.MAX_CHANNELS) {
-      this.errors.push(this.createError(`Too many channels: ${this.format.channels} (max ${WavStreamDecoder.MAX_CHANNELS})`));
+      this.errors.push(
+        this.createError(`Too many channels: ${this.format.channels} (max ${WavStreamDecoder.MAX_CHANNELS})`)
+      );
       return false;
     }
 
