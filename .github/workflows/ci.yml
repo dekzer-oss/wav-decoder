@@ -12,6 +12,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install system dependencies (for browser tests)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-0 libasound2 libnss3 libxss1 libx11-xcb1 libxcomposite1 \
+            libxdamage1 libxrandr2 libgbm1 libatk1.0-0 libcups2 libxshmfence1 \
+            libglu1-mesa libpangocairo-1.0-0 libpangoft2-1.0-0 fonts-liberation \
+            libappindicator3-1 libsecret-1-0 lsb-release
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -23,8 +32,57 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run all tests
-        run: pnpm test:all
+      - name: Install browsers for Playwright
+        run: pnpm exec playwright install
+
+      - name: Run all tests (Node + Browser)
+        run: xvfb-run -a pnpm test:all
+
+  benchmarks:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies (for browser benchmarks)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-0 libasound2 libnss3 libxss1 libx11-xcb1 libxcomposite1 \
+            libxdamage1 libxrandr2 libgbm1 libatk1.0-0 libcups2 libxshmfence1 \
+            libglu1-mesa libpangocairo-1.0-0 libpangoft2-1.0-0 fonts-liberation \
+            libappindicator3-1 libsecret-1-0 lsb-release
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install browsers for Playwright
+        run: pnpm exec playwright install
+
+      - name: Clear previous benchmark files
+        run: rm -f node-benchmarks.json browser-benchmarks.json
+
+      - name: Run Node benchmarks
+        run: pnpm vitest bench --run --project=node --outputFile=node-benchmarks.json
+
+      - name: Run Browser benchmarks
+        run: xvfb-run -a pnpm vitest bench --run --project=browser --outputFile=browser-benchmarks.json
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            node-benchmarks.json
+            browser-benchmarks.json
 
   build:
     runs-on: ubuntu-latest
@@ -50,6 +108,6 @@ jobs:
         run: |
           echo "Verifying build artifacts:"
           ls -lh dist
-          [ -f dist/index.js ] || (echo "❌ Missing index.js" && exit 1)
-          [ -f dist/index.mjs ] || (echo "❌ Missing index.mjs" && exit 1)
-          [ -f dist/index.d.ts ] || (echo "❌ Missing index.d.ts" && exit 1)
+          [ -f dist/index.js ] || (echo "Missing index.js" && exit 1)
+          [ -f dist/index.mjs ] || (echo "Missing index.mjs" && exit 1)
+          [ -f dist/index.d.ts ] || (echo "Missing index.d.ts" && exit 1)
