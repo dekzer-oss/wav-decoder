@@ -46,17 +46,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Clear previous benchmark file
-        run: rm -f benchmarks.json
+      - name: Install browsers for Playwright
+        run: pnpm exec playwright install
 
-      - name: Run benchmarks (Node only)
-        run: pnpm bench
+      - name: Clear previous benchmark files
+        run: rm -f node-benchmarks.json browser-benchmarks.json
+
+      - name: Run Node benchmarks
+        run: pnpm vitest bench --run --reporter=json --project=node > node-benchmarks.json
+
+      - name: Run Browser benchmarks
+        run: pnpm vitest bench --run --reporter=json --project=browser > browser-benchmarks.json
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
-          path: benchmarks.json
+          path: |
+            node-benchmarks.json
+            browser-benchmarks.json
 
   build:
     runs-on: ubuntu-latest

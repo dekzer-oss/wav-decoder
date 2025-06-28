@@ -42,14 +42,14 @@ const KSDATAFORMAT_SUBTYPE_IEEE_FLOAT = new Uint8Array([
  * It supports PCM (8, 16, 24, 32-bit), IEEE Float (32, 64-bit), A-Law, and µ-Law formats.
  * It is designed to be highly resilient to malformed files and can be used in any JavaScript environment.
  */
-export class WavStreamDecoder {
+export class WavDecoder {
   private static readonly MAX_HEADER_SIZE = 2 * 1024 * 1024;
   private static readonly MAX_AUDIO_BUFFER_SIZE = 16 * 1024 * 1024;
   private static readonly MAX_CHANNELS = 32;
   private static readonly MAX_SAMPLE_RATE = 384000;
 
-  private static readonly ALAW_TABLE: Float32Array = WavStreamDecoder.buildAlawTable();
-  private static readonly MULAW_TABLE: Float32Array = WavStreamDecoder.buildMulawTable();
+  private static readonly ALAW_TABLE: Float32Array = WavDecoder.buildAlawTable();
+  private static readonly MULAW_TABLE: Float32Array = WavDecoder.buildMulawTable();
 
   private readonly errors: DecodeError[] = [];
 
@@ -67,7 +67,7 @@ export class WavStreamDecoder {
   private pendingHeaderData = new Uint8Array(0);
 
   constructor() {
-    this.audioBuffer = new RingBuffer(WavStreamDecoder.MAX_AUDIO_BUFFER_SIZE);
+    this.audioBuffer = new RingBuffer(WavDecoder.MAX_AUDIO_BUFFER_SIZE);
   }
 
   /**
@@ -180,7 +180,7 @@ export class WavStreamDecoder {
 
     try {
       if (this.state === DecoderState.UNINIT) {
-        if (this.pendingHeaderData.length + chunk.length > WavStreamDecoder.MAX_HEADER_SIZE) {
+        if (this.pendingHeaderData.length + chunk.length > WavDecoder.MAX_HEADER_SIZE) {
           this.state = DecoderState.ERROR;
           return this.createErrorResult('Header size exceeds maximum limit.');
         }
@@ -455,16 +455,16 @@ export class WavStreamDecoder {
       return false;
     }
 
-    if (this.format.channels > WavStreamDecoder.MAX_CHANNELS) {
+    if (this.format.channels > WavDecoder.MAX_CHANNELS) {
       this.errors.push(
-        this.createError(`Too many channels: ${this.format.channels} (max ${WavStreamDecoder.MAX_CHANNELS})`)
+        this.createError(`Too many channels: ${this.format.channels} (max ${WavDecoder.MAX_CHANNELS})`)
       );
       return false;
     }
 
-    if (this.format.sampleRate > WavStreamDecoder.MAX_SAMPLE_RATE) {
+    if (this.format.sampleRate > WavDecoder.MAX_SAMPLE_RATE) {
       this.errors.push(
-        this.createError(`Sample rate too high: ${this.format.sampleRate} (max ${WavStreamDecoder.MAX_SAMPLE_RATE})`)
+        this.createError(`Sample rate too high: ${this.format.sampleRate} (max ${WavDecoder.MAX_SAMPLE_RATE})`)
       );
       return false;
     }
@@ -568,11 +568,11 @@ export class WavStreamDecoder {
   }
 
   private readAlaw(view: DataView, off: number): number {
-    return WavStreamDecoder.ALAW_TABLE[view.getUint8(off)] || 0;
+    return WavDecoder.ALAW_TABLE[view.getUint8(off)] || 0;
   }
 
   private readMulaw(view: DataView, off: number): number {
-    return WavStreamDecoder.MULAW_TABLE[view.getUint8(off)] || 0;
+    return WavDecoder.MULAW_TABLE[view.getUint8(off)] || 0;
   }
 
   private arraysEqual(a: Uint8Array, b: Uint8Array): boolean {

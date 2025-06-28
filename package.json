@@ -1,32 +1,37 @@
 {
   "name": "streaming-wav-decoder",
   "version": "1.0.0",
-  "description": "A robust, streaming-capable WAV audio decoder with full PCM and float support — zero dependencies, works anywhere JavaScript runs.",
-  "license": "MIT",
+  "description": "A robust, streaming-capable WAV audio decoder with full PCM, float, A-law, and µ-law support — zero dependencies, works in browsers and Node.js.",
   "author": "Maikel Eckelboom",
+  "license": "MIT",
   "homepage": "https://github.com/dekzer-oss/streaming-wav-decoder#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/dekzer-oss/streaming-wav-decoder.git"
   },
+  "bugs": {
+    "url": "https://github.com/dekzer-oss/streaming-wav-decoder/issues"
+  },
+  "packageManager": "pnpm@10.12.4",
   "engines": {
     "node": ">=20.0.0"
   },
   "keywords": [
     "wav",
-    "audio",
     "streaming",
+    "audio",
     "decoder",
     "pcm",
     "ieee-float",
-    "javascript",
-    "browser",
-    "nodejs",
     "a-law",
     "mu-law",
     "waveform",
-    "real-time",
-    "audioworklet"
+    "realtime",
+    "javascript",
+    "browser",
+    "nodejs",
+    "audioworklet",
+    "zero-dependencies"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -55,7 +60,7 @@
     "bench": "vitest bench --run --project node --reporter=default --outputFile=benchmarks.json",
     "build": "tsup",
     "build:verify": "tsup && node --eval \"import('./dist/index.js').then(m => console.log('✓ Build verified'))\"",
-    "release": "pnpm test:all && pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",

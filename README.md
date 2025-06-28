@@ -1,4 +1,4 @@
-# 🎧 streaming-wav-decoder
+# 🎷 streaming-wav-decoder
 
 A robust, streaming-capable WAV audio decoder with full PCM and float support — zero dependencies, works anywhere JavaScript runs.
 
@@ -24,26 +24,26 @@ Coming soon — [demo link placeholder](https://your-demo-url.com)
 
 ### 🤔 Why Not `decodeAudioData`?
 
-- Requires full download of audio file before decoding begins
-- Consumes large memory for long or high-resolution files
-- Cannot operate on live streams, blobs, or real-time sources
-- Incompatible with `AudioWorklet`-style low-latency workflows
+* Requires full download of audio file before decoding begins
+* Consumes large memory for long or high-resolution files
+* Cannot operate on live streams, blobs, or real-time sources
+* Incompatible with `AudioWorklet`-style low-latency workflows
 
 ---
 
 ### ✅ Key Features
 
-- **Streaming-First API**: Decode audio as bytes arrive from a network stream, file, or any other source
-- **Comprehensive Format Support**: PCM (8–32 bit), IEEE Float (32/64), A-Law, µ-Law
-- **Truly Isomorphic**: Works in browsers, Node.js, Web Workers, AudioWorklets
-- **Zero Dependencies**: Fully standalone, modern TypeScript, tree-shakable
-- **Endian-Safe**: Supports both `RIFF` (LE) and `RIFX` (BE) formats
-- **Real-Time Aligned Mode**: `decodeAligned()` bypasses buffering for ultra-low latency
-- **Battle-Tested**: Fuzzed, 100% test coverage, hardened with golden test sets
+* **Streaming-First API**: Decode audio as bytes arrive from a network stream, file, or any other source
+* **Comprehensive Format Support**: PCM (8–32 bit), IEEE Float (32/64), A-Law, µ-Law
+* **Truly Isomorphic**: Works in browsers, Node.js, Web Workers, AudioWorklets
+* **Zero Dependencies**: Fully standalone, modern TypeScript, tree-shakable
+* **Endian-Safe**: Supports both `RIFF` (LE) and `RIFX` (BE) formats
+* **Real-Time Aligned Mode**: `decodeAligned()` bypasses buffering for ultra-low latency
+* **Battle-Tested**: Fuzzed, 100% test coverage, hardened with golden test sets
 
 ---
 
-### 📦 Installation
+### 🛆 Installation
 
 ```bash
 # pnpm
@@ -63,11 +63,12 @@ yarn add streaming-wav-decoder
 This example shows how to progressively decode a WAV file fetched from a URL.
 
 ```ts
-import { WavStreamDecoder } from 'streaming-wav-decoder';
+import { WavDecoder } from 'streaming-wav-decoder';
 
 async function decodeAudioStream(url: string) {
-  const decoder = new WavStreamDecoder();
+  const decoder = new WavDecoder();
   const response = await fetch(url);
+  if (!response.body) throw new Error('No response body');
   const reader = response.body.getReader();
 
   while (true) {
@@ -98,29 +99,29 @@ The decoder provides two distinct decoding methods, designed for different use c
 
 #### `decode(chunk: Uint8Array)`
 
-- **Best for**: General-purpose streaming from files or network requests
-- **Behavior**: Parses WAV header, buffers unaligned data safely
-- **Notes**: Use this for most use cases — it's robust and handles malformed input
+* **Best for**: General-purpose streaming from files or network requests
+* **Behavior**: Parses WAV header, buffers unaligned data safely
+* **Notes**: Use this for most use cases — it's robust and handles malformed input
 
 #### `decodeAligned(block: Uint8Array)`
 
-- **Best for**: AudioWorklets, DSP engines, real-time byte-accurate pipelines
-- **Requirement**: Input must be block-aligned: `block.length % decoder.info.format.blockAlign === 0`
-- **Behavior**: Skips buffering for optimal performance — ideal for hot paths
+* **Best for**: AudioWorklets, DSP engines, real-time byte-accurate pipelines
+* **Requirement**: Input must be block-aligned: `block.length % decoder.info.format.blockAlign === 0`
+* **Behavior**: Skips buffering for optimal performance — ideal for hot paths
 
 #### Other Core Methods & Properties
 
-- `new WavStreamDecoder()`: Creates a decoder instance
-- `flush()`: Flushes remaining buffer at the end of a stream
-- `reset()` / `free()`: Resets state for decoding a new file
-- `info`: Exposes stream metadata: sample rate, format, channels, block alignment, etc.
+* `new WavDecoder()`: Creates a decoder instance
+* `flush()`: Flushes remaining buffer at the end of a stream
+* `reset()` / `free()`: Resets state for decoding a new file
+* `info`: Exposes stream metadata: sample rate, format, channels, block alignment, etc.
 
 ---
 
 ### 🚀 Performance: The "Fast Path" Explained
 
 | Method            | Best For          | Internal Overhead                                     |
-| ----------------- | ----------------- | ----------------------------------------------------- |
+|-------------------|-------------------|-------------------------------------------------------|
 | `decode()`        | General Streaming | Manages internal buffer, handles unaligned chunks     |
 | `decodeAligned()` | Real-time / DSP   | **Bypasses buffer**, block-aligned, ultra-low-latency |
 
@@ -131,23 +132,26 @@ In real-time decoding tests across Chrome, Firefox, and Safari, `decodeAligned()
 
 ### 🧭 Roadmap
 
-- \[✅ **v1.0: Core Decoder**]
-  - Streaming chunk-based decoding
-  - Accurate WAV format parsing
-  - Complete test suite
+* ✔️ **v1.0: Core Decoder**
 
-- \[⏳ **v1.1: Debugging + Diagnostics**]
-  - Detailed error messages
-  - Recovery heuristics
-  - Mutation testing integration
+  * Streaming chunk-based decoding
+  * Accurate WAV format parsing
+  * Complete test suite
 
-- \[🚀 **v2.0: Metadata Support**]
-  - Parse `LIST`, `INFO`, `bext`, `cue `, and markers
-  - Expose tags via `info.tags`
+* ⏳ **v1.1: Debugging + Diagnostics**
+
+  * Detailed error messages
+  * Recovery heuristics
+  * Mutation testing integration
+
+* 🚀 **v2.0: Metadata Support**
+
+  * Parse `LIST`, `INFO`, `bext`, `cue `, and markers
+  * Expose tags via `info.tags`
 
 ---
 
-### 🪪 License
+### 🧺 License
 
 Licensed under the [MIT License](./LICENSE).
 See [opensource.org/licenses/MIT](https://opensource.org/licenses/MIT) for full text.

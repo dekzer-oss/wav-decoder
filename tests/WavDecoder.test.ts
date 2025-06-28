@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, test } from 'vitest';
-import { type WavDecodedAudio, DecoderState, type WaveFormat, WavStreamDecoder } from '../src';
+import { type WavDecodedAudio, DecoderState, type WaveFormat, WavDecoder } from '../src';
 import { fixtureProperties } from './utils/fixtures';
 import { findStringInUint8Array, loadFixture } from './utils/helpers';
 
@@ -15,11 +15,11 @@ beforeAll(async () => {
   });
 });
 
-describe('WavStreamDecoder', () => {
-  let decoder: WavStreamDecoder;
+describe('WavDecoder', () => {
+  let decoder: WavDecoder;
 
   beforeEach(() => {
-    decoder = new WavStreamDecoder();
+    decoder = new WavDecoder();
   });
 
   test.each(Object.entries(fixtureProperties))(

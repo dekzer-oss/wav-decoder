@@ -218,7 +218,7 @@
       </main>
     </div>
     <script type="module">
-      import { WavStreamDecoder } from '../src';
+      import { WavDecoder } from '../src';
 
       function formatBytes(bytes) {
         if (bytes === 0) return '0 bytes';
@@ -278,7 +278,7 @@
           this.elements = this.getElements();
           this.metrics = new Metrics();
           this.logger = new Logger(this.elements.logSection);
-          this.decoder = new WavStreamDecoder();
+          this.decoder = new WavDecoder();
           this.audioCtx = null;
           this.audioQueue = [];
           this.playing = false;
