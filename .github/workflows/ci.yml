@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [main, dev]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
@@ -12,31 +12,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system dependencies (Ubuntu 24.04 for Playwright)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libxi6 libxrender1 gstreamer1.0-libav gstreamer1.0-plugins-bad \
-            gstreamer1.0-plugins-base gstreamer1.0-plugins-good libicu74 \
-            libatomic1 libenchant-2-2 libepoxy0 libevent-2.1-7t64 libflite1 \
-            libgles2 libgstreamer-gl1.0-0 libgstreamer-plugins-bad1.0-0 \
-            libgstreamer-plugins-base1.0-0 libgstreamer1.0-0 libgtk-4-1 \
-            libharfbuzz-icu0 libharfbuzz0b libhyphen0 libjpeg-turbo8 \
-            liblcms2-2 libmanette-0.2-0 libopus0
-
-      - name: Setup Node.js
+      - name: Setup Node.js & pnpm
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - run: npm install -g pnpm
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Cache Playwright browsers & deps
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install browsers for Playwright
-        run: pnpm exec playwright install
+      - name: Install Playwright browsers + system deps
+        run: pnpm exec playwright install --with-deps
 
       - name: Run all tests (Node + Browser)
         run: xvfb-run -a pnpm test:all
@@ -47,33 +46,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system dependencies (Ubuntu 24.04 for Playwright)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libxi6 libxrender1 gstreamer1.0-libav gstreamer1.0-plugins-bad \
-            gstreamer1.0-plugins-base gstreamer1.0-plugins-good libicu74 \
-            libatomic1 libenchant-2-2 libepoxy0 libevent-2.1-7t64 libflite1 \
-            libgles2 libgstreamer-gl1.0-0 libgstreamer-plugins-bad1.0-0 \
-            libgstreamer-plugins-base1.0-0 libgstreamer1.0-0 libgtk-4-1 \
-            libharfbuzz-icu0 libharfbuzz0b libhyphen0 libjpeg-turbo8 \
-            liblcms2-2 libmanette-0.2-0 libopus0
-
-      - name: Setup Node.js
+      - name: Setup Node.js & pnpm
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - run: npm install -g pnpm
+
+      - name: Restore caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-ci-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install browsers for Playwright
-        run: pnpm exec playwright install
+      - name: Install Playwright browsers + system deps
+        run: pnpm exec playwright install --with-deps
 
-      - name: Clear previous benchmark files
+      - name: Clean previous benchmarks
         run: rm -f node-benchmarks.json browser-benchmarks.json
 
       - name: Run Node benchmarks
@@ -96,13 +90,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js & pnpm
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - run: npm install -g pnpm
+
+      - name: Restore pnpm store cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
         run: pnpm install
@@ -114,6 +113,6 @@ jobs:
         run: |
           echo "Verifying build artifacts:"
           ls -lh dist
-          [ -f dist/index.js ] || (echo "Missing index.js" && exit 1)
-          [ -f dist/index.mjs ] || (echo "Missing index.mjs" && exit 1)
-          [ -f dist/index.d.ts ] || (echo "Missing index.d.ts" && exit 1)
+          [ -f dist/index.js ]   || (echo "❌ Missing index.js"   && exit 1)
+          [ -f dist/index.mjs ]  || (echo "❌ Missing index.mjs"  && exit 1)
+          [ -f dist/index.d.ts ] || (echo "❌ Missing index.d.ts" && exit 1)
