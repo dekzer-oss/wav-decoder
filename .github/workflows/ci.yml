@@ -53,10 +53,10 @@ jobs:
         run: rm -f node-benchmarks.json browser-benchmarks.json
 
       - name: Run Node benchmarks
-        run: pnpm vitest bench --run --reporter=json --project=node > node-benchmarks.json
+        run: pnpm vitest bench --run --project=node --outputFile=node-benchmarks.json
 
       - name: Run Browser benchmarks
-        run: pnpm vitest bench --run --reporter=json --project=browser > browser-benchmarks.json
+        run: pnpm vitest bench --run --project=browser --outputFile=browser-benchmarks.json
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
