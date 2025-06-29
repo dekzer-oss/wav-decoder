@@ -92,11 +92,11 @@
               <input
                 type="checkbox"
                 id="autoplayToggle"
-                class="accent-blue-600 dark:accent-blue-400 mt-1.75 size-4"
+                class="accent-blue-600 dark:accent-blue-400 mt-1.75 size-3"
                 aria-label="Autoplay toggle"
               />
               <span class="flex flex-col">
-                <span class="text-sm font-semibold">Play/Autoplay</span>
+                <span>Autoplay</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400"
                   >Start playback automatically after decoding</span
                 >
@@ -218,7 +218,7 @@
       </main>
     </div>
     <script type="module">
-      import { WavDecoder } from '../src';
+      import { WaveDecoder } from '../src';
 
       function formatBytes(bytes) {
         if (bytes === 0) return '0 bytes';
@@ -255,6 +255,7 @@
           this.container.appendChild(entry);
           this.container.scrollTop = this.container.scrollHeight;
         }
+
       }
 
       class Metrics {
@@ -278,7 +279,7 @@
           this.elements = this.getElements();
           this.metrics = new Metrics();
           this.logger = new Logger(this.elements.logSection);
-          this.decoder = new WavDecoder();
+          this.decoder = new WaveDecoder();
           this.audioCtx = null;
           this.audioQueue = [];
           this.playing = false;
@@ -403,16 +404,16 @@
 
         updateMetrics(info, totalSamples) {
           const elapsed = (performance.now() - this.metrics.startTime) / 1000;
-          this.elements.bytesProcessed.textContent = formatBytes(info.bytesDecoded);
+          this.elements.bytesProcessed.textContent = formatBytes(info.decodedBytes);
           this.elements.samplesDecoded.textContent = totalSamples.toLocaleString();
-          if (elapsed > 0) this.elements.decodingSpeed.textContent = formatSpeed(info.bytesDecoded / elapsed);
+          if (elapsed > 0) this.elements.decodingSpeed.textContent = formatSpeed(info.decodedBytes / elapsed);
         }
 
         updateAudioInfo(format, estimatedSamples) {
           const formats = { 1: 'PCM', 3: 'IEEE Float', 6: 'A-Law', 7: 'µ-Law', 65534: 'Extensible' };
           this.elements.formatInfo.textContent = formats[format.formatTag] || `Unknown (${format.formatTag})`;
           this.elements.sampleRateInfo.textContent = `${format.sampleRate.toLocaleString()} Hz`;
-          this.elements.channelsInfo.textContent = format.channels;
+          this.elements.channelsInfo.textContent = format.numChannels;
           this.elements.bitDepthInfo.textContent = `${format.bitsPerSample}-bit`;
           if (estimatedSamples > 0 && format.sampleRate > 0) {
             const duration = estimatedSamples / format.sampleRate;
@@ -454,7 +455,7 @@
 
         stopPlayback() {
           if (this.currentSource) {
-            this.currentSource.onended = null; // Prevent onended from firing
+            this.currentSource.onended = null;
             this.currentSource.stop();
             this.currentSource = null;
           }
@@ -498,9 +499,10 @@
                 }
                 const dur = (performance.now() - this.metrics.startTime) / 1000;
                 this.logger.log(
-                  `Completed in ${dur.toFixed(2)}s • ${totalSamples.toLocaleString()} samples`,
+                  `Completed in ${dur.toFixed(2)}s • ${totalSamples.toLocaleString()} samplesDecoded`,
                   'success'
                 );
+                console.log({ info: this.decoder.info });
               } catch (err) {
                 this.logger.log(`Finalization error: ${err.message}`, 'warning');
               }
@@ -525,12 +527,13 @@
                 if (!hasFirstAudio) {
                   const ttfa = this.metrics.markFirstAudio();
                   this.elements.ttfaTime.textContent = `${ttfa.toFixed(1)}ms`;
+                  console.log({ info })
                   hasFirstAudio = true;
                 }
                 if (!hasAudioInfo && info.format.sampleRate) {
                   this.updateAudioInfo(info.format, this.decoder.estimatedSamples);
                   this.logger.log(
-                    `Format: ${info.format.channels}ch ${info.format.sampleRate}Hz ${info.format.bitsPerSample}-bit`,
+                    `Format: ${info.format.numChannels}ch ${info.format.sampleRate}Hz ${info.format.bitsPerSample}-bit`,
                     'info'
                   );
                   hasAudioInfo = true;

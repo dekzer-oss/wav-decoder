@@ -1,5 +1,5 @@
 import { beforeAll, bench, describe } from 'vitest';
-import { DecoderState, WavDecoder } from '../src';
+import { DecoderState, WaveDecoder } from '../src';
 import { fixtureProperties } from './utils/fixtures';
 import { loadFixture } from './utils/helpers';
 
@@ -14,70 +14,69 @@ beforeAll(async () => {
   });
 });
 
-describe('WavDecoder full decode() performance', () => {
+describe('WaveDecoder full decode() performance', () => {
   bench('8bit_mono.wav - decode', () => {
     const data = loadedFixtures.get('8bit_mono.wav')!;
-    const decoder = new WavDecoder();
+    const decoder = new WaveDecoder();
     decoder.decode(data);
     decoder.free();
   });
 
   bench('pcm_d16_le_stereo.wav - decode', () => {
     const data = loadedFixtures.get('pcm_d16_le_stereo.wav')!;
-    const decoder = new WavDecoder();
+    const decoder = new WaveDecoder();
     decoder.decode(data);
     decoder.free();
   });
 
   bench('pcm_d24_be_stereo.wav - decode', () => {
     const data = loadedFixtures.get('pcm_d24_be_stereo.wav')!;
-    const decoder = new WavDecoder();
+    const decoder = new WaveDecoder();
     decoder.decode(data);
     decoder.free();
   });
 });
 
-describe('WavDecoder API comparison under looping conditions', () => {
-  bench('block-by-block (using decodeAligned)', () => {
-    const fileData = loadedFixtures.get('pcm_d16_le_stereo.wav')!;
-    const decoder = new WavDecoder();
+describe('WaveDecoder API comparison under looping conditions', () => {
+  const setupDecoderWithBody = (fixtureName: string) => {
+    const fileData = loadedFixtures.get(fixtureName)!;
+    const decoder = new WaveDecoder();
 
-    const header = fileData.subarray(0, 100);
+    const dataChunkStart = fileData.findIndex((byte, i) =>
+      i + 3 < fileData.length &&
+      String.fromCharCode(byte) === 'd' &&
+      String.fromCharCode(fileData[i + 1]!) === 'a' &&
+      String.fromCharCode(fileData[i + 2]!) === 't' &&
+      String.fromCharCode(fileData[i + 3]!) === 'a'
+    );
+    const headerEndOffset = dataChunkStart + 8;
+    const header = fileData.subarray(0, headerEndOffset);
+    const body = fileData.subarray(headerEndOffset);
+
     decoder.decode(header);
-
     if (decoder.info.state !== DecoderState.DECODING) {
       throw new Error('Decoder failed to initialize.');
     }
+    return { decoder, body, format: decoder.info.format };
+  };
 
-    const headerBytesProcessed = decoder.info.bytesDecoded;
-    const body = fileData.subarray(headerBytesProcessed);
-    const { blockAlign } = decoder.info.format;
+  bench('block-by-block (using decodeFrames)', () => {
+    const { decoder, body, format } = setupDecoderWithBody('pcm_d16_le_stereo.wav');
+    const { blockAlign } = format;
     const chunkSize = blockAlign * 512;
 
     for (let i = 0; i < body.length; i += chunkSize) {
       const chunk = body.subarray(i, i + chunkSize);
       if (chunk.length % blockAlign === 0) {
-        decoder.decodeAligned(chunk);
+        decoder.decodeFrames(chunk);
       }
     }
-
     decoder.free();
   });
 
   bench('block-by-block (using decode)', () => {
-    const fileData = loadedFixtures.get('pcm_d16_le_stereo.wav')!;
-    const decoder = new WavDecoder();
-
-    const header = fileData.subarray(0, 100);
-    decoder.decode(header);
-
-    if (decoder.info.state !== DecoderState.DECODING) {
-      throw new Error('Decoder failed to initialize.');
-    }
-
-    const headerBytesProcessed = decoder.info.bytesDecoded;
-    const body = fileData.subarray(headerBytesProcessed);
-    const { blockAlign } = decoder.info.format;
+    const { decoder, body, format } = setupDecoderWithBody('pcm_d16_le_stereo.wav');
+    const { blockAlign } = format;
     const chunkSize = blockAlign * 512;
 
     for (let i = 0; i < body.length; i += chunkSize) {
@@ -86,7 +85,6 @@ describe('WavDecoder API comparison under looping conditions', () => {
         decoder.decode(chunk);
       }
     }
-
     decoder.free();
   });
 });
