@@ -71,6 +71,7 @@ describe('WaveDecoder API comparison under looping conditions', () => {
         decoder.decodeFrames(chunk);
       }
     }
+
     decoder.free();
   });
 
@@ -85,6 +86,7 @@ describe('WaveDecoder API comparison under looping conditions', () => {
         decoder.decode(chunk);
       }
     }
+
     decoder.free();
   });
 });

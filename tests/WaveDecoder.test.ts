@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, test } from 'vitest';
-import { type DecodedWaveAudio, DecoderState, type WaveFormat, WaveDecoder } from '../src';
+import { type DecodedWaveAudio, DecoderState,  WaveDecoder } from '../src';
 import { fixtureProperties } from './utils/fixtures';
 import { findStringInUint8Array, loadFixture } from './utils/helpers';
 
@@ -132,12 +132,12 @@ describe('WaveDecoder', () => {
     const internalBuffer = decoder.ringBuffer;
     expect(internalBuffer.available).toBe(3);
 
-    const flushResult = await decoder.flush();
+    const flushResult = decoder.flush();
 
-    expect(flushResult).toBeNull();
+    expect(flushResult).toBeDefined();
     expect(internalBuffer.available).toBe(0);
     expect(decoder.info.state).toBe(DecoderState.ENDED);
-    expect(decoder.info.errors[0]?.message).toContain('Discarded 3 bytes');
+    expect(flushResult.errors[0]?.message).toBe('Discarded 3 bytes of incomplete final block.');
   });
 
   it('should free resources and end the decoder', () => {

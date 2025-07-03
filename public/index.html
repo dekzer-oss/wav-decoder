@@ -411,7 +411,7 @@
 
         updateAudioInfo(format, estimatedSamples) {
           const formats = { 1: 'PCM', 3: 'IEEE Float', 6: 'A-Law', 7: 'µ-Law', 65534: 'Extensible' };
-          this.elements.formatInfo.textContent = formats[format.formatTag] || `Unknown (${format.formatTag})`;
+          this.elements.formatInfo.textContent = formats[format.format] || `Unknown (${format.format})`;
           this.elements.sampleRateInfo.textContent = `${format.sampleRate.toLocaleString()} Hz`;
           this.elements.channelsInfo.textContent = format.numChannels;
           this.elements.bitDepthInfo.textContent = `${format.bitsPerSample}-bit`;
@@ -502,7 +502,6 @@
                   `Completed in ${dur.toFixed(2)}s • ${totalSamples.toLocaleString()} samplesDecoded`,
                   'success'
                 );
-                console.log({ info: this.decoder.info });
               } catch (err) {
                 this.logger.log(`Finalization error: ${err.message}`, 'warning');
               }
@@ -527,7 +526,6 @@
                 if (!hasFirstAudio) {
                   const ttfa = this.metrics.markFirstAudio();
                   this.elements.ttfaTime.textContent = `${ttfa.toFixed(1)}ms`;
-                  console.log({ info })
                   hasFirstAudio = true;
                 }
                 if (!hasAudioInfo && info.format.sampleRate) {

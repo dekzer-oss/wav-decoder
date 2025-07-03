@@ -1,5 +1,5 @@
 {
-  "name": "wave-decoder",
+  "name": "@dekzer/wav-decoder",
   "version": "0.1.0",
   "description": "A robust, streaming-capable WAV audio decoder with full PCM, float, A-law, and µ-law support — zero dependencies, works in browsers and Node.js.",
   "author": "Maikel Eckelboom",

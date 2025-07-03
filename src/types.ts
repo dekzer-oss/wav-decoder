@@ -29,13 +29,16 @@ export interface DecodeError {
   outputSamples: number;
 }
 
-/**
- * Represents a decoded chunk of WAV audio.
- */
+
 export interface DecodedWaveAudio {
   channelData: Float32Array[];
   samplesDecoded: number;
   sampleRate: CommonSampleRate | (number & {});
+  errors: DecodeError[];
+}
+
+export interface InterleavedDecodeResult {
+  samplesDecoded: number;
   errors: DecodeError[];
 }
 

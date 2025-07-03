@@ -20,6 +20,7 @@ TEST_CONFIGS = [
     {'codec': 'float', 'bit_depth': 32, 'channels': 2, 'endian': 'big'},
     {'codec': 'alaw', 'bit_depth': 8, 'channels': 1, 'endian': 'little'},
     {'codec': 'ulaw', 'bit_depth': 8, 'channels': 2, 'endian': 'little'},
+    # {'codec': 'pcm', 'bit_depth': 16, 'channels': 8, 'endian': 'little'},
 ]
 
 
@@ -173,7 +174,7 @@ def generate_wav(config):
             if codec in ('alaw', 'ulaw'):
                 linear_16bit = int(sample_float * 32767)
 
-            # Write sample for each channel
+            # Write a sample for each channel
             for _ in range(channels):
                 if codec == 'pcm':
                     if bit_depth == 8:  # Unsigned 8-bit PCM
