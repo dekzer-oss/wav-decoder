@@ -1,7 +1,7 @@
 import { beforeAll, bench, describe } from 'vitest';
-import { DecoderState, WaveDecoder } from '../src';
-import { fixtureProperties } from './utils/fixtures';
-import { loadFixture } from './utils/helpers';
+import { DecoderState, WavDecoder } from '../src';
+import { fixtureProperties } from './fixtures';
+import { loadFixture } from './fixtures/helpers.ts';
 
 const loadedFixtures = new Map<string, Uint8Array>();
 
@@ -14,33 +14,37 @@ beforeAll(async () => {
   });
 });
 
-describe('WaveDecoder full decode() performance', () => {
-  bench('8bit_mono.wav - decode', () => {
-    const data = loadedFixtures.get('8bit_mono.wav')!;
-    const decoder = new WaveDecoder();
+describe('WavDecoder full decode() performance', () => {
+  bench('sine_alaw_8bit_le_mono.wav - decode', () => {
+    const data = loadedFixtures.get('sine_alaw_8bit_le_mono.wav');
+    if (!data) throw new Error('Fixture not found: sine_alaw_8bit_le_mono.wav');
+    const decoder = new WavDecoder();
     decoder.decode(data);
     decoder.free();
   });
 
-  bench('pcm_d16_le_stereo.wav - decode', () => {
-    const data = loadedFixtures.get('pcm_d16_le_stereo.wav')!;
-    const decoder = new WaveDecoder();
+  bench('sine_pcm_16bit_le_stereo.wav - decode', () => {
+    const data = loadedFixtures.get('sine_pcm_16bit_le_stereo.wav');
+    if (!data) throw new Error('Fixture not found: sine_pcm_16bit_le_stereo.wav');
+    const decoder = new WavDecoder();
     decoder.decode(data);
     decoder.free();
   });
 
-  bench('pcm_d24_be_stereo.wav - decode', () => {
-    const data = loadedFixtures.get('pcm_d24_be_stereo.wav')!;
-    const decoder = new WaveDecoder();
+  bench('sine_pcm_24bit_be_stereo.wav - decode', () => {
+    const data = loadedFixtures.get('sine_pcm_24bit_be_stereo.wav')
+    if (!data) throw new Error('Fixture not found: sine_pcm_24bit_be_stereo.wav');
+    const decoder = new WavDecoder();
     decoder.decode(data);
     decoder.free();
   });
 });
 
-describe('WaveDecoder API comparison under looping conditions', () => {
+describe('WavDecoder API comparison under looping conditions', () => {
   const setupDecoderWithBody = (fixtureName: string) => {
-    const fileData = loadedFixtures.get(fixtureName)!;
-    const decoder = new WaveDecoder();
+    const fileData = loadedFixtures.get(fixtureName)
+    if (!fileData) throw new Error(`Fixture not found: ${fixtureName}`);
+    const decoder = new WavDecoder();
 
     const dataChunkStart = fileData.findIndex((byte, i) =>
       i + 3 < fileData.length &&
@@ -61,7 +65,7 @@ describe('WaveDecoder API comparison under looping conditions', () => {
   };
 
   bench('block-by-block (using decodeFrames)', () => {
-    const { decoder, body, format } = setupDecoderWithBody('pcm_d16_le_stereo.wav');
+    const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
     const { blockAlign } = format;
     const chunkSize = blockAlign * 512;
 
@@ -76,7 +80,7 @@ describe('WaveDecoder API comparison under looping conditions', () => {
   });
 
   bench('block-by-block (using decode)', () => {
-    const { decoder, body, format } = setupDecoderWithBody('pcm_d16_le_stereo.wav');
+    const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
     const { blockAlign } = format;
     const chunkSize = blockAlign * 512;
 

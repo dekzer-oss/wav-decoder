@@ -1,6 +1,6 @@
-# 🤝 Contributing to streaming-wav-decoder
+# 🤝 Contributing to @dekzer/wav-decoder
 
-Thanks for your interest in improving `streaming-wav-decoder`!  
+Thanks for your interest in improving `@dekzer/wav-decoder`!  
 This project welcomes contributions — whether you're fixing bugs, improving documentation, writing tests, or proposing
 features.
 
@@ -17,8 +17,8 @@ Supports PCM, IEEE float, A-law, µ-law — fully endianness-aware.
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/dekzer-oss/streaming-wav-decoder.git
-   cd streaming-wav-decoder
+   git clone https://github.com/dekzer-oss/@dekzer/wav-decoder.git
+   cd @dekzer/wav-decoder
    ```
 
 2. **Install dependencies**
@@ -87,8 +87,8 @@ Supports PCM, IEEE float, A-law, µ-law — fully endianness-aware.
 
 Feel free to open:
 
-- An [Issue](https://github.com/dekzer-oss/streaming-wav-decoder/issues)
-- A [Discussion](https://github.com/dekzer-oss/streaming-wav-decoder/discussions)
+- An [Issue](https://github.com/dekzer-oss/@dekzer/wav-decoder/issues)
+- A [Discussion](https://github.com/dekzer-oss/@dekzer/wav-decoder/discussions)
 - Or reach out directly.
 
 ---

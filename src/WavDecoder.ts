@@ -1,5 +1,5 @@
-import type { DecodedWaveAudio, DecodeError, InterleavedDecodeResult, WaveFormat } from './types';
-import { RingBuffer } from './RingBuffer.ts';
+import type { DecodedWavAudio, DecodeError, WavFormat } from './types';
+import { RingBuffer } from './RingBuffer';
 
 export enum DecoderState {
   UNINIT,
@@ -33,18 +33,18 @@ export interface DecoderOptions {
   maxBufferSize?: number;
 }
 
-export class WaveDecoder {
+export class WavDecoder {
   private static readonly MAX_HEADER_SIZE = 2 * 1024 * 1024;
   private static readonly MAX_BUFFER_SIZE = 16 * 1024 * 1024;
   private static readonly MAX_SAMPLE_RATE = 384000;
   private static readonly MAX_CHANNELS = 32;
-  private static readonly ALAW_TABLE: Float32Array = WaveDecoder.buildAlawTable();
-  private static readonly MULAW_TABLE: Float32Array = WaveDecoder.buildMulawTable();
+  private static readonly ALAW_TABLE: Float32Array = WavDecoder.buildAlawTable();
+  private static readonly MULAW_TABLE: Float32Array = WavDecoder.buildMulawTable();
   private readonly errors: DecodeError[] = [];
 
   private state = DecoderState.UNINIT;
   private ringBuffer: RingBuffer;
-  private format = {} as WaveFormat;
+  private format = {} as WavFormat;
   private parsedChunks: ChunkInfo[] = [];
   private unhandledChunks: ChunkInfo[] = [];
   private factChunkSamples = 0;
@@ -62,7 +62,7 @@ export class WaveDecoder {
   private channelData: Float32Array[] = [];
 
   constructor(options: DecoderOptions = {}) {
-    const bufferSize = options.maxBufferSize ?? WaveDecoder.MAX_BUFFER_SIZE;
+    const bufferSize = options.maxBufferSize ?? WavDecoder.MAX_BUFFER_SIZE;
     this.ringBuffer = new RingBuffer(bufferSize);
 
     this.decodeBuffer = new ArrayBuffer(4096);
@@ -72,13 +72,13 @@ export class WaveDecoder {
   public get info() {
     return {
       state: this.state,
-      format: { ...this.format },
-      errors: [...this.errors],
       formatTag: this.formatTag,
       decodedBytes: this.decodedBytes,
       remainingBytes: this.remainingBytes,
       totalBytes: this.totalBytes,
       progress: this.totalBytes > 0 ? (this.totalBytes - this.remainingBytes) / this.totalBytes : 0,
+      format: { ...this.format },
+      errors: [...this.errors],
       parsedChunks: [...this.parsedChunks],
       unhandledChunks: [...this.unhandledChunks],
     };
@@ -134,7 +134,7 @@ export class WaveDecoder {
     this.state = DecoderState.UNINIT;
     this.ringBuffer.clear();
     this.errors.length = 0;
-    this.format = {} as WaveFormat;
+    this.format = {} as WavFormat;
     this.remainingBytes = this.decodedBytes = this.totalBytes = this.factChunkSamples = 0;
     this.parsedChunks = [];
     this.unhandledChunks = [];
@@ -144,13 +144,102 @@ export class WaveDecoder {
     this.channelData = [];
   }
 
-  public decode(chunk: Uint8Array): DecodedWaveAudio {
+  // NEW METHOD
+  public async decodeFile(file: File, chunkSize: number = 1024 * 1024): Promise<DecodedWavAudio> {
+    if (this.state === DecoderState.ENDED || this.state === DecoderState.ERROR) {
+      return this.createErrorResult('Decoder is in a terminal state.');
+    }
+
+    // Reset decoder for new file
+    this.reset();
+
+    const finalResult: DecodedWavAudio = {
+      channelData: [],
+      samplesDecoded: 0,
+      sampleRate: 0,
+      errors: [],
+    };
+
+    try {
+      let offset = 0;
+
+      while (offset < file.size) {
+        const slice = file.slice(offset, offset + chunkSize);
+        const arrayBuffer = await slice.arrayBuffer();
+        const chunk = new Uint8Array(arrayBuffer);
+        offset += chunkSize;
+
+        // Process current chunk
+        const chunkResult = this.decode(chunk);
+        finalResult.errors.push(...chunkResult.errors);
+
+        if (chunkResult.samplesDecoded > 0) {
+          if (finalResult.sampleRate === 0) {
+            finalResult.sampleRate = chunkResult.sampleRate;
+          }
+
+          // Initialize or extend channel arrays
+          if (finalResult.channelData.length === 0) {
+            finalResult.channelData = chunkResult.channelData.map(
+              () => new Float32Array(0),
+            );
+          }
+
+          // Append samples per channel
+          for (let ch = 0; ch < chunkResult.channelData.length; ch++) {
+            const existing = finalResult.channelData[ch]!;
+            const newSamples = chunkResult.channelData[ch]!;
+            const combined = new Float32Array(existing.length + newSamples.length);
+            combined.set(existing);
+            combined.set(newSamples, existing.length);
+            finalResult.channelData[ch] = combined;
+          }
+          finalResult.samplesDecoded += chunkResult.samplesDecoded;
+        }
+      }
+
+      // Process final partial block
+      const flushResult = this.flush();
+      finalResult.errors.push(...flushResult.errors);
+
+      if (flushResult.samplesDecoded > 0) {
+        if (finalResult.sampleRate === 0) {
+          finalResult.sampleRate = flushResult.sampleRate;
+        }
+        if (finalResult.channelData.length === 0) {
+          finalResult.channelData = flushResult.channelData.map(
+            () => new Float32Array(0),
+          );
+        }
+
+        // Append final samples per channel
+        for (let ch = 0; ch < flushResult.channelData.length; ch++) {
+          const existing = finalResult.channelData[ch]!;
+          const newSamples = flushResult.channelData[ch]!;
+          const combined = new Float32Array(existing.length + newSamples.length);
+          combined.set(existing);
+          combined.set(newSamples, existing.length);
+          finalResult.channelData[ch] = combined;
+        }
+        finalResult.samplesDecoded += flushResult.samplesDecoded;
+      }
+
+      return finalResult;
+    } catch (err) {
+      this.state = DecoderState.ERROR;
+      const message = err instanceof Error ? err.message : String(err);
+      finalResult.errors.push(this.createError(`File decode error: ${message}`));
+      return finalResult;
+    }
+  }
+
+  public decode(chunk: Uint8Array): DecodedWavAudio {
     if (this.state === DecoderState.ENDED || this.state === DecoderState.ERROR) {
       return this.createErrorResult('Decoder is in a terminal state.');
     }
     try {
       if (this.state === DecoderState.UNINIT) {
-        if (this.headerBuffer.length + chunk.length > WaveDecoder.MAX_HEADER_SIZE) {
+        if (this.headerBuffer.length + chunk.length > WavDecoder.MAX_HEADER_SIZE) {
           this.state = DecoderState.ERROR;
           return this.createErrorResult('Header size exceeds maximum limit.');
         }
@@ -199,7 +288,7 @@ export class WaveDecoder {
     return output;
   }
 
-  public decodeFrames(frames: Uint8Array): DecodedWaveAudio {
+  public decodeFrames(frames: Uint8Array): DecodedWavAudio {
     if (this.state !== DecoderState.DECODING) {
       return this.createErrorResult('Decoder must be initialized before decodeFrames().');
     }
@@ -222,7 +311,7 @@ export class WaveDecoder {
     }
   }
 
-  public flush(): DecodedWaveAudio {
+  public flush(): DecodedWavAudio {
     if (this.state === DecoderState.ENDED || this.state === DecoderState.ERROR) {
       return this.createEmptyResult();
     }
@@ -252,7 +341,7 @@ export class WaveDecoder {
     }
   }
 
-  private processBufferedBlocks(): DecodedWaveAudio {
+  private processBufferedBlocks(): DecodedWavAudio {
     const blockSize = this.format.blockAlign;
     if (this.state !== DecoderState.DECODING || !blockSize || this.ringBuffer.available < blockSize) {
       return this.createEmptyResult();
@@ -262,7 +351,7 @@ export class WaveDecoder {
     const bytesToProcess = blocksToProcess * blockSize;
 
     const contiguous = this.ringBuffer.peekContiguous();
-    let decoded: DecodedWaveAudio;
+    let decoded: DecodedWavAudio;
 
     if (contiguous.length >= bytesToProcess) {
       decoded = this.decodeInterleavedFrames(contiguous.subarray(0, bytesToProcess));
@@ -277,7 +366,7 @@ export class WaveDecoder {
     return decoded;
   }
 
-  private decodeInterleavedFrames(frames: Uint8Array): DecodedWaveAudio {
+  private decodeInterleavedFrames(frames: Uint8Array): DecodedWavAudio {
     const { blockAlign, numChannels, sampleRate, bitsPerSample } = this.format;
     const samplesDecoded = frames.length / blockAlign;
     const bps = this.bytesPerSample;
@@ -347,15 +436,19 @@ export class WaveDecoder {
     }
   }
 
-  private decodeGenericPCM(samples: number, bps: number, bits: number): void {
+  private decodeGenericPCM(samples: number, bytesPerSample: number, bitsPerSample: number): void {
     const view = this.decodeView;
-    const blockSize = this.format.blockAlign;
     const numChannels = this.format.numChannels;
+    let offset = 0;
+
     for (let i = 0; i < samples; i++) {
-      const base = i * blockSize;
       for (let ch = 0; ch < numChannels; ch++) {
-        const offset = base + ch * bps;
-        this.channelData[ch]![i] = this.readPcm(view, offset, bits);
+        if (offset + bytesPerSample > view.byteLength) {
+          this.channelData[ch]![i] = 0; // Prevent reading past the buffer
+          continue;
+        }
+        this.channelData[ch]![i] = this.readPcm(view, offset, bitsPerSample);
+        offset += bytesPerSample;
       }
     }
   }
@@ -516,15 +609,15 @@ export class WaveDecoder {
       this.errors.push(this.createError('Invalid format: zero values in required fields'));
       return false;
     }
-    if (this.format.numChannels > WaveDecoder.MAX_CHANNELS) {
+    if (this.format.numChannels > WavDecoder.MAX_CHANNELS) {
       this.errors.push(
-        this.createError(`Too many channels: ${this.format.numChannels} (max ${WaveDecoder.MAX_CHANNELS})`)
+        this.createError(`Too many channels: ${this.format.numChannels} (max ${WavDecoder.MAX_CHANNELS})`),
       );
       return false;
     }
-    if (this.format.sampleRate > WaveDecoder.MAX_SAMPLE_RATE) {
+    if (this.format.sampleRate > WavDecoder.MAX_SAMPLE_RATE) {
       this.errors.push(
-        this.createError(`Sample rate too high: ${this.format.sampleRate} (max ${WaveDecoder.MAX_SAMPLE_RATE})`)
+        this.createError(`Sample rate too high: ${this.format.sampleRate} (max ${WavDecoder.MAX_SAMPLE_RATE})`),
       );
       return false;
     }
@@ -532,17 +625,27 @@ export class WaveDecoder {
       this.errors.push(this.createError(`Unsupported audio format: 0x${this.formatTag.toString(16)}`));
       return false;
     }
-    if (this.format.blockAlign !== (this.format.bitsPerSample / 8) * this.format.numChannels) {
-      const expectedBlockAlign = (this.format.bitsPerSample / 8) * this.format.numChannels;
+
+    const expectedBlockAlign = (this.format.bitsPerSample / 8) * this.format.numChannels;
+    if (this.format.blockAlign !== expectedBlockAlign && expectedBlockAlign > 0) {
       this.errors.push(
-        this.createError(`Invalid blockAlign: expected ${expectedBlockAlign}, got ${this.format.blockAlign}`)
+        this.createError(`Corrected invalid blockAlign: header value was ${this.format.blockAlign}, but is now ${expectedBlockAlign}`),
       );
-      return false;
+      this.format.blockAlign = expectedBlockAlign;
     }
+
+    const expectedByteRate = this.format.sampleRate * this.format.blockAlign;
+    if (this.format.byteRate !== expectedByteRate && expectedByteRate > 0) {
+      this.errors.push(
+        this.createError(`Corrected invalid byteRate: header value was ${this.format.byteRate}, but is now ${expectedByteRate}`),
+      );
+      this.format.byteRate = expectedByteRate;
+    }
+
     const valid = this.getValidBitDepths(this.formatTag);
     if (!valid.includes(this.format.bitsPerSample)) {
       this.errors.push(
-        this.createError(`Invalid bit depth: ${this.format.bitsPerSample} for format 0x${this.formatTag.toString(16)}`)
+        this.createError(`Invalid bit depth: ${this.format.bitsPerSample} for format 0x${this.formatTag.toString(16)}`),
       );
       return false;
     }
@@ -622,11 +725,11 @@ export class WaveDecoder {
   }
 
   private readAlaw(view: DataView, off: number): number {
-    return WaveDecoder.ALAW_TABLE[view.getUint8(off)] || 0;
+    return WavDecoder.ALAW_TABLE[view.getUint8(off)] || 0;
   }
 
   private readMulaw(view: DataView, off: number): number {
-    return WaveDecoder.MULAW_TABLE[view.getUint8(off)] || 0;
+    return WavDecoder.MULAW_TABLE[view.getUint8(off)] || 0;
   }
 
   private arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
@@ -635,7 +738,7 @@ export class WaveDecoder {
     return true;
   }
 
-  private createEmptyResult(): DecodedWaveAudio {
+  private createEmptyResult(): DecodedWavAudio {
     const errors = [...this.errors];
     this.errors.length = 0;
     return {
@@ -646,7 +749,7 @@ export class WaveDecoder {
     };
   }
 
-  private createErrorResult(msg: string): DecodedWaveAudio {
+  private createErrorResult(msg: string): DecodedWavAudio {
     this.errors.push(this.createError(msg));
     return this.createEmptyResult();
   }
@@ -662,34 +765,4 @@ export class WaveDecoder {
     };
   }
 
-  public decodeIntoInterleaved(input: Uint8Array, output: Float32Array, offsetFrames = 0): InterleavedDecodeResult {
-    const { formatTag, format } = this;
-    const { blockAlign, numChannels, bitsPerSample } = format;
-    const samplesDecoded = Math.floor(input.length / blockAlign);
-
-    if (formatTag !== WAVE_FORMAT_PCM || numChannels !== 2 || bitsPerSample !== 16) {
-      return {
-        samplesDecoded,
-        errors: [this.createError('Unsupported format for decodeIntoInterleaved')],
-      };
-    }
-
-    const view = new DataView(input.buffer, input.byteOffset, input.length);
-    const outOffset = offsetFrames * numChannels;
-    const isLE = this.isLittleEndian;
-
-    for (let i = 0; i < samplesDecoded; i++) {
-      const base = i * blockAlign;
-      const left = view.getInt16(base, isLE) / 0x8000;
-      const right = view.getInt16(base + 2, isLE) / 0x8000;
-      const outIndex = outOffset + i * 2;
-      output[outIndex] = left;
-      output[outIndex + 1] = right;
-    }
-
-    return {
-      samplesDecoded,
-      errors: [...this.errors],
-    };
-  }
 }

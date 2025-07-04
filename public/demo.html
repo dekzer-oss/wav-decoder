@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WAV Decoder Demo</title>
+</head>
+<body>
+<button id="playButton">Play Audio</button>
+<script type="module">
+  import { WavDecoder } from '../src';
+
+  let audioCtx = null;
+  let nextStartTime = 0;
+  let accumulatedChannels = null;
+  let format = null;
+  let isPlaying = false;
+  let sampleRate = 0;
+
+  async function decodeAudioStream(audioUrl) {
+    if (isPlaying) return;
+    isPlaying = true;
+    document.getElementById('playButton').disabled = true;
+
+    const decoder = new WavDecoder();
+    accumulatedChannels = null;
+    format = null;
+    sampleRate = 0;
+
+    audioCtx ??= new AudioContext();
+
+    try {
+      const response = await fetch(audioUrl);
+      if (!response.body) {
+        throw new Error('Response body is not a ReadableStream.');
+      }
+
+      const reader = response.body.getReader();
+      let headerParsed = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // Process chunk through decoder
+        const decodedAudio = decoder.decode(value);
+
+        // Update format information
+        const info = decoder.info;
+        if (!headerParsed && info.format.sampleRate) {
+          format = info.format;
+          sampleRate = format.sampleRate;
+          console.log('Audio Format Detected:', format);
+          accumulatedChannels = Array.from(
+            { length: format.numChannels },
+            () => [],
+          );
+          headerParsed = true;
+        }
+
+        // Accumulate decoded audio
+        if (headerParsed && decodedAudio.channelData.length > 0) {
+          for (let i = 0; i < info.format.numChannels; i++) {
+            accumulatedChannels[i].push(...decodedAudio.channelData[i]);
+          }
+
+          // Play accumulated segments when we have enough data
+          playAccumulatedSegments();
+        }
+      }
+
+      // Process final chunk
+      const finalResult = decoder.flush();
+      if (headerParsed && finalResult.channelData.length > 0) {
+        for (let i = 0; i < format.numChannels; i++) {
+          accumulatedChannels[i].push(...finalResult.channelData[i]);
+        }
+        playAccumulatedSegments(true);
+      }
+
+      console.log('✅ Decoding complete!');
+    } catch (error) {
+      console.error('Error during decoding:', error);
+    } finally {
+      isPlaying = false;
+      document.getElementById('playButton').disabled = false;
+    }
+  }
+
+  function playAccumulatedSegments(force = false) {
+    if (!accumulatedChannels || accumulatedChannels[0].length === 0) return;
+
+    const minSamples = Math.floor(sampleRate * 0.5);
+    const availableSamples = accumulatedChannels[0].length;
+
+    if (force || availableSamples >= minSamples) {
+      const playSamples = force ? availableSamples : minSamples;
+
+      const segmentData = accumulatedChannels.map(channel =>
+        new Float32Array(channel.splice(0, playSamples)),
+      );
+
+      const buffer = audioCtx.createBuffer(
+        segmentData.length,
+        playSamples,
+        sampleRate,
+      );
+
+      for (let i = 0; i < segmentData.length; i++) {
+        buffer.copyToChannel(segmentData[i], i);
+      }
+
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+
+      if (nextStartTime === 0) {
+        nextStartTime = audioCtx.currentTime + 0.1;
+        source.start(nextStartTime);
+      } else {
+        source.start(nextStartTime);
+      }
+
+      nextStartTime += buffer.duration;
+    }
+  }
+
+  document.getElementById('playButton').addEventListener('click', () => {
+    nextStartTime = 0;
+    decodeAudioStream('M1F1-Alaw-AFsp.wav');
+  });
+</script>
+</body>
+</html>

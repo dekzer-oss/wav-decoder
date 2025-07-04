@@ -31,10 +31,10 @@ yarn add @dekzer/wav-decoder
 ## Basic Usage
 
 ```typescript
-import { WaveDecoder } from '@dekzer/wav-decoder';
+import { WavDecoder } from '@dekzer/wav-decoder';
 
 async function streamAudio(url: string) {
-  const decoder = new WaveDecoder();
+  const decoder = new WavDecoder();
   const response = await fetch(url);
   const reader = response.body.getReader();
 
@@ -59,11 +59,11 @@ async function streamAudio(url: string) {
 
 ## API
 
-### `new WaveDecoder()`
+### `new WavDecoder()`
 Creates a new decoder instance.
 
 ### `decode(chunk: Uint8Array)`
-Decodes a chunk of WAV data. Returns a `DecodedWaveAudio` with:
+Decodes a chunk of WAV data. Returns a `DecodedWavAudio` with:
 - `channelData: Float32Array[]` - Decoded audio samplesDecoded by channel
 - `samplesDecoded: number` - Number of samplesDecoded decoded from this chunk
 - `sampleRate: number` - Sample rate of the audio
@@ -81,7 +81,7 @@ Processes any remaining buffered data. Returns a Promise that resolves to final 
 ### `info`
 Provides comprehensive decoder information:
 - `state: DecoderState` - Current decoder state
-- `format: WaveFormat` - Detailed format information including sample rate, channels, bit depth
+- `format: WavFormat` - Detailed format information including sample rate, channels, bit depth
 - `errors: DecodeError[]` - Decoding error history
 - `progress: number` - Decoding progress (0-1)
 - Plus additional diagnostic information
