@@ -4,21 +4,24 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: release-${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   release:
+    if: secrets.NPM_TOKEN != ''          # skip run if no token configured
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # allow the action to open PRs / create tags
-      packages: write   # needed when you actually publish to npm
+      contents: write
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # changesets needs full history
+        with: { fetch-depth: 0 }
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.13.1
+        with: { version: 10.13.1 }
 
       - uses: actions/setup-node@v4
         with:
@@ -28,8 +31,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # will either open / update a version-bump PR, or, if that PR
-      # was merged and a changeset exists, publish via “pnpm release”
+      # publish or open version-bump PR
       - uses: changesets/action@v1
         with:
           publish: pnpm release

@@ -1,17 +1,23 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  test-build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.13.1
+        with: { version: 10.13.1 }
 
       - uses: actions/setup-node@v4
         with:
@@ -19,5 +25,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # runs Vitest (node + browser) and builds artifacts
       - run: pnpm test:ci
       - run: pnpm build
