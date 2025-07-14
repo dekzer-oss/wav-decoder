@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   release:
-    if: secrets.NPM_TOKEN != ''          # skip run if no token configured
+    if: ${{ secrets.NPM_TOKEN != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
