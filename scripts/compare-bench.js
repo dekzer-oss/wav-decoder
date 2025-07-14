@@ -4,47 +4,73 @@ import { execSync } from 'node:child_process';
 const THRESHOLD = 0.1;
 const FILES = ['bench/bench-node.json', 'bench/bench-browser.json'];
 
-const flatten = (d) =>
-  d.files.flatMap((f) =>
-    f.groups.flatMap((g) => g.benchmarks.map((b) => ({ key: `${g.fullName} – ${b.name}`, hz: b.hz })))
+/** collect fastest Hz per “suite – benchmark” key */
+function flatten(json) {
+  const map = new Map();
+  json.files.forEach((f) =>
+    f.groups.forEach((g) =>
+      g.benchmarks.forEach((b) => {
+        const key = `${g.fullName} – ${b.name}`;
+        if (!map.has(key) || b.hz > map.get(key)) map.set(key, b.hz);
+      })
+    )
   );
+  return map;
+}
 
-const current = [];
-for (const p of FILES) {
-  try {
-    current.push(...flatten(JSON.parse(await fs.readFile(p, 'utf8'))));
-  } catch {
-    /* file missing – skip */
+async function loadCurrent() {
+  const merged = new Map();
+  for (const file of FILES) {
+    try {
+      const data = JSON.parse(await fs.readFile(file, 'utf8'));
+      flatten(data).forEach((hz, key) => {
+        if (!merged.has(key) || hz > merged.get(key)) merged.set(key, hz);
+      });
+    } catch {
+      /* file missing, skip */
+    }
   }
+  return merged;
 }
 
-if (!current.length) {
-  console.error('no benchmark data to compare');
-  process.exit(2);
-}
-
-let baseline = [];
-try {
-  for (const p of FILES) {
-    const raw = execSync(`git show origin/main:${p}`, { encoding: 'utf8' });
-    baseline.push(...flatten(JSON.parse(raw)));
+function loadBaseline() {
+  const merged = new Map();
+  for (const file of FILES) {
+    try {
+      const raw = execSync(`git show origin/main:${file}`, { encoding: 'utf8' });
+      flatten(JSON.parse(raw)).forEach((hz, key) => {
+        if (!merged.has(key) || hz > merged.get(key)) merged.set(key, hz);
+      });
+    } catch {
+      /* file absent on main, ignore */
+    }
   }
-} catch {
-  console.log('no baseline on main – first run, skipping diff');
-  process.exit(0);
+  return merged;
 }
 
-const baseMap = new Map(baseline.map((b) => [b.key, b.hz]));
-let failed = false;
-
-for (const cur of current) {
-  const old = baseMap.get(cur.key);
-  if (!old) continue;
-  if ((old - cur.hz) / old > THRESHOLD) {
-    console.error(`❌  ${cur.key} regressed ${(((old - cur.hz) / old) * 100).toFixed(1)} %`);
-    failed = true;
+(async () => {
+  const cur = await loadCurrent();
+  if (cur.size === 0) {
+    console.error('no benchmark data to compare');
+    process.exit(2);
   }
-}
 
-if (failed) process.exit(1);
-console.log('✅  no perf regressions > 10 %');
+  const base = loadBaseline();
+  if (base.size === 0) {
+    console.log('no baseline on main – first run, skipping diff');
+    process.exit(0);
+  }
+
+  let failed = false;
+  for (const [key, curHz] of cur) {
+    const oldHz = base.get(key);
+    if (!oldHz) continue;
+    if ((oldHz - curHz) / oldHz > THRESHOLD) {
+      console.error(`❌  ${key} regressed ${(((oldHz - curHz) / oldHz) * 100).toFixed(1)} %`);
+      failed = true;
+    }
+  }
+
+  if (failed) process.exit(1);
+  console.log('✅  no perf regressions > 10 %');
+})();
