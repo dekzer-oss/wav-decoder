@@ -1,114 +1,164 @@
-# @dekzer/wav-decoder
+# @dekzer/wav-decoder <!-- omit from toc -->
 
-A streaming WAV decoder for TypeScript/JavaScript with support for large files and real-time processing.
+A small TypeScript/JavaScript library that **progressively decodes uncompressed WAV audio as the bytes arrive**.
+It was written for in-house streaming experiments inside *Dekzer*, but we decided to publish the code because it may save others some time. The API is intentionally minimal; please expect breaking changes until we tag a 1.0.0.
 
-[![npm version](https://img.shields.io/npm/v/@dekzer/wav-decoder.svg)](https://www.npmjs.com/package/@dekzer/wav-decoder)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+---
 
-## Why This Library?
+## Table of contents
 
-The Web Audio API's `decodeAudioData()` requires the entire audio file to be loaded into memory before decoding can begin. This creates problems when working with large WAV files or streaming audio data.
+1. [Status & project goals](#status--project-goals)
+2. [Features](#features)
+3. [Installation](#installation)
+4. [Quick example](#quick-example)
+5. [Detailed API](#detailed-api)
+6. [Supported formats, platforms & limits](#supported-formats-platforms--limits)
+7. [Development & testing](#development--testing)
+8. [License](#license)
 
-This library allows you to decode WAV audio progressively as data arrives, enabling:
+---
 
-- Instant playback of large files (1GB+)
-- Streaming from network sources
-- Lower memory usage
-- Real-time audio processing
+## Status & project goals
+
+|                       |                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| **Maturity**          | Internal prototype; usable, but not yet frozen.                                             |
+| **Stability promise** | Semantic-versioning will start at v1.0.0. Until then new releases *might* introduce breaks. |
+| **Road-map**          | Better errors, optional worker/Worklet wrapper, and typed events for back-pressure.         |
+
+---
+
+## Features
+
+* **Chunk-by-chunk decoding** – start playback before the file is finished downloading.
+* **No runtime dependencies** – the package.json lists only dev-deps and peer-less prod code.&#x20;
+* **Broad PCM coverage** – 8/16/24/32-bit PCM, 32/64-bit float, A-law and µ-law, little- and big-endian.
+  The unit-tests run those variants against \~20 fixtures.&#x20;
+* **Works in Node 20+ and modern browsers**; for browsers you can pipe the decoded Float32Arrays straight into an `AudioContext`.
+
+---
 
 ## Installation
 
 ```bash
-# pnpm
+# with pnpm
 pnpm add @dekzer/wav-decoder
 
-# npm
+# or npm
 npm install @dekzer/wav-decoder
-
-# yarn
-yarn add @dekzer/wav-decoder
 ```
 
-## Basic Usage
+No post-install scripts, no optional binaries.
 
-```typescript
+---
+
+## Quick example
+
+```ts
 import { WavDecoder } from '@dekzer/wav-decoder';
 
-async function streamAudio(url: string) {
+async function streamAndPlay(url: string) {
   const decoder = new WavDecoder();
   const response = await fetch(url);
-  const reader = response.body.getReader();
+  const reader   = response.body!.getReader();
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
 
-    const result = decoder.decode(value);
-    if (result.samplesDecoded > 0) {
-      // Process audio data immediately
-      playAudio(result.channelData);
+    const out = decoder.decode(value);
+    if (out.samplesDecoded) {
+      // `out.channelData` is Float32Array[] (interleaved already split per channel)
+      playChunk(out.channelData, out.sampleRate);
     }
   }
 
-  // Process any remaining data
-  const final = decoder.flush();
-  if (final) {
-    playAudio(final.channelData);
-  }
+  const tail = decoder.flush();
+  if (tail.samplesDecoded) playChunk(tail.channelData, tail.sampleRate);
 }
 ```
 
-## API
+---
 
-### `new WavDecoder()`
+## Detailed API
 
-Creates a new decoder instance.
+### `class WavDecoder`
 
-### `decode(chunk: Uint8Array)`
+| Member                                         | Description                                                                                                                                                                             |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **constructor()**                              | Allocates internal ring-buffer (default 64 KiB).                                                                                                                                        |
+| **decode(chunk: Uint8Array): DecodedWavAudio** | Feed arbitrary-sized data. Returns samples (may be zero) and non-fatal error list.                                                                                                      |
+| **decodeFrames(chunkAlignedToBlock)**          | Same as `decode`, but *requires* that `chunk.length % format.blockSize === 0` for maximum throughput.                                                                                   |
+| **decodeFrame(frame)**                         | Decodes *one* interleaved frame and returns a `Float32Array` with `channels` elements, or `null` if the frame is incomplete. Used in performance-critical code paths (see benchmarks).  |
+| **flush()**                                    | Drains any remaining bytes (including a partial final block). Useful when the stream closes.                                                                                            |
+| **reset()**                                    | Clears internal state so the instance can be re-used.                                                                                                                                   |
+| **free()**                                     | Releases the ring-buffer and changes `info.state` to `ENDED`; subsequent calls are no-ops.                                                                                              |
+| **info** *(read-only)*                         | Live diagnostics object described below.                                                                                                                                                |
 
-Decodes a chunk of WAV data. Returns a `DecodedWavAudio` with:
+#### `DecodedWavAudio`
 
-- `channelData: Float32Array[]` - Decoded audio samplesDecoded by channel
-- `samplesDecoded: number` - Number of samplesDecoded decoded from this chunk
-- `sampleRate: number` - Sample rate of the audio
-- `errors: DecodeError[]` - Any decoding errors encountered
+```ts
+{
+  channelData    : Float32Array[]; // one array per channel
+  samplesDecoded : number;         // samples added by *this* call
+  sampleRate     : number;         // independent copy for convenience
+  errors         : DecodeError[];  // non-fatal issues (clipped sample, NaN, …)
+}
+```
 
-### `decodeFrames(frames: Uint8Array)`
+#### `decoder.info`
 
-Optimized version for real-time use. Input must be block-aligned (length must be a multiple of `blockSize`).
+| Field          | Notes                                                                                                   |
+|----------------|---------------------------------------------------------------------------------------------------------|
+| `state`        | `DecoderState.IDLE \| DECODING \| ENDED \| ERROR`.                                                      |
+| `format`       | Populated after the `fmt ` chunk is parsed: `{ formatTag, channels, sampleRate, bitDepth, blockSize }`. |
+| `decodedBytes` | Total bytes written into PCM output so far.                                                             |
+| `progress`     | Fraction 0–1 based on WAV `data` chunk size (falls back to `NaN` if size unknown).                      |
+| `errors`       | Array of the last few `DecodeError`s; a *fatal* error switches `state` to `ERROR`.                      |
 
-### `decodeFrame(frame: Uint8Array)`
+#### `enum DecoderState`
 
-Decodes a single audio frame. Highly optimized for performance-critical applications.
+Exact numeric values are private – rely only on the names:
 
-### `flush()`
+```ts
+IDLE = 0, DECODING = 1, ENDED = 2, ERROR = 3
+```
 
-Processes any remaining buffered data. Returns a Promise that resolves to final decoded audio or null.
+---
 
-### `info`
+## Supported formats, platforms & limits
 
-Provides comprehensive decoder information:
+| Aspect              | Notes                                                                                 |
+|---------------------|---------------------------------------------------------------------------------------|
+| **Containers**      | RIFF `WAVE` (little-endian) & RIFX (big-endian).                                      |
+| **Codecs**          | 0x0001 PCM, 0x0003 IEEE float, 0x0006 A-law, 0x0007 µ-law.                            |
+| **Bits per sample** | 8/16/24/32-bit integer, 32/64-bit float.                                              |
+| **Channels**        | 1 … 8 tested; more should work, memory permitting.                                    |
+| **Sample-rate**     | Any positive integer ≤ 192 kHz (no fixed list).                                       |
+| **File size**       | Limited only by the host stream; decoding is constant-memory.                         |
+| **Not supported**   | ADPCM, MPEG-encoded “WAV”, broadcast extensions, cue lists.                           |
+| **Browsers**        | Requires `ReadableStream` and `AudioContext` (≈ Chrome 94+, Firefox 92+, Safari 15+). |
+| **Node**            | Node 20 or newer (streams with BYOB readers were simplified in 20).                   |
 
-- `state: DecoderState` - Current decoder state
-- `formatTag: WavFormat` - Detailed formatTag information including sample rate, channels, bit depth
-- `errors: DecodeError[]` - Decoding error history
-- `progress: number` - Decoding progress (0-1)
-- Plus additional diagnostic information
+---
 
-## Supported Formats
+## Development & testing
 
-- PCM (8, 16, 24, 32-bit)
-- IEEE Float (32, 64-bit)
-- A-law and µ-law
-- Both little-endian (RIFF) and big-endian (RIFX)
-- Extensible WAV formats
+Clone and install with **pnpm >= 8**.
 
-## Requirements
+```bash
+pnpm install          # grabs dev-deps only
+pnpm test             # vitest: Node + happy-dom browser suite
+pnpm bench            # micro-benchmarks for several fixtures
+pnpm demo             # vite – opens the browser demos
+```
 
-- Modern JavaScript environment with TypeScript support
-- No dependencies
+CI runs `vitest`, Playwright browser tests and size-limited benchmarks on each PR.&#x20;
+
+Fixtures are generated from pure-Python (`scripts/generate_wav_fixtures.py`) – no copyrighted samples.&#x20;
+
+---
 
 ## License
 
-Licensed under the [MIT License](./LICENSE).
-See [opensource.org/licenses/MIT](https://opensource.org/licenses/MIT) for full text.
+MIT – see [LICENSE](./LICENSE). No warranty.
