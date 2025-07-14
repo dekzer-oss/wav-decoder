@@ -39,8 +39,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Publish (or open version-bump PR)
-        if: env.NPM_TOKEN != ''
+      - name: Publish
+        if: ${{ env.NPM_TOKEN != '' }}
         uses: changesets/action@v1
         with:
           publish: pnpm release
@@ -49,5 +49,5 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Skip publish (no NPM_TOKEN)
-        if: env.NPM_TOKEN == ''
+        if: ${{ env.NPM_TOKEN == '' }}
         run: echo "NPM_TOKEN not set — skipping publish."
