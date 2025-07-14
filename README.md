@@ -1,7 +1,7 @@
 # @dekzer/wav-decoder <!-- omit from toc -->
 
-![benchmark](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge.json)
-
+![Browser throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-browser.json)
+![Node throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-node.json)
 A small TypeScript/JavaScript library that **progressively decodes uncompressed WAV audio as the bytes arrive**.
 It was written for in-house streaming experiments inside *Dekzer*, but we decided to publish the code because it may save others some time. The API is intentionally minimal; please expect breaking changes until we tag a 1.0.0.
 
