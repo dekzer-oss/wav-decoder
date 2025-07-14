@@ -21,7 +21,7 @@ It was written for in-house streaming experiments inside *Dekzer*, but we decide
 ## Status & project goals
 
 |                       |                                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------- |
+|-----------------------|---------------------------------------------------------------------------------------------|
 | **Maturity**          | Internal prototype; usable, but not yet frozen.                                             |
 | **Stability promise** | Semantic-versioning will start at v1.0.0. Until then new releases *might* introduce breaks. |
 | **Road-map**          | Better errors, optional worker/Worklet wrapper, and typed events for back-pressure.         |
@@ -84,16 +84,16 @@ async function streamAndPlay(url: string) {
 
 ### `class WavDecoder`
 
-| Member                                         | Description                                                                                                                                                                             |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **constructor()**                              | Allocates internal ring-buffer (default 64 KiB).                                                                                                                                        |
-| **decode(chunk: Uint8Array): DecodedWavAudio** | Feed arbitrary-sized data. Returns samples (may be zero) and non-fatal error list.                                                                                                      |
-| **decodeFrames(chunkAlignedToBlock)**          | Same as `decode`, but *requires* that `chunk.length % format.blockSize === 0` for maximum throughput.                                                                                   |
-| **decodeFrame(frame)**                         | Decodes *one* interleaved frame and returns a `Float32Array` with `channels` elements, or `null` if the frame is incomplete. Used in performance-critical code paths (see benchmarks).  |
-| **flush()**                                    | Drains any remaining bytes (including a partial final block). Useful when the stream closes.                                                                                            |
-| **reset()**                                    | Clears internal state so the instance can be re-used.                                                                                                                                   |
-| **free()**                                     | Releases the ring-buffer and changes `info.state` to `ENDED`; subsequent calls are no-ops.                                                                                              |
-| **info** *(read-only)*                         | Live diagnostics object described below.                                                                                                                                                |
+| Member                                         | Description                                                                                                                                                                            |
+|------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **constructor()**                              | Allocates internal ring-buffer (default 64 KiB).                                                                                                                                       |
+| **decode(chunk: Uint8Array): DecodedWavAudio** | Feed arbitrary-sized data. Returns samples (may be zero) and non-fatal error list.                                                                                                     |
+| **decodeFrames(chunkAlignedToBlock)**          | Same as `decode`, but *requires* that `chunk.length % format.blockSize === 0` for maximum throughput.                                                                                  |
+| **decodeFrame(frame)**                         | Decodes *one* interleaved frame and returns a `Float32Array` with `channels` elements, or `null` if the frame is incomplete. Used in performance-critical code paths (see benchmarks). |
+| **flush()**                                    | Drains any remaining bytes (including a partial final block). Useful when the stream closes.                                                                                           |
+| **reset()**                                    | Clears internal state so the instance can be re-used.                                                                                                                                  |
+| **free()**                                     | Releases the ring-buffer and changes `info.state` to `ENDED`; subsequent calls are no-ops.                                                                                             |
+| **info** *(read-only)*                         | Live diagnostics object described below.                                                                                                                                               |
 
 #### `DecodedWavAudio`
 
