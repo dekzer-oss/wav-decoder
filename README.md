@@ -70,7 +70,7 @@ Decodes a chunk of WAV data. Returns a `DecodedWavAudio` with:
 - `errors: DecodeError[]` - Any decoding errors encountered
 
 ### `decodeFrames(frames: Uint8Array)`
-Optimized version for real-time use. Input must be block-aligned (length must be a multiple of `blockAlign`).
+Optimized version for real-time use. Input must be block-aligned (length must be a multiple of `blockSize`).
 
 ### `decodeFrame(frame: Uint8Array)`
 Decodes a single audio frame. Highly optimized for performance-critical applications.

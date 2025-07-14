@@ -133,4 +133,19 @@ export class RingBuffer {
     const length = Math.min(this.size, this.capacity - rp);
     return this.buffer.subarray(rp, rp + length);
   }
+
+  /**
+   * Peek `len` bytes starting `offset` bytes after the current read pointer,
+   * without advancing the read pointer.  Wrap-around is handled.
+   */
+  peek(len: number, offset = 0): Uint8Array {
+    const start = (this.readPos + offset) & (this.capacity - 1);
+    const end   = (start + len) & (this.capacity - 1);
+
+    if (start < end || end === 0)
+      return this.buffer.subarray(start, start + len);
+
+    return this.buffer.subarray(0, end);
+  }
+
 }

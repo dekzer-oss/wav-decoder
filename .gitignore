@@ -32,4 +32,7 @@ lerna-debug.log*
 Thumbs.db
 
 # Custom files
-source.md
+source_code.md
+
+public/samples/*
+#!public/samples/.gitkeep

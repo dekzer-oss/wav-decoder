@@ -66,12 +66,12 @@ describe('WavDecoder API comparison under looping conditions', () => {
 
   bench('block-by-block (using decodeFrames)', () => {
     const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
-    const { blockAlign } = format;
-    const chunkSize = blockAlign * 512;
+    const { blockSize } = format;
+    const chunkSize = blockSize * 512;
 
     for (let i = 0; i < body.length; i += chunkSize) {
       const chunk = body.subarray(i, i + chunkSize);
-      if (chunk.length % blockAlign === 0) {
+      if (chunk.length % blockSize === 0) {
         decoder.decodeFrames(chunk);
       }
     }
@@ -81,8 +81,8 @@ describe('WavDecoder API comparison under looping conditions', () => {
 
   bench('block-by-block (using decode)', () => {
     const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
-    const { blockAlign } = format;
-    const chunkSize = blockAlign * 512;
+    const { blockSize } = format;
+    const chunkSize = blockSize * 512;
 
     for (let i = 0; i < body.length; i += chunkSize) {
       const chunk = body.subarray(i, i + chunkSize);

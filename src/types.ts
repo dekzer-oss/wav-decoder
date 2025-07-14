@@ -6,39 +6,22 @@
  * - 7 = µ-law
  * - 65534 = Extensible (used for non-standard formats)
  */
-export type WavFormatTag = 1 | 3 | 6 | 7 | 65534;
+export type WavFormatTag = 1 | 3 | 6 | 7 | 65534 | (number & {});
 
 /**
- * Common bit depths used in WAV files.
+ * Supported bit depths. The `(number & {})` allows for any numeric value
+ * while providing autocomplete for common bit depths.
  */
-export type WavBitsPerSample = 8 | 16 | 24 | 32 | 64;
+export type WavBitsPerSample = 8 | 16 | 24 | 32 | 64 | (number & {});
 
 /**
  * Standard audio sample rates in Hz. The `(number & {})` allows for any numeric value
- * while still providing autocomplete for common rates.
+ * while providing autocomplete for common rates.
  */
-export type CommonSampleRate = 8000 | 16000 | 22050 | 44100 | 48000 | 96000 | 192000;
-
-/**
- * Specific error codes for better programmatic error handling.
- */
-export type DecodeErrorCode =
-  | 'USER_ABORT'
-  | 'DECODER_TERMINATED'
-  | 'FILE_READ_ERROR'
-  | 'HEADER_TOO_LARGE'
-  | 'INVALID_HEADER'
-  | 'INVALID_FORMAT_CHUNK'
-  | 'INVALID_FORMAT'
-  | 'UNSUPPORTED_CHANNELS'
-  | 'UNSUPPORTED_SAMPLERATE'
-  | 'UNSUPPORTED_FORMAT'
-  | 'UNSUPPORTED_BIT_DEPTH'
-  | 'INVALID_BLOCK_ALIGN'
-  | 'INVALID_BYTE_RATE'
-  | 'BUFFER_FULL'
-  | 'DECODING_ERROR'
-  | 'INCOMPLETE_FRAME_PADDED';
+export type CommonSampleRate =
+  | 8000 | 11025 | 16000 | 22050 | 32000 | 44100 | 48000
+  | 88200 | 96000 | 176400 | 192000
+  | (number & {});
 
 /**
  * Information about a decoding error encountered while processing a WAV file.
@@ -46,62 +29,60 @@ export type DecodeErrorCode =
 export interface DecodeError {
   /** A descriptive message about the error. */
   message: string;
-  /** A machine-readable code for the specific error. */
-  code: DecodeErrorCode;
-  /** The length of a single audio frame (block align) in bytes at the time of the error. */
+  /** The length of a single audio frame in bytes at the time of the error. */
   frameLength: number;
   /** The estimated frame number where the error occurred. */
   frameNumber: number;
-  /** The total number of bytes processed from the input stream before the error. */
+  /** The total number of bytes processed before the error. */
   inputBytes: number;
 }
 
 /**
- * The result of a successful decode operation, containing the audio data.
+ * The result of a decode operation.
  */
 export interface DecodedWavAudio {
-  /** An array of Float32Arrays, one for each audio channel. */
+  /** Array of Float32Arrays (one per channel) */
   channelData: Float32Array[];
-  /** The total number of samples decoded per channel. */
+  /** Number of samples decoded per channel */
   samplesDecoded: number;
-  /** The sample rate of the decoded audio in Hz. */
-  sampleRate: CommonSampleRate | (number & {});
-  /** An array of non-fatal errors encountered during decoding. */
+  /** Sample rate in Hz */
+  sampleRate: CommonSampleRate;
+  /** Non-fatal errors encountered during decoding */
   errors: DecodeError[];
 }
 
 /**
- * Options for configuring the WavDecoder instance upon creation.
+ * WAV decoder configuration options.
  */
 export interface DecoderOptions {
-  /** The maximum size of the internal ring buffer in bytes. Defaults to 16MB. */
+  /** Maximum ring buffer size in bytes (default: 16MB) */
   maxBufferSize?: number;
-  /** If true, the decoder will output a single interleaved Float32Array instead of separate channels. Defaults to false. */
-  interleaved?: boolean;
 }
 
 /**
- * Options for the `decodeFile` method.
- */
-export interface DecodeFileOptions {
-  /** The size of the file chunks to read in bytes. Defaults to 1MB. */
-  chunkSize?: number;
-  /** A callback function to report decoding progress, receiving a value from 0.0 to 1.0. */
-  onProgress?: (progress: number) => void;
-}
-
-/**
- * Describes the audio format of the WAV file.
+ * Describes WAV file audio format.
  */
 export interface WavFormat {
-  format: WavFormatTag | (number & {});
-  numChannels: number;
-  sampleRate: CommonSampleRate | (number & {});
-  byteRate: number;
-  blockAlign: number;
-  bitsPerSample: WavBitsPerSample | (number & {});
+  /** Format tag (PCM, Float, etc.) */
+  format: WavFormatTag;
+  /** Number of audio channels */
+  channelCount: number;
+  /** Samples per second */
+  sampleRate: CommonSampleRate;
+  /** Data rate in bytes/second */
+  bytesPerSecond: number;
+  /** Block size in bytes */
+  blockSize: number;
+  /** Bits per sample */
+  bitsPerSample: WavBitsPerSample;
+  /** Size of extension area (if present) */
   extensionSize?: number;
+  /** Valid bits per sample (if specified) */
   validBitsPerSample?: number;
+  /** Speaker position mask */
   channelMask?: number;
+  /** GUID of subformat */
   subFormat?: Uint8Array;
+  /** Calculated duration in seconds */
+  duration?: number;
 }

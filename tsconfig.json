@@ -26,5 +26,10 @@
     "noPropertyAccessFromIndexSignature": false,
 
     "types": ["node", "vite/client"]
-  }
+  },
+
+  "include": [
+    "src",
+    "public"
+  ]
 }

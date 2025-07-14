@@ -34,7 +34,7 @@ describe('WavDecoder', () => {
 
       expect(result.errors).toEqual([]);
       expect(format.format).toBe(expected.formatTag);
-      expect(format.numChannels).toBe(expected.channels);
+      expect(format.channelCount).toBe(expected.channels);
       expect(format.sampleRate).toBe(expected.sampleRate);
       expect(format.bitsPerSample).toBe(expected.bitDepth);
       expect(result.channelData.length).toBe(expected.channels);
@@ -61,18 +61,18 @@ describe('WavDecoder', () => {
       decoder.decode(header);
       expect(decoder.info.state).toBe(DecoderState.DECODING);
 
-      const { blockAlign } = decoder.info.format;
-      expect(blockAlign).toBeGreaterThan(0);
+      const { blockSize } = decoder.info.format;
+      expect(blockSize).toBeGreaterThan(0);
 
       let totalSamplesDecoded = 0;
-      const chunkSize = blockAlign * 512;
+      const chunkSize = blockSize * 512;
 
       for (let offset = 0; offset < body.length; offset += chunkSize) {
         const chunk = body.subarray(offset, offset + chunkSize);
-        const framesInChunk = Math.floor(chunk.length / blockAlign);
+        const framesInChunk = Math.floor(chunk.length / blockSize);
         if (framesInChunk === 0) continue;
 
-        const frameData = chunk.subarray(0, framesInChunk * blockAlign);
+        const frameData = chunk.subarray(0, framesInChunk * blockSize);
         const frameResult = decoder.decodeFrames(frameData);
         expect(frameResult.errors).toEqual([]);
         totalSamplesDecoded += frameResult.samplesDecoded;
@@ -198,12 +198,12 @@ describe('WavDecoder', () => {
 
     decoder.decode(header);
     expect(decoder.info.state).toBe(DecoderState.DECODING);
-    const { blockAlign, numChannels } = decoder.info.format;
+    const { blockSize, channelCount } = decoder.info.format;
 
     const bytesDecodedBefore = decoder.info.decodedBytes;
     expect(bytesDecodedBefore).toBe(0);
 
-    const firstFrame = body.subarray(0, blockAlign);
+    const firstFrame = body.subarray(0, blockSize);
     const result = decoder.decodeFrame(firstFrame);
 
     const bytesDecodedAfter = decoder.info.decodedBytes;
@@ -211,7 +211,7 @@ describe('WavDecoder', () => {
 
     expect(result).not.toBeNull();
     expect(result).toBeInstanceOf(Float32Array);
-    expect(result!.length).toBe(numChannels);
+    expect(result!.length).toBe(channelCount);
 
     const batchResult = decoder.decodeFrames(firstFrame);
     const expectedLeftSample = batchResult.channelData[0]![0]!;
@@ -220,7 +220,7 @@ describe('WavDecoder', () => {
     expect(result![0]).toBeCloseTo(expectedLeftSample);
     expect(result![1]).toBeCloseTo(expectedRightSample);
 
-    const badFrame = body.subarray(0, blockAlign - 1);
+    const badFrame = body.subarray(0, blockSize - 1);
     expect(decoder.decodeFrame(badFrame)).toBeNull();
   });
 
