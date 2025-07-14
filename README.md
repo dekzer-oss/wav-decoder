@@ -1,5 +1,7 @@
 # @dekzer/wav-decoder <!-- omit from toc -->
 
+![benchmark](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge.json)
+
 A small TypeScript/JavaScript library that **progressively decodes uncompressed WAV audio as the bytes arrive**.
 It was written for in-house streaming experiments inside *Dekzer*, but we decided to publish the code because it may save others some time. The API is intentionally minimal; please expect breaking changes until we tag a 1.0.0.
 
@@ -24,16 +26,16 @@ It was written for in-house streaming experiments inside *Dekzer*, but we decide
 |-----------------------|---------------------------------------------------------------------------------------------|
 | **Maturity**          | Internal prototype; usable, but not yet frozen.                                             |
 | **Stability promise** | Semantic-versioning will start at v1.0.0. Until then new releases *might* introduce breaks. |
-| **Road-map**          | Better errors, optional worker/Worklet wrapper, and typed events for back-pressure.         |
+| **Road-map**          | Optional worker/Worklet wrapper.                                                            |
 
 ---
 
 ## Features
 
 * **Chunk-by-chunk decoding** – start playback before the file is finished downloading.
-* **No runtime dependencies** – the package.json lists only dev-deps and peer-less prod code.&#x20;
+* **No runtime dependencies** – the package.json lists only dev-deps and peer-less prod code.
 * **Broad PCM coverage** – 8/16/24/32-bit PCM, 32/64-bit float, A-law and µ-law, little- and big-endian.
-  The unit-tests run those variants against \~20 fixtures.&#x20;
+  The unit-tests run those variants against ~20 fixtures.
 * **Works in Node 20+ and modern browsers**; for browsers you can pipe the decoded Float32Arrays straight into an `AudioContext`.
 
 ---

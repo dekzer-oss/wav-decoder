@@ -4,15 +4,15 @@
   "description": "A robust, streaming-capable WAV audio decoder with full PCM, float, A-law, and µ-law support — zero dependencies, works in browsers and Node.js.",
   "author": "Maikel Eckelboom",
   "license": "MIT",
-  "homepage": "https://github.com/dekzer-oss/streaming-wav-decoder#readme",
+  "homepage": "https://github.com/dekzer-oss/wav-decoder#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dekzer-oss/streaming-wav-decoder.git"
+    "url": "https://github.com/dekzer-oss/wav-decoder.git"
   },
   "bugs": {
-    "url": "https://github.com/dekzer-oss/streaming-wav-decoder/issues"
+    "url": "https://github.com/dekzer-oss/wav-decoder/issues"
   },
-  "packageManager": "pnpm@10.12.4",
+  "packageManager": "pnpm@10.13.1",
   "engines": {
     "node": ">=20.0.0"
   },
@@ -34,14 +34,13 @@
     "zero-dependencies"
   ],
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
@@ -52,29 +51,31 @@
     "dev": "vitest",
     "demo": "vite",
     "format": "prettier --write .",
-    "fixtures:generate": "python3 scripts/generate_wav_fixtures.py",
-    "test": "vitest run --reporter=verbose",
+    "fixtures:generate": "python3 scripts/gen-wav-fixtures.py",
+    "test": "vitest --run --reporter=verbose",
     "test:watch": "vitest",
-    "test:node": "vitest run --project node",
-    "test:browser": "vitest run --project browser --poolOptions.browser.isolate=false --poolOptions.browser.concurrent=3",
+    "test:node": "vitest --project node",
+    "test:browser": "vitest --project browser --poolOptions.browser.isolate=false --poolOptions.browser.concurrent=3",
     "test:ci": "pnpm exec playwright install && pnpm -r run test:node & pnpm -r run test:browser & wait",
-    "bench": "vitest bench --reporter=verbose",
-    "bench:browser": "vitest bench --project browser --reporter=verbose",
-    "bench:node": "vitest bench --project node --reporter=verbose",
+    "bench": "vitest bench --run --outputJson bench/bench.json",
+    "bench:browser": "vitest bench --run --project browser --outputJson bench/bench-browser.json",
+    "bench:node": "vitest bench --run --project node --outputJson bench/bench-node.json",
     "build": "tsup",
-    "build:verify": "tsup && node --eval \"import('./dist/index.js').then(m => console.log('✓ Build verified'))\"",
-    "release": "pnpm build && changeset publish"
+    "build:verify": "tsup && node --eval \"import('./dist/index.mjs').then(() => console.log('✓ Build verified'))\"",
+    "release": "pnpm build && changeset publish",
+    "bench:compare": "pnpm vitest bench --run && node scripts/compare-bench.js",
+    "bench:update": "pnpm vitest bench --run && node scripts/update-badge.js"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "@playwright/test": "^1.53.1",
     "@types/node": "^24.0.5",
-    "@vitest/browser": "^3.2.4",
+    "@vitest/browser": "4.0.0-beta.2",
+    "vitest": "4.0.0-beta.2",
     "happy-dom": "^18.0.1",
     "prettier": "^3.6.2",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
-    "vite": "^7.0.0",
-    "vitest": "^3.2.4"
+    "vite": "^7.0.0"
   }
 }

@@ -1,0 +1,42 @@
+name: Benchmarks
+
+on:
+  pull_request:
+    paths: [ 'src/**', 'tests/**' ]
+  push:
+    branches: [ main ]
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.13.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm vitest bench --run
+
+      - run: node scripts/compare-bench.js
+
+      - if: github.ref == 'refs/heads/main'
+        run: |
+          node scripts/update-badge.js
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add bench/bench.json bench/badge.json
+          git commit -m "chore(bench): update benchmark baseline & badge [skip ci]" || echo "no changes"
+          git push

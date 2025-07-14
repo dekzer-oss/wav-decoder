@@ -3,24 +3,19 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm', 'cjs'],
-  dts: {
-    entry: 'src/index.ts',
-  },
-  sourcemap: true,
+  splitting: false,
+  dts: true,
+  target: 'node18',
+  sourcemap: false,
   clean: true,
-  tsconfig: 'tsconfig.build.json',
   minify: true,
-  outExtension({ format }) {
-    return {
-      js: format === 'esm' ? '.mjs' : '.js',
-    };
-  },
-  terserOptions: {
-    compress: {
-      drop_console: true,
-    },
-    format: {
-      comments: false,
-    },
+  outExtension: ({ format }) => ({
+    js: format === 'esm' ? '.mjs' : '.cjs',
+  }),
+  esbuildOptions(options) {
+    // strip console/debugger in one pass
+    options.minifyWhitespace = true;
+    options.pure ||= [];
+    options.pure.push('console.log', 'console.debug');
   },
 });

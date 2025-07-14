@@ -22,11 +22,11 @@ export type CommonSampleRate =
 /* ---------- runtime structures ---------- */
 
 export interface DecodeError {
-  message: string; // brief description
-  frameLength: number; // bytes in one frame
-  frameNumber: number; // index of bad frame
-  inputBytes: number; // bytes read so far
-  outputSamples: number; // samples produced so far
+  message: string;
+  frameLength: number;
+  frameNumber: number;
+  inputBytes: number;
+  outputSamples: number;
 }
 
 export interface DecodedWavAudio {
@@ -34,12 +34,12 @@ export interface DecodedWavAudio {
   samplesDecoded: number;
   sampleRate: CommonSampleRate;
   bitDepth: WavBitDepth;
-  duration: number; // seconds
+  duration: number;
   errors: DecodeError[];
 }
 
 export interface DecoderOptions {
-  maxBufferSize?: number; // default 16 MiB
+  maxBufferSize?: number;
 }
 
 /* ---------- header summary ---------- */
@@ -52,12 +52,11 @@ export interface WavFormat {
   blockSize: number;
   bitDepth: WavBitDepth;
 
-  /* optional fields (extensible) */
   extensionSize?: number;
   validBitsPerSample?: number;
   channelMask?: number;
   subFormat?: Uint8Array;
-  duration?: number; // seconds (file-level)
+  duration?: number;
 }
 
 /* ---------- decoder bookkeeping ---------- */
@@ -81,10 +80,10 @@ export interface WavDecoderInfo {
   decodedBytes: number;
   remainingBytes: number;
   totalBytes: number;
-  progress: number; // 0–1
+  progress: number;
   format: WavFormat;
   errors: DecodeError[];
   parsedChunks: ChunkInfo[];
   unhandledChunks: ChunkInfo[];
-  duration: number; // seconds decoded so far
+  duration: number; // seconds decoded so far <-- ? is this true?
 }

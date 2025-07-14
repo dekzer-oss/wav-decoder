@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     projects: [
       {
+        extends: true,
         test: {
           name: 'node',
           environment: 'node',
@@ -13,6 +14,7 @@ export default defineConfig({
         },
       },
       {
+        extends: true,
         test: {
           name: 'browser',
           environment: 'happy-dom',
@@ -20,8 +22,8 @@ export default defineConfig({
           include: ['tests/**/*.test.ts'],
           exclude: ['tests/**/*.bench.ts'],
           browser: {
-            provider: 'playwright',
             enabled: true,
+            provider: 'playwright',
             headless: true,
             screenshotFailures: false,
             instances: [{ browser: 'chromium' }, { browser: 'firefox' }, { browser: 'webkit' }],

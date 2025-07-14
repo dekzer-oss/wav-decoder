@@ -1,4 +1,4 @@
-import { beforeAll, bench, describe } from 'vitest';
+import { beforeAll, bench, type BenchOptions, describe } from 'vitest';
 import { DecoderState, WavDecoder } from '../src';
 import { fixtureProperties } from './fixtures';
 import { loadFixture } from './fixtures/helpers.ts';
@@ -14,30 +14,47 @@ beforeAll(async () => {
   });
 });
 
+const benchOptions: BenchOptions = {
+  warmupIterations: 20,
+  time: 1_000,
+};
+
 describe('WavDecoder full decode() performance', () => {
-  bench('sine_alaw_8bit_le_mono.wav - decode', () => {
-    const data = loadedFixtures.get('sine_alaw_8bit_le_mono.wav');
-    if (!data) throw new Error('Fixture not found: sine_alaw_8bit_le_mono.wav');
-    const decoder = new WavDecoder();
-    decoder.decode(data);
-    decoder.free();
-  });
+  bench(
+    'sine_alaw_8bit_le_mono.wav - decode',
+    () => {
+      const data = loadedFixtures.get('sine_alaw_8bit_le_mono.wav');
+      if (!data) throw new Error('Fixture not found: sine_alaw_8bit_le_mono.wav');
+      const decoder = new WavDecoder();
+      decoder.decode(data);
+      decoder.free();
+    },
+    benchOptions
+  );
 
-  bench('sine_pcm_16bit_le_stereo.wav - decode', () => {
-    const data = loadedFixtures.get('sine_pcm_16bit_le_stereo.wav');
-    if (!data) throw new Error('Fixture not found: sine_pcm_16bit_le_stereo.wav');
-    const decoder = new WavDecoder();
-    decoder.decode(data);
-    decoder.free();
-  });
+  bench(
+    'sine_pcm_16bit_le_stereo.wav - decode',
+    () => {
+      const data = loadedFixtures.get('sine_pcm_16bit_le_stereo.wav');
+      if (!data) throw new Error('Fixture not found: sine_pcm_16bit_le_stereo.wav');
+      const decoder = new WavDecoder();
+      decoder.decode(data);
+      decoder.free();
+    },
+    benchOptions
+  );
 
-  bench('sine_pcm_24bit_be_stereo.wav - decode', () => {
-    const data = loadedFixtures.get('sine_pcm_24bit_be_stereo.wav');
-    if (!data) throw new Error('Fixture not found: sine_pcm_24bit_be_stereo.wav');
-    const decoder = new WavDecoder();
-    decoder.decode(data);
-    decoder.free();
-  });
+  bench(
+    'sine_pcm_24bit_be_stereo.wav - decode',
+    () => {
+      const data = loadedFixtures.get('sine_pcm_24bit_be_stereo.wav');
+      if (!data) throw new Error('Fixture not found: sine_pcm_24bit_be_stereo.wav');
+      const decoder = new WavDecoder();
+      decoder.decode(data);
+      decoder.free();
+    },
+    benchOptions
+  );
 });
 
 describe('WavDecoder API comparison under looping conditions', () => {
@@ -65,33 +82,41 @@ describe('WavDecoder API comparison under looping conditions', () => {
     return { decoder, body, format: decoder.info.format };
   };
 
-  bench('block-by-block (using decodeFrames)', () => {
-    const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
-    const { blockSize } = format;
-    const chunkSize = blockSize * 512;
+  bench(
+    'block-by-block (using decodeFrames)',
+    () => {
+      const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
+      const { blockSize } = format;
+      const chunkSize = blockSize * 512;
 
-    for (let i = 0; i < body.length; i += chunkSize) {
-      const chunk = body.subarray(i, i + chunkSize);
-      if (chunk.length % blockSize === 0) {
-        decoder.decodeFrames(chunk);
+      for (let i = 0; i < body.length; i += chunkSize) {
+        const chunk = body.subarray(i, i + chunkSize);
+        if (chunk.length % blockSize === 0) {
+          decoder.decodeFrames(chunk);
+        }
       }
-    }
 
-    decoder.free();
-  });
+      decoder.free();
+    },
+    benchOptions
+  );
 
-  bench('block-by-block (using decode)', () => {
-    const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
-    const { blockSize } = format;
-    const chunkSize = blockSize * 512;
+  bench(
+    'block-by-block (using decode)',
+    () => {
+      const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
+      const { blockSize } = format;
+      const chunkSize = blockSize * 512;
 
-    for (let i = 0; i < body.length; i += chunkSize) {
-      const chunk = body.subarray(i, i + chunkSize);
-      if (chunk.length > 0) {
-        decoder.decode(chunk);
+      for (let i = 0; i < body.length; i += chunkSize) {
+        const chunk = body.subarray(i, i + chunkSize);
+        if (chunk.length > 0) {
+          decoder.decode(chunk);
+        }
       }
-    }
 
-    decoder.free();
-  });
+      decoder.free();
+    },
+    benchOptions
+  );
 });
