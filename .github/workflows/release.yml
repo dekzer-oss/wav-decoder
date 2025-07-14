@@ -2,7 +2,7 @@ name: Release (Changesets)
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
 
 concurrency:
   group: release-${{ github.workflow }}
@@ -10,7 +10,6 @@ concurrency:
 
 jobs:
   release:
-    if: ${{ secrets.NPM_TOKEN != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,10 +30,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # publish or open version-bump PR
-      - uses: changesets/action@v1
+      - name: Publish (or open version-bump PR)
+        if: ${{ secrets.NPM_TOKEN != '' }}
+        uses: changesets/action@v1
         with:
           publish: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN:    ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Skip publish (no NPM_TOKEN)
+        if: ${{ secrets.NPM_TOKEN == '' }}
+        run: echo "NPM_TOKEN not set — skipping publish."
