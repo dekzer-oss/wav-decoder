@@ -8,157 +8,157 @@ export interface FixtureProperties {
 
 export const fixtureProperties: Record<string, FixtureProperties> = {
   'exotic_alt_clipped_silent_stereo.wav': {
-    channels: 2,       // "stereo" in name
+    channels: 2,
     sampleRate: 44100,
-    bitDepth: 16,      // assumed common depth for clipped files
+    bitDepth: 16,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // assumed PCM
+    formatTag: 0x0001,
   },
   'sine_pcm_8bit_le_mono.wav': {
-    channels: 1,       // "mono"
+    channels: 1,
     sampleRate: 44100,
-    bitDepth: 8,       // "8bit"
+    bitDepth: 8,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // "pcm"
+    formatTag: 0x0001,
   },
   'exotic_float32_nan_inf.wav': {
-    channels: 1,       // assumed mono (no channel specifier)
+    channels: 1,
     sampleRate: 44100,
-    bitDepth: 32,      // "float32"
+    bitDepth: 32,
     samplesPerChannel: 44100,
-    formatTag: 0x0003  // float
+    formatTag: 0x0003,
   },
   'sine_ulaw_8bit_le_stereo.wav': {
-    channels: 2,       // "stereo"
+    channels: 2,
     sampleRate: 44100,
-    bitDepth: 8,       // "8bit"
+    bitDepth: 8,
     samplesPerChannel: 44100,
-    formatTag: 0x0007  // ulaw
+    formatTag: 0x0007,
   },
   'sweep_pcm_24bit_le_8ch.wav': {
-    channels: 8,       // "8ch"
+    channels: 8,
     sampleRate: 44100,
-    bitDepth: 24,      // "24bit"
+    bitDepth: 24,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // pcm
+    formatTag: 0x0001,
   },
   'sine_alaw_8bit_le_mono.wav': {
-    channels: 1,       // "mono"
+    channels: 1,
     sampleRate: 44100,
-    bitDepth: 8,       // "8bit"
+    bitDepth: 8,
     samplesPerChannel: 44100,
-    formatTag: 0x0006  // alaw
+    formatTag: 0x0006,
   },
   'sweep_float_32bit_le_8ch.wav': {
-    channels: 8,       // "8ch"
+    channels: 8,
     sampleRate: 44100,
-    bitDepth: 32,      // "32bit"
+    bitDepth: 32,
     samplesPerChannel: 44100,
-    formatTag: 0x0003  // float
+    formatTag: 0x0003,
   },
   'sine_float_32bit_le_mono.wav': {
-    channels: 1,       // "mono"
+    channels: 1,
     sampleRate: 44100,
-    bitDepth: 32,      // "32bit"
+    bitDepth: 32,
     samplesPerChannel: 44100,
-    formatTag: 0x0003  // float
+    formatTag: 0x0003,
   },
   'exotic_short_pcm16_80samples.wav': {
-    channels: 1,       // implied by "pcm16" pattern
+    channels: 1,
     sampleRate: 44100,
-    bitDepth: 16,      // "pcm16"
-    samplesPerChannel: 80, // "80samples"
-    formatTag: 0x0001  // pcm
+    bitDepth: 16,
+    samplesPerChannel: 80,
+    formatTag: 0x0001,
   },
   'sine_pcm_32bit_le_stereo.wav': {
-    channels: 2,       // "stereo"
+    channels: 2,
     sampleRate: 44100,
-    bitDepth: 32,      // "32bit"
+    bitDepth: 32,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // pcm
+    formatTag: 0x0001,
   },
   'sine_float_64bit_le_stereo.wav': {
-    channels: 2,       // "stereo"
+    channels: 2,
     sampleRate: 44100,
-    bitDepth: 64,      // "64bit"
+    bitDepth: 64,
     samplesPerChannel: 44100,
-    formatTag: 0x0003  // float
+    formatTag: 0x0003,
   },
   'sweep_float_32bit_le_stereo.wav': {
-    channels: 2,       // "stereo"
+    channels: 2,
     sampleRate: 44100,
-    bitDepth: 32,      // "32bit"
+    bitDepth: 32,
     samplesPerChannel: 44100,
-    formatTag: 0x0003  // float
+    formatTag: 0x0003,
   },
   'sweep_pcm_16bit_le_stereo.wav': {
-    channels: 2,       // "stereo"
+    channels: 2,
     sampleRate: 44100,
-    bitDepth: 16,      // "16bit"
+    bitDepth: 16,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // pcm
+    formatTag: 0x0001,
   },
   'sine_float_32bit_be_stereo.wav': {
-    channels: 2,       // "stereo"
+    channels: 2,
     sampleRate: 44100,
-    bitDepth: 32,      // "32bit"
+    bitDepth: 32,
     samplesPerChannel: 44100,
-    formatTag: 0x0003  // float
+    formatTag: 0x0003,
   },
   'sine_pcm_24bit_le_8ch.wav': {
-    channels: 8,       // "8ch"
+    channels: 8,
     sampleRate: 44100,
-    bitDepth: 24,      // "24bit"
+    bitDepth: 24,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // pcm
+    formatTag: 0x0001,
   },
   'sine_float_32bit_le_8ch.wav': {
-    channels: 8,       // "8ch"
+    channels: 8,
     sampleRate: 44100,
-    bitDepth: 32,      // "32bit"
+    bitDepth: 32,
     samplesPerChannel: 44100,
-    formatTag: 0x0003  // float
+    formatTag: 0x0003,
   },
   'sine_pcm_16bit_le_stereo.wav': {
-    channels: 2,       // "stereo"
+    channels: 2,
     sampleRate: 44100,
-    bitDepth: 16,      // "16bit"
+    bitDepth: 16,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // pcm
+    formatTag: 0x0001,
   },
   'sine_pcm_16bit_be_mono.wav': {
-    channels: 1,       // "mono"
+    channels: 1,
     sampleRate: 44100,
-    bitDepth: 16,      // "16bit"
+    bitDepth: 16,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // pcm
+    formatTag: 0x0001,
   },
   'exotic_silent_pcm16_mono.wav': {
-    channels: 1,       // "mono"
+    channels: 1,
     sampleRate: 44100,
-    bitDepth: 16,      // "pcm16"
+    bitDepth: 16,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // pcm
+    formatTag: 0x0001,
   },
   'sine_pcm_24bit_be_stereo.wav': {
-    channels: 2,       // "stereo"
+    channels: 2,
     sampleRate: 44100,
-    bitDepth: 24,      // "24bit"
+    bitDepth: 24,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // pcm
+    formatTag: 0x0001,
   },
   'exotic_clipped_pcm16_mono.wav': {
-    channels: 1,       // "mono"
+    channels: 1,
     sampleRate: 44100,
-    bitDepth: 16,      // "pcm16"
+    bitDepth: 16,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // pcm
+    formatTag: 0x0001,
   },
   'sine_pcm_24bit_le_mono.wav': {
-    channels: 1,       // "mono"
+    channels: 1,
     sampleRate: 44100,
-    bitDepth: 24,      // "24bit"
+    bitDepth: 24,
     samplesPerChannel: 44100,
-    formatTag: 0x0001  // pcm
-  }
+    formatTag: 0x0001,
+  },
 };

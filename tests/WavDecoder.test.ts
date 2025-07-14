@@ -7,9 +7,7 @@ const loadedFixtures = new Map<string, Uint8Array>();
 
 beforeAll(async () => {
   const fixtureNames = Object.keys(fixtureProperties);
-  const audioDataArray = await Promise.all(
-    fixtureNames.map(name => loadFixture(name))
-  );
+  const audioDataArray = await Promise.all(fixtureNames.map((name) => loadFixture(name)));
 
   fixtureNames.forEach((name, index) => {
     loadedFixtures.set(name, audioDataArray[index]!);
@@ -33,10 +31,10 @@ describe('WavDecoder', () => {
       const format = decoder.info.format;
 
       expect(result.errors).toEqual([]);
-      expect(format.format).toBe(expected.formatTag);
-      expect(format.channelCount).toBe(expected.channels);
+      expect(format.formatTag).toBe(expected.formatTag);
+      expect(format.channels).toBe(expected.channels);
       expect(format.sampleRate).toBe(expected.sampleRate);
-      expect(format.bitsPerSample).toBe(expected.bitDepth);
+      expect(format.bitDepth).toBe(expected.bitDepth);
       expect(result.channelData.length).toBe(expected.channels);
 
       for (let i = 0; i < result.channelData.length; i++) {
@@ -45,42 +43,39 @@ describe('WavDecoder', () => {
     }
   );
 
-  test.each(Object.entries(fixtureProperties))(
-    'should correctly decode %s frame by frame',
-    (fixtureName, expected) => {
-      const audioData = loadedFixtures.get(fixtureName);
-      if (!audioData) throw new Error(`Fixture "${fixtureName}" not found.`);
+  test.each(Object.entries(fixtureProperties))('should correctly decode %s frame by frame', (fixtureName, expected) => {
+    const audioData = loadedFixtures.get(fixtureName);
+    if (!audioData) throw new Error(`Fixture "${fixtureName}" not found.`);
 
-      const dataChunkStart = findStringInUint8Array(audioData, 'data');
-      expect(dataChunkStart).toBeGreaterThan(-1);
+    const dataChunkStart = findStringInUint8Array(audioData, 'data');
+    expect(dataChunkStart).toBeGreaterThan(-1);
 
-      const headerEndOffset = dataChunkStart + 8;
-      const header = audioData.subarray(0, headerEndOffset);
-      const body = audioData.subarray(headerEndOffset);
+    const headerEndOffset = dataChunkStart + 8;
+    const header = audioData.subarray(0, headerEndOffset);
+    const body = audioData.subarray(headerEndOffset);
 
-      decoder.decode(header);
-      expect(decoder.info.state).toBe(DecoderState.DECODING);
+    decoder.decode(header);
+    expect(decoder.info.state).toBe(DecoderState.DECODING);
 
-      const { blockSize } = decoder.info.format;
-      expect(blockSize).toBeGreaterThan(0);
+    const { blockSize } = decoder.info.format;
+    expect(blockSize).toBeGreaterThan(0);
 
-      let totalSamplesDecoded = 0;
-      const chunkSize = blockSize * 512;
+    let totalSamplesDecoded = 0;
+    const chunkSize = blockSize * 512;
 
-      for (let offset = 0; offset < body.length; offset += chunkSize) {
-        const chunk = body.subarray(offset, offset + chunkSize);
-        const framesInChunk = Math.floor(chunk.length / blockSize);
-        if (framesInChunk === 0) continue;
+    for (let offset = 0; offset < body.length; offset += chunkSize) {
+      const chunk = body.subarray(offset, offset + chunkSize);
+      const framesInChunk = Math.floor(chunk.length / blockSize);
+      if (framesInChunk === 0) continue;
 
-        const frameData = chunk.subarray(0, framesInChunk * blockSize);
-        const frameResult = decoder.decodeFrames(frameData);
-        expect(frameResult.errors).toEqual([]);
-        totalSamplesDecoded += frameResult.samplesDecoded;
-      }
-
-      expect(totalSamplesDecoded).toBe(expected.samplesPerChannel);
+      const frameData = chunk.subarray(0, framesInChunk * blockSize);
+      const frameResult = decoder.decodeFrames(frameData);
+      expect(frameResult.errors).toEqual([]);
+      totalSamplesDecoded += frameResult.samplesDecoded;
     }
-  );
+
+    expect(totalSamplesDecoded).toBe(expected.samplesPerChannel);
+  });
 
   it('should handle NaN/Inf values in exotic_float32_nan_inf.wav', () => {
     const fixtureName = 'exotic_float32_nan_inf.wav';
@@ -93,9 +88,7 @@ describe('WavDecoder', () => {
     const hasNaN = result.channelData[0]?.some(Number.isNaN);
     expect(hasNaN).toBe(true);
 
-    const hasInf = result.channelData[0]?.some(
-      sample => !Number.isNaN(sample) && !Number.isFinite(sample)
-    );
+    const hasInf = result.channelData[0]?.some((sample) => !Number.isNaN(sample) && !Number.isFinite(sample));
     expect(hasInf).toBe(false);
   });
 
@@ -108,8 +101,8 @@ describe('WavDecoder', () => {
     expect(result.errors).toEqual([]);
 
     // Optimized: Single bulk check per channel
-    result.channelData.forEach(channel => {
-      const isSilent = channel.every(sample => sample === 0);
+    result.channelData.forEach((channel) => {
+      const isSilent = channel.every((sample) => sample === 0);
       expect(isSilent).toBe(true);
     });
   });
@@ -122,14 +115,10 @@ describe('WavDecoder', () => {
     const result = decoder.decode(audioData);
     expect(result.errors).toEqual([]);
 
-    result.channelData.forEach(channel => {
-      const invalidSamples = channel
-        .map(s => Math.round(s))
-        .filter(s => s !== -1 && s !== 0 && s !== 1);
+    result.channelData.forEach((channel) => {
+      const invalidSamples = channel.map((s) => Math.round(s)).filter((s) => s !== -1 && s !== 0 && s !== 1);
 
-      expect(invalidSamples).toEqual(
-        new Float32Array(0)
-      );
+      expect(invalidSamples).toEqual(new Float32Array(0));
     });
   });
 
@@ -147,10 +136,10 @@ describe('WavDecoder', () => {
     const multiChannelFixtures = [
       'sweep_pcm_24bit_le_8ch.wav',
       'sine_pcm_24bit_le_8ch.wav',
-      'sine_float_32bit_le_8ch.wav'
+      'sine_float_32bit_le_8ch.wav',
     ];
 
-    multiChannelFixtures.forEach(fixtureName => {
+    multiChannelFixtures.forEach((fixtureName) => {
       decoder = new WavDecoder();
       const audioData = loadedFixtures.get(fixtureName);
       if (!audioData) throw new Error(`Fixture "${fixtureName}" not found.`);
@@ -162,12 +151,9 @@ describe('WavDecoder', () => {
   });
 
   it('should handle clipped PCM files', () => {
-    const clippedFixtures = [
-      'exotic_clipped_pcm16_mono.wav',
-      'exotic_alt_clipped_silent_stereo.wav',
-    ];
+    const clippedFixtures = ['exotic_clipped_pcm16_mono.wav', 'exotic_alt_clipped_silent_stereo.wav'];
 
-    clippedFixtures.forEach(fixtureName => {
+    clippedFixtures.forEach((fixtureName) => {
       decoder = new WavDecoder();
       const audioData = loadedFixtures.get(fixtureName);
       if (!audioData) throw new Error(`Fixture "${fixtureName}" not found.`);
@@ -175,11 +161,9 @@ describe('WavDecoder', () => {
       const result = decoder.decode(audioData);
       expect(result.errors).toEqual([]);
 
-      result.channelData.forEach(channel => {
-        const outOfRange = channel.filter(s => s < -1 || s > 1);
-        expect(outOfRange).toEqual(
-          new Float32Array(0)
-        );
+      result.channelData.forEach((channel) => {
+        const outOfRange = channel.filter((s) => s < -1 || s > 1);
+        expect(outOfRange).toEqual(new Float32Array(0));
       });
     });
   });
@@ -198,7 +182,7 @@ describe('WavDecoder', () => {
 
     decoder.decode(header);
     expect(decoder.info.state).toBe(DecoderState.DECODING);
-    const { blockSize, channelCount } = decoder.info.format;
+    const { blockSize, channels } = decoder.info.format;
 
     const bytesDecodedBefore = decoder.info.decodedBytes;
     expect(bytesDecodedBefore).toBe(0);
@@ -211,7 +195,7 @@ describe('WavDecoder', () => {
 
     expect(result).not.toBeNull();
     expect(result).toBeInstanceOf(Float32Array);
-    expect(result!.length).toBe(channelCount);
+    expect(result!.length).toBe(channels);
 
     const batchResult = decoder.decodeFrames(firstFrame);
     const expectedLeftSample = batchResult.channelData[0]![0]!;

@@ -49,10 +49,8 @@ export class RingBuffer {
 
     const firstChunk = this.capacity - wp;
     if (bytesToWrite <= firstChunk) {
-      // Data fits in a single contiguous block.
       buffer.set(data.subarray(0, bytesToWrite), wp);
     } else {
-      // Data wraps around the end of the buffer.
       buffer.set(data.subarray(0, firstChunk), wp);
       buffer.set(data.subarray(firstChunk, bytesToWrite), 0);
     }
@@ -77,10 +75,8 @@ export class RingBuffer {
     const firstChunk = this.capacity - rp;
 
     if (length <= firstChunk) {
-      // Data is in a single contiguous block.
       target.set(buffer.subarray(rp, rp + length), 0);
     } else {
-      // Data wraps around the end of the buffer.
       target.set(buffer.subarray(rp, rp + firstChunk), 0);
       target.set(buffer.subarray(0, length - firstChunk), firstChunk);
     }
@@ -98,7 +94,6 @@ export class RingBuffer {
   read(length: number): Uint8Array | null {
     if (this.size < length) return null;
     const result = new Uint8Array(length);
-    // readInto will always succeed here because we checked the size.
     this.readInto(result);
     return result;
   }
@@ -140,12 +135,10 @@ export class RingBuffer {
    */
   peek(len: number, offset = 0): Uint8Array {
     const start = (this.readPos + offset) & (this.capacity - 1);
-    const end   = (start + len) & (this.capacity - 1);
+    const end = (start + len) & (this.capacity - 1);
 
-    if (start < end || end === 0)
-      return this.buffer.subarray(start, start + len);
+    if (start < end || end === 0) return this.buffer.subarray(start, start + len);
 
     return this.buffer.subarray(0, end);
   }
-
 }

@@ -32,7 +32,7 @@ describe('WavDecoder full decode() performance', () => {
   });
 
   bench('sine_pcm_24bit_be_stereo.wav - decode', () => {
-    const data = loadedFixtures.get('sine_pcm_24bit_be_stereo.wav')
+    const data = loadedFixtures.get('sine_pcm_24bit_be_stereo.wav');
     if (!data) throw new Error('Fixture not found: sine_pcm_24bit_be_stereo.wav');
     const decoder = new WavDecoder();
     decoder.decode(data);
@@ -42,16 +42,17 @@ describe('WavDecoder full decode() performance', () => {
 
 describe('WavDecoder API comparison under looping conditions', () => {
   const setupDecoderWithBody = (fixtureName: string) => {
-    const fileData = loadedFixtures.get(fixtureName)
+    const fileData = loadedFixtures.get(fixtureName);
     if (!fileData) throw new Error(`Fixture not found: ${fixtureName}`);
     const decoder = new WavDecoder();
 
-    const dataChunkStart = fileData.findIndex((byte, i) =>
-      i + 3 < fileData.length &&
-      String.fromCharCode(byte) === 'd' &&
-      String.fromCharCode(fileData[i + 1]!) === 'a' &&
-      String.fromCharCode(fileData[i + 2]!) === 't' &&
-      String.fromCharCode(fileData[i + 3]!) === 'a'
+    const dataChunkStart = fileData.findIndex(
+      (byte, i) =>
+        i + 3 < fileData.length &&
+        String.fromCharCode(byte) === 'd' &&
+        String.fromCharCode(fileData[i + 1]!) === 'a' &&
+        String.fromCharCode(fileData[i + 2]!) === 't' &&
+        String.fromCharCode(fileData[i + 3]!) === 'a'
     );
     const headerEndOffset = dataChunkStart + 8;
     const header = fileData.subarray(0, headerEndOffset);

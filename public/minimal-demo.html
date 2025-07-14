@@ -1,288 +1,299 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WAV Decoder – Simple Metrics Demo</title>
-  <link rel="icon" href="favicon/favicon.svg" type="image/svg+xml" />
-  <style>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WAV Decoder – Simple Metrics Demo</title>
+    <link rel="icon" href="favicon/favicon.svg" type="image/svg+xml" />
+    <style>
       :root {
-          --bg: #f8fafc;
-          --fg: #0f172a;
-          --border: #cbd5e1;
-          --accent: #2563eb;
+        --bg: #f8fafc;
+        --fg: #0f172a;
+        --border: #cbd5e1;
+        --accent: #2563eb;
       }
       @media (prefers-color-scheme: dark) {
-          :root {
-              --bg: #0f172a;
-              --fg: #f8fafc;
-              --border: #334155;
-              --accent: #3b82f6;
-          }
+        :root {
+          --bg: #0f172a;
+          --fg: #f8fafc;
+          --border: #334155;
+          --accent: #3b82f6;
+        }
       }
 
       * {
-          box-sizing: border-box;
+        box-sizing: border-box;
       }
 
       body {
-          font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-          background: var(--bg);
-          color: var(--fg);
-          line-height: 1.6;
-          margin: 0;
-          padding: 2rem 1rem 4rem;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        line-height: 1.6;
+        margin: 0;
+        padding: 2rem 1rem 4rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
 
       h1 {
-          font-size: 1.5rem;
-          margin-bottom: 1.5rem;
-          text-align: center;
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
       }
 
       .drop-zone {
-          width: min(420px, 90vw);
-          padding: 3rem 1.5rem;
-          border: 2px dashed var(--border);
-          border-radius: 8px;
-          text-align: center;
-          cursor: pointer;
-          transition: background 150ms ease, border-color 150ms ease;
+        width: min(420px, 90vw);
+        padding: 3rem 1.5rem;
+        border: 2px dashed var(--border);
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition:
+          background 150ms ease,
+          border-color 150ms ease;
       }
       .drop-zone:hover,
       .drop-zone.dragover {
-          background: color-mix(in srgb, var(--accent) 7%, transparent);
-          border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 7%, transparent);
+        border-color: var(--accent);
       }
-      .drop-zone[aria-disabled="true"] {
-          opacity: 0.5;
-          cursor: not-allowed;
+      .drop-zone[aria-disabled='true'] {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
 
       progress {
-          width: min(420px, 90vw);
-          height: 10px;
-          margin: 1.25rem 0;
-          appearance: none;
+        width: min(420px, 90vw);
+        height: 10px;
+        margin: 1.25rem 0;
+        appearance: none;
       }
       progress[value]::-webkit-progress-bar {
-          background: var(--border);
-          border-radius: 6px;
+        background: var(--border);
+        border-radius: 6px;
       }
       progress[value]::-webkit-progress-value {
-          background: var(--accent);
-          border-radius: 6px;
-          transition: width 0.15s;
+        background: var(--accent);
+        border-radius: 6px;
+        transition: width 0.15s;
       }
 
       #metrics {
-          width: min(420px, 90vw);
-          border: 1px solid var(--border);
-          border-radius: 8px;
-          padding: 1rem;
-          margin-top: 1.25rem;
+        width: min(420px, 90vw);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1.25rem;
       }
       #metrics ul {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 0.75rem 0.5rem;
-          font-size: 0.925rem;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem 0.5rem;
+        font-size: 0.925rem;
       }
       #metrics li span {
-          font-weight: 600;
+        font-weight: 600;
       }
 
       button {
-          margin-top: 1.5rem;
-          padding: 0.65rem 1.25rem;
-          font-size: 0.95rem;
-          border: none;
-          border-radius: 6px;
-          color: var(--bg);
-          background: var(--accent);
-          cursor: pointer;
-          transition: background 150ms;
+        margin-top: 1.5rem;
+        padding: 0.65rem 1.25rem;
+        font-size: 0.95rem;
+        border: none;
+        border-radius: 6px;
+        color: var(--bg);
+        background: var(--accent);
+        cursor: pointer;
+        transition: background 150ms;
       }
       button:hover {
-          background: color-mix(in srgb, var(--accent) 85%, black 15%);
+        background: color-mix(in srgb, var(--accent) 85%, black 15%);
       }
       button:disabled {
-          background: var(--border);
-          cursor: not-allowed;
+        background: var(--border);
+        cursor: not-allowed;
       }
-  </style>
-</head>
-<body>
-<h1>Progressive WAV Decoder — Minimal Demo</h1>
+    </style>
+  </head>
+  <body>
+    <h1>Progressive WAV Decoder — Minimal Demo</h1>
 
-<div id="uploadZone" class="drop-zone" role="button" tabindex="0" aria-label="Upload WAV file">
-  Drop a .wav file here<br />or click to select
-  <div style="font-size:0.8rem;opacity:0.7;margin-top:0.25rem">Decodes in streaming chunks</div>
-</div>
+    <div id="uploadZone" class="drop-zone" role="button" tabindex="0" aria-label="Upload WAV file">
+      Drop a .wav file here<br />or click to select
+      <div style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.25rem">Decodes in streaming chunks</div>
+    </div>
 
-<input id="fileInput" type="file" accept="audio/wav,.wav" hidden />
+    <input id="fileInput" type="file" accept="audio/wav,.wav" hidden />
 
-<progress id="progressBar" value="0" max="1" hidden></progress>
+    <progress id="progressBar" value="0" max="1" hidden></progress>
 
-<section id="metrics" class="hidden">
-  <ul>
-    <li>TTFA: <span id="ttfa">-</span></li>
-    <li>Bytes: <span id="bytes">-</span></li>
-    <li>Samples: <span id="samples">-</span></li>
-    <li>Speed: <span id="speed">-</span></li>
-  </ul>
-</section>
+    <section id="metrics" class="hidden">
+      <ul>
+        <li>TTFA: <span id="ttfa">-</span></li>
+        <li>Bytes: <span id="bytes">-</span></li>
+        <li>Samples: <span id="samples">-</span></li>
+        <li>Speed: <span id="speed">-</span></li>
+      </ul>
+    </section>
 
-<button id="resetBtn" hidden>Decode Another File</button>
+    <button id="resetBtn" hidden>Decode Another File</button>
 
-<script type="module">
-  import { WavDecoder } from "../src";
+    <script type="module">
+      import { WavDecoder } from '../src';
 
-  const els = {
-    drop: document.getElementById("uploadZone"),
-    input: document.getElementById("fileInput"),
-    bar: document.getElementById("progressBar"),
-    metrics: document.getElementById("metrics"),
-    ttfa: document.getElementById("ttfa"),
-    bytes: document.getElementById("bytes"),
-    samples: document.getElementById("samples"),
-    speed: document.getElementById("speed"),
-    reset: document.getElementById("resetBtn"),
-  };
+      const els = {
+        drop: document.getElementById('uploadZone'),
+        input: document.getElementById('fileInput'),
+        bar: document.getElementById('progressBar'),
+        metrics: document.getElementById('metrics'),
+        ttfa: document.getElementById('ttfa'),
+        bytes: document.getElementById('bytes'),
+        samples: document.getElementById('samples'),
+        speed: document.getElementById('speed'),
+        reset: document.getElementById('resetBtn'),
+      };
 
-  const state = {
-    startTime: 0,
-    ttfaMarked: false,
-  };
+      const state = {
+        startTime: 0,
+        ttfaMarked: false,
+      };
 
-  function formatBytes(bytes) {
-    if (!bytes) return "0";
-    const units = ["B", "KiB", "MiB", "GiB"];
-    const i = Math.floor(Math.log2(bytes) / 10);
-    return `${(bytes / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-  }
+      function formatBytes(bytes) {
+        if (!bytes) return '0';
+        const units = ['B', 'KiB', 'MiB', 'GiB'];
+        const i = Math.floor(Math.log2(bytes) / 10);
+        return `${(bytes / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+      }
 
-  function formatSpeed(bps) {
-    return `${(bps / 1048576).toFixed(1)} MiB/s`;
-  }
+      function formatSpeed(bps) {
+        return `${(bps / 1048576).toFixed(1)} MiB/s`;
+      }
 
-  function resetUI() {
-    els.metrics.classList.add("hidden");
-    els.bar.hidden = true;
-    els.bar.value = 0;
-    els.drop.removeAttribute("aria-disabled");
-    els.drop.classList.remove("dragover");
-    els.reset.hidden = true;
-    [els.ttfa, els.bytes, els.samples, els.speed].forEach(el => (el.textContent = "-"));
-  }
-
-  function initDragAndDrop() {
-    ["dragenter", "dragover"].forEach(ev => {
-      els.drop.addEventListener(ev, e => {
-        e.preventDefault();
-        els.drop.classList.add("dragover");
-      });
-    });
-    ["dragleave", "drop"].forEach(ev => {
-      els.drop.addEventListener(ev, e => {
-        e.preventDefault();
-        if (ev === "drop") {
-          const file = Array.from(e.dataTransfer.files).find(f => f.type === "audio/wav" || f.name.endsWith(".wav"));
-          if (file) handleFile(file);
-        }
-        els.drop.classList.remove("dragover");
-      });
-    });
-  }
-
-  function handleFileSelect() {
-    els.drop.addEventListener("click", () => els.input.click());
-    els.input.addEventListener("change", e => {
-      const file = e.target.files?.[0];
-      if (file) handleFile(file);
-      e.target.value = "";
-    });
-  }
-
-  function handleFile(file) {
-    resetUI();
-    els.drop.setAttribute("aria-disabled", "true");
-    els.bar.hidden = false;
-    els.metrics.classList.remove("hidden");
-    els.drop.textContent = `Decoding \"${file.name}\" …`;
-
-    const decoder = new WavDecoder();
-    const reader = file.stream().getReader();
-    state.startTime = performance.now();
-    state.ttfaMarked = false;
-    let totalSamples = 0;
-
-    const read = ({ done, value }) => {
-      if (done) return finalize();
-      try {
-        const res = decoder.decode(value);
-        const info = decoder.info;
-        updateUI(info, res.samplesDecoded, totalSamples);
-        if (res.samplesDecoded) {
-          totalSamples += res.samplesDecoded;
-          markTTFA();
-        }
-        return reader.read().then(read);
-      } catch (err) {
-        console.error(err);
-        els.drop.textContent = `Error: ${err.message}`;
-        els.drop.removeAttribute("aria-disabled");
+      function resetUI() {
+        els.metrics.classList.add('hidden');
         els.bar.hidden = true;
-      }
-    };
-
-    function finalize() {
-      try {
-        const fin = decoder.flush();
-        if (fin?.samplesDecoded) totalSamples += fin.samplesDecoded;
-        els.samples.textContent = totalSamples.toLocaleString();
-      } catch (err) {
-        console.warn("flush error", err);
+        els.bar.value = 0;
+        els.drop.removeAttribute('aria-disabled');
+        els.drop.classList.remove('dragover');
+        els.reset.hidden = true;
+        [els.ttfa, els.bytes, els.samples, els.speed].forEach((el) => (el.textContent = '-'));
       }
 
-      els.drop.textContent = `Done – ${file.name}`;
-      els.reset.hidden = false;
-      els.drop.removeAttribute("aria-disabled");
-    }
-
-    function updateUI(info, newlyDecoded, runningTotal) {
-      if (info.progress) els.bar.value = info.progress;
-      const elapsed = (performance.now() - state.startTime) / 1000;
-      els.bytes.textContent = formatBytes(info.decodedBytes);
-      els.samples.textContent = (runningTotal + newlyDecoded).toLocaleString();
-      if (elapsed > 0) els.speed.textContent = formatSpeed(info.decodedBytes / elapsed);
-    }
-
-    function markTTFA() {
-      if (!state.ttfaMarked) {
-        const ms = performance.now() - state.startTime;
-        els.ttfa.textContent = `${ms.toFixed(1)} ms`;
-        state.ttfaMarked = true;
+      function initDragAndDrop() {
+        ['dragenter', 'dragover'].forEach((ev) => {
+          els.drop.addEventListener(ev, (e) => {
+            e.preventDefault();
+            els.drop.classList.add('dragover');
+          });
+        });
+        ['dragleave', 'drop'].forEach((ev) => {
+          els.drop.addEventListener(ev, (e) => {
+            e.preventDefault();
+            if (ev === 'drop') {
+              const file = Array.from(e.dataTransfer.files).find(
+                (f) => f.type === 'audio/wav' || f.name.endsWith('.wav')
+              );
+              if (file) handleFile(file);
+            }
+            els.drop.classList.remove('dragover');
+          });
+        });
       }
-    }
 
-    reader.read().then(read);
-  }
+      function handleFileSelect() {
+        els.drop.addEventListener('click', () => els.input.click());
+        els.input.addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+          e.target.value = '';
+        });
+      }
 
-  els.reset.addEventListener("click", () => {
-    resetUI();
-    els.drop.textContent = "Drop a .wav file here\nor click to select";
-  });
+      function handleFile(file) {
+        resetUI();
+        els.drop.setAttribute('aria-disabled', 'true');
+        els.bar.hidden = false;
+        els.metrics.classList.remove('hidden');
+        els.drop.textContent = `Decoding \"${file.name}\" …`;
 
-  resetUI();
-  initDragAndDrop();
-  handleFileSelect();
-</script>
-</body>
+        const decoder = new WavDecoder();
+        const reader = file.stream().getReader();
+        state.startTime = performance.now();
+        state.ttfaMarked = false;
+        let totalSamples = 0;
+
+        const read = ({ done, value }) => {
+          if (done) return finalize();
+          try {
+            const res = decoder.decode(value);
+            const info = decoder.info;
+            updateUI(info, res.samplesDecoded, totalSamples);
+            if (res.samplesDecoded) {
+              totalSamples += res.samplesDecoded;
+              markTTFA();
+            }
+            return reader.read().then(read);
+          } catch (err) {
+            console.error(err);
+            els.drop.textContent = `Error: ${err.message}`;
+            els.drop.removeAttribute('aria-disabled');
+            els.bar.hidden = true;
+          }
+        };
+
+        function finalize() {
+          try {
+            const fin = decoder.flush();
+            if (fin?.samplesDecoded) totalSamples += fin.samplesDecoded;
+            els.samples.textContent = totalSamples.toLocaleString();
+          } catch (err) {
+            console.warn('flush error', err);
+          }
+
+          els.drop.textContent = `Done – ${file.name}`;
+          els.reset.hidden = false;
+          els.drop.removeAttribute('aria-disabled');
+        }
+
+        function updateUI(info, newlyDecoded, runningTotal) {
+          if (info.progress) els.bar.value = info.progress;
+          const elapsed = (performance.now() - state.startTime) / 1000;
+          els.bytes.textContent = formatBytes(info.decodedBytes);
+          els.samples.textContent = (runningTotal + newlyDecoded).toLocaleString();
+          if (elapsed > 0) els.speed.textContent = formatSpeed(info.decodedBytes / elapsed);
+        }
+
+        function markTTFA() {
+          if (!state.ttfaMarked) {
+            const ms = performance.now() - state.startTime;
+            els.ttfa.textContent = `${ms.toFixed(1)} ms`;
+            state.ttfaMarked = true;
+          }
+        }
+
+        reader.read().then(read);
+      }
+
+      els.reset.addEventListener('click', () => {
+        resetUI();
+        els.drop.textContent = 'Drop a .wav file here\nor click to select';
+      });
+
+      resetUI();
+      initDragAndDrop();
+      handleFileSelect();
+    </script>
+  </body>
 </html>

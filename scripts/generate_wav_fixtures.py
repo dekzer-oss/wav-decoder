@@ -256,7 +256,7 @@ def generate_exotic_wavs():
     save_wave("exotic_clipped_pcm16_mono.wav", clipped_pcm)
     save_wave("exotic_alt_clipped_silent_stereo.wav", alt_pattern, nchannels=2)
     save_wave("exotic_short_pcm16_80samples.wav", short_pcm)
-    # Save float32 with NaN/Inf manually (PCM float32 = format code 3)
+    # Save float32 with NaN/Inf manually (PCM float32 = formatTag code 3)
     def write_float_wav_header(data_bytes, sample_rate=44100, nchannels=1):
         block_align = 4 * nchannels
         byte_rate = sample_rate * block_align
@@ -282,4 +282,4 @@ def main():
     print("All WAV test files generated in:", OUTPUT_DIR.resolve())
 
 if __name__ == "__main__":
-    main() 
+    main()

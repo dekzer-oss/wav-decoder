@@ -10,6 +10,7 @@ A streaming WAV decoder for TypeScript/JavaScript with support for large files a
 The Web Audio API's `decodeAudioData()` requires the entire audio file to be loaded into memory before decoding can begin. This creates problems when working with large WAV files or streaming audio data.
 
 This library allows you to decode WAV audio progressively as data arrives, enabling:
+
 - Instant playback of large files (1GB+)
 - Streaming from network sources
 - Lower memory usage
@@ -60,28 +61,36 @@ async function streamAudio(url: string) {
 ## API
 
 ### `new WavDecoder()`
+
 Creates a new decoder instance.
 
 ### `decode(chunk: Uint8Array)`
+
 Decodes a chunk of WAV data. Returns a `DecodedWavAudio` with:
+
 - `channelData: Float32Array[]` - Decoded audio samplesDecoded by channel
 - `samplesDecoded: number` - Number of samplesDecoded decoded from this chunk
 - `sampleRate: number` - Sample rate of the audio
 - `errors: DecodeError[]` - Any decoding errors encountered
 
 ### `decodeFrames(frames: Uint8Array)`
+
 Optimized version for real-time use. Input must be block-aligned (length must be a multiple of `blockSize`).
 
 ### `decodeFrame(frame: Uint8Array)`
+
 Decodes a single audio frame. Highly optimized for performance-critical applications.
 
 ### `flush()`
+
 Processes any remaining buffered data. Returns a Promise that resolves to final decoded audio or null.
 
 ### `info`
+
 Provides comprehensive decoder information:
+
 - `state: DecoderState` - Current decoder state
-- `format: WavFormat` - Detailed format information including sample rate, channels, bit depth
+- `formatTag: WavFormat` - Detailed formatTag information including sample rate, channels, bit depth
 - `errors: DecodeError[]` - Decoding error history
 - `progress: number` - Decoding progress (0-1)
 - Plus additional diagnostic information

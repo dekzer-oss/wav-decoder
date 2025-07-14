@@ -50,19 +50,17 @@ Supports PCM, IEEE float, A-law, µ-law — fully endianness-aware.
 
 ### 🧪 Tests
 
-
-* Ensure all changes are accompanied by relevant tests (using `vitest`).
-* Run tests for Node.js with: `pnpm test:node` and for the browser with: `pnpm test:browser` as appropriate.
-* To run all tests, use: `pnpm test:all`.
-* To run tests with live reloading (watch for changes), use: `pnpm dev`.
-
+- Ensure all changes are accompanied by relevant tests (using `vitest`).
+- Run tests for Node.js with: `pnpm test:node` and for the browser with: `pnpm test:browser` as appropriate.
+- To run all tests, use: `pnpm test:all`.
+- To run tests with live reloading (watch for changes), use: `pnpm dev`.
 
 ### 🎨 Formatting
 
 - Run Prettier before committing:
 
   ```bash
-  pnpm format
+  pnpm formatTag
   ```
 
 ---

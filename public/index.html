@@ -238,7 +238,6 @@
 <script type="module">
   import { WavDecoder } from '../src';
 
-  // Utility functions
   const formatBytes = (bytes) => {
     if (bytes === 0) return '0 bytes';
     const units = ['bytes', 'KiB', 'MiB', 'GiB'];
@@ -257,7 +256,6 @@
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Logger Class
   class Logger {
     constructor(container) {
       this.container = container;
@@ -306,7 +304,6 @@
     }
   }
 
-  // Main Application Logic
   class App {
     constructor() {
       this.elements = {};
@@ -332,13 +329,27 @@
     // Collects all DOM elements by their IDs
     collectElements() {
       const ids = [
-        'uploadZone', 'fileInput', 'resultsSection', 'progressFill',
-        'resetButton', 'progressIndicator', 'ttfaTime', 'bytesProcessed',
-        'samplesDecoded', 'decodingSpeed', 'formatInfo', 'sampleRateInfo',
-        'channelsInfo', 'bitDepthInfo', 'durationInfo', 'logSection',
-        'autoplayToggle', 'stopPlaybackBtn', 'playbackControls',
+        'uploadZone',
+        'fileInput',
+        'resultsSection',
+        'progressFill',
+        'resetButton',
+        'progressIndicator',
+        'ttfaTime',
+        'bytesProcessed',
+        'samplesDecoded',
+        'decodingSpeed',
+        'formatInfo',
+        'sampleRateInfo',
+        'channelsInfo',
+        'bitDepthInfo',
+        'durationInfo',
+        'logSection',
+        'autoplayToggle',
+        'stopPlaybackBtn',
+        'playbackControls',
       ];
-      ids.forEach(id => {
+      ids.forEach((id) => {
         this.elements[id] = document.getElementById(id);
         if (!this.elements[id]) {
           console.warn(`Element with ID '${id}' not found.`);
@@ -353,11 +364,10 @@
       this.elements.stopPlaybackBtn.addEventListener('click', this.stopPlayback.bind(this));
       this.elements.fileInput.addEventListener('change', this.handleFileInputChange.bind(this));
 
-      // Drag and drop events
-      ['dragover', 'dragleave', 'drop'].forEach(event => {
+      ['dragover', 'dragleave', 'drop'].forEach((event) => {
         this.elements.uploadZone.addEventListener(event, (e) => {
           e.preventDefault();
-          e.stopPropagation(); // Stop propagation for drag events
+          e.stopPropagation();
           this.elements.uploadZone.classList.toggle('border-blue-400', event === 'dragover');
         });
       });
@@ -412,11 +422,11 @@
     }
 
     reset() {
-      this.stopPlayback(); // Stop any current playback
+      this.stopPlayback();
       this.logger.clear();
       this.metrics.reset();
-      this.decoder.reset(); // Reset the WAV decoder state
-      this.audioQueue = []; // Clear audio queue
+      this.decoder.reset();
+      this.audioQueue = [];
 
       this.elements.resultsSection.classList.add('hidden');
       this.elements.resetButton.classList.add('hidden');
@@ -427,8 +437,15 @@
       this.elements.progressFill.style.width = '0%';
 
       const displayElements = [
-        'ttfaTime', 'bytesProcessed', 'samplesDecoded', 'decodingSpeed',
-        'formatInfo', 'sampleRateInfo', 'channelsInfo', 'bitDepthInfo', 'durationInfo',
+        'ttfaTime',
+        'bytesProcessed',
+        'samplesDecoded',
+        'decodingSpeed',
+        'formatInfo',
+        'sampleRateInfo',
+        'channelsInfo',
+        'bitDepthInfo',
+        'durationInfo',
       ];
       displayElements.forEach((id) => {
         if (this.elements[id]) this.elements[id].textContent = '-';
@@ -450,11 +467,11 @@
       }
     }
 
-    updateAudioInfo(format, estimatedSamples) {
+    updateAudioInfo(formatTag, estimatedSamples) {
       const formats = { 1: 'PCM', 3: 'IEEE Float', 6: 'A-Law', 7: 'µ-Law', 65534: 'Extensible' };
-      this.elements.formatInfo.textContent = formats[format.format] || `Unknown (${format.format})`;
+      this.elements.formatInfo.textContent = formats[format.formatTag] || `Unknown (${format.formatTag})`;
       this.elements.sampleRateInfo.textContent = `${format.sampleRate.toLocaleString()} Hz`;
-      this.elements.channelsInfo.textContent = format.channelCount;
+      this.elements.channelsInfo.textContent = format.channels;
       this.elements.bitDepthInfo.textContent = `${format.bitsPerSample}-bit`;
       if (estimatedSamples > 0 && format.sampleRate > 0) {
         const durationSeconds = estimatedSamples / format.sampleRate;
@@ -592,7 +609,7 @@
             if (!hasAudioFormatInfo && decoderInfo.format.sampleRate) {
               this.updateAudioInfo(decoderInfo.format, this.decoder.estimatedSamples);
               this.logger.log(
-                `Audio Format: ${decoderInfo.format.channelCount}ch, ${decoderInfo.format.sampleRate}Hz, ${decoderInfo.format.bitsPerSample}-bit`,
+                `Audio Format: ${decoderInfo.format.channels}ch, ${decoderInfo.format.sampleRate}Hz, ${decoderInfo.format.bitDepth}-bit`,
                 'info',
               );
               hasAudioFormatInfo = true;
