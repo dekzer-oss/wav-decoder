@@ -1,11 +1,11 @@
-/** RIFF “fmt ” tag – 1 = PCM, 3 = float, 6 = A-law, 7 = µ-law, 65534 = extensible. */
-export type WavFormatTag = 1 | 3 | 6 | 7 | 65534 | (number & {});
-
 /** Typical bit-depths; accepts any number. */
 export type WavBitDepth = 8 | 16 | 24 | 32 | 64 | (number & {});
 
+/** RIFF “fmt ” tag – 1 = PCM, 3 = float, 6 = A-law, 7 = µ-law, 65534 = extensible. */
+export type WavFormatTag = 1 | 3 | 6 | 7 | 65534 | (number & {});
+
 /** Common sample-rates (Hz); accepts any number. */
-export type CommonSampleRate =
+export type WavSampleRate =
   | 8000
   | 11025
   | 16000
@@ -19,71 +19,74 @@ export type CommonSampleRate =
   | 192000
   | (number & {});
 
-/* ---------- runtime structures ---------- */
+export interface ChunkInfo {
+  id: string;
+  offset: number;
+  size: number;
+}
 
 export interface DecodeError {
-  message: string;
   frameLength: number;
   frameNumber: number;
   inputBytes: number;
+  message: string;
   outputSamples: number;
 }
 
 export interface DecodedWavAudio {
-  channelData: Float32Array[];
-  samplesDecoded: number;
-  sampleRate: CommonSampleRate;
   bitDepth: WavBitDepth;
+  channelData: Float32Array[];
   duration: number;
   errors: DecodeError[];
+  sampleRate: WavSampleRate;
+  samplesDecoded: number;
+}
+
+export enum DecoderState {
+  DECODING,
+  ENDED,
+  ERROR,
+  UNINIT,
 }
 
 export interface DecoderOptions {
   maxBufferSize?: number;
 }
 
-/* ---------- header summary ---------- */
+export interface WavDecoderInfo {
+  decodedBytes: number;
+  errors: DecodeError[];
+  format: WavFormat;
+  formatTag: number;
+  parsedChunks: ChunkInfo[];
+  progress: number;
+  remainingBytes: number;
+  state: DecoderState;
+  totalBytes: number;
+  totalDuration: number;
+  unhandledChunks: ChunkInfo[];
+}
+
+export interface WavDecoderInterface {
+  decode(chunk: Uint8Array): DecodedWavAudio;
+  decodeFrame(frame: Uint8Array): Float32Array | null;
+  decodeFrames(frames: Uint8Array): DecodedWavAudio;
+  free(): void;
+  flush(): DecodedWavAudio;
+  info: WavDecoderInfo;
+  reset(): void;
+}
 
 export interface WavFormat {
-  formatTag: WavFormatTag;
-  channels: number;
-  sampleRate: CommonSampleRate;
-  bytesPerSecond: number;
-  blockSize: number;
   bitDepth: WavBitDepth;
-
-  extensionSize?: number;
-  validBitsPerSample?: number;
+  blockSize: number;
+  bytesPerSecond: number;
+  channels: number;
+  samplesPerBlock: number;
   channelMask?: number;
+  extensionSize?: number;
+  formatTag: WavFormatTag;
+  sampleRate: WavSampleRate;
   subFormat?: Uint8Array;
-  duration?: number;
-}
-
-/* ---------- decoder bookkeeping ---------- */
-
-export enum DecoderState {
-  UNINIT,
-  DECODING,
-  ENDED,
-  ERROR,
-}
-
-export interface ChunkInfo {
-  id: string;
-  size: number;
-  offset: number;
-}
-
-export interface WavDecoderInfo {
-  state: DecoderState;
-  formatTag: number;
-  decodedBytes: number;
-  remainingBytes: number;
-  totalBytes: number;
-  progress: number;
-  format: WavFormat;
-  errors: DecodeError[];
-  parsedChunks: ChunkInfo[];
-  unhandledChunks: ChunkInfo[];
-  duration: number; // seconds decoded so far <-- ? is this true?
+  validBitsPerSample?: number;
 }
