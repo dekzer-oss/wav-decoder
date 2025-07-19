@@ -19,8 +19,8 @@ lerna-debug.log*
 .env.*.local
 
 # IDE and Editor directories
-.vscode/
-.idea/
+.vscode
+.idea
 *.suo
 *.ntvs*
 *.njsproj

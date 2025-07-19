@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WAV Decoder – Simple Metrics Demo</title>
+    <title>WAV Decoder – Starter Demo</title>
     <link rel="icon" href="favicon/favicon.svg" type="image/svg+xml" />
     <style>
       :root {
@@ -128,11 +128,10 @@
     </style>
   </head>
   <body>
-    <h1>Progressive WAV Decoder — Minimal Demo</h1>
+    <h1>WAV Decoder — Starter Demo</h1>
 
     <div id="uploadZone" class="drop-zone" role="button" tabindex="0" aria-label="Upload WAV file">
       Drop a .wav file here<br />or click to select
-      <div style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.25rem">Decodes in streaming chunks</div>
     </div>
 
     <input id="fileInput" type="file" accept="audio/wav,.wav" hidden />
@@ -238,8 +237,7 @@
           if (done) return finalize();
           try {
             const res = decoder.decode(value);
-            const info = decoder.info;
-            updateUI(info, res.samplesDecoded, totalSamples);
+            updateUI(decoder.info, res.samplesDecoded, totalSamples);
             if (res.samplesDecoded) {
               totalSamples += res.samplesDecoded;
               markTTFA();

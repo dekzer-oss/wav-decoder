@@ -4,10 +4,10 @@ on:
   pull_request:
     paths: [ 'src/**', 'tests/**' ]
   push:
-    branches: [ main ]
+    branches: [main]
 
 concurrency:
-  group: "bench-${{ github.ref }}"
+  group: bench-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -17,40 +17,34 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
 
-      - name: Fetch main for diff
-        run: git fetch origin main --depth=1
+      # make sure origin/main is available for diff
+      - run: git fetch origin main --depth=1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.13.1
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.13.1 }
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
+      # install Playwright browsers for the browser benches
+      - run: pnpm exec playwright install --with-deps
 
-      - name: Run benches
-        run: pnpm bench:compare
+      # run benches for node + browser and compare with baseline
+      - run: pnpm bench:compare
 
-      - name: Update baseline & badges
-        if: ${{ github.ref == 'refs/heads/main' }}
+      # on pushes to main, update badge and baseline
+      - if: github.ref == 'refs/heads/main'
         run: |
           node scripts/update-badge.js
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add bench/bench-*.json bench/badge-browser.json bench/badge-node.json
-          git commit -m "chore(bench): update baseline & badges [skip ci]" || echo "no changes"
+          git add bench/bench-*.json
+          git commit -m "chore(bench): update benchmark baseline & badge [skip ci]" || echo "no changes"
           git push

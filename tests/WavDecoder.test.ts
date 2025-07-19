@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, test } from 'vitest';
 import { type DecodedWavAudio, DecoderState, WavDecoder } from '../src';
 import { fixtureProperties } from './fixtures';
-import { findStringInUint8Array, loadFixture } from './fixtures/helpers.ts';
+import { findStringInUint8Array, loadFixture } from './fixtures/helpers';
 
 const loadedFixtures = new Map<string, Uint8Array>();
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>WAV Decoder Demo</title>
+  <title>WAV Decoder - Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="favicon/favicon.svg" type="image/svg+xml" />
   <script src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -26,21 +26,21 @@
           animation: fadeIn 0.2s ease-in-out;
       }
 
-      #logSection::-webkit-scrollbar {
+      #logs::-webkit-scrollbar {
           width: 8px;
       }
 
-      #logSection::-webkit-scrollbar-track {
+      #logs::-webkit-scrollbar-track {
           background: #1f2937;
           border-radius: 4px;
       }
 
-      #logSection::-webkit-scrollbar-thumb {
+      #logs::-webkit-scrollbar-thumb {
           background: #4b5563;
           border-radius: 4px;
       }
 
-      #logSection::-webkit-scrollbar-thumb:hover {
+      #logs::-webkit-scrollbar-thumb:hover {
           background: #6b7280;
       }
   </style>
@@ -65,20 +65,22 @@
     </a>
   </div>
 </header>
-<div class="max-w-4xl mx-auto py-4 px-3 md:py-8 md:px-6">
+<div class="max-w-4xl mx-auto py-4 px-3 md:py-4 md:px-6">
   <main>
-    <div class="text-center mb-8">
+    <div class="text-center mb-6">
       <img src="favicon/favicon.svg" alt="Logo" class="max-w-full h-24 mx-auto mb-4" />
-      <h1 class="text-xl font-bold mb-2">Progressive WAV Decoder — Demo</h1>
-      <p class="text-gray-600 dark:text-gray-400 text-balance max-w-lg mx-auto">
-        A minimal demo showcasing <strong>real-time, chunk-based WAV decoding</strong> in the browser.
-      </p>
+      <div>
+        <h1 class="text-xl font-bold mb-2">WAV Decoder — Demo</h1>
+        <p class="text-gray-600 dark:text-gray-400 text-balance max-w-lg mx-auto">
+          A minimal demo showcasing <strong>real-time, chunk-based WAV decoding</strong> in the browser.
+        </p>
+      </div>
     </div>
 
     <div class="relative">
       <div
-        class="border-2 bg-white dark:bg-gray-800 h-38 grid place-items-center border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 transition-all duration-150 rounded-lg p-8 text-center"
-        id="uploadZone"
+        class="border-2 text-balance bg-white dark:bg-gray-800 h-38 grid place-items-center border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-500 transition-all duration-150 rounded-lg p-8 text-center"
+        id="upload"
         role="button"
         tabindex="0"
         aria-label="Upload WAV file"
@@ -91,66 +93,63 @@
         </div>
       </div>
       <button
-        id="resetButton"
+        id="reset"
         class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition-all animate-fade-in"
       >
         Decode Another File
       </button>
-      <input type="file" id="fileInput" class="hidden" accept=".wav,audio/wav" />
+      <input type="file" id="input" class="hidden" accept=".wav,audio/wav" />
     </div>
 
     <div class="flex flex-wrap gap-x-4 my-2 justify-center items-center">
       <label
-        for="autoplayToggle"
+        for="autoplay"
         class="flex items-center hover:bg-gray-200 dark:hover:bg-gray-800/60 rounded-lg px-4 py-2"
       >
             <span
-              class="inline-flex items-start gap-3 text-sm font-medium text-gray-700 dark:text-gray-200 cursor-pointer select-none"
+              class="inline-flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-gray-200 cursor-pointer select-none"
             >
               <input
                 type="checkbox"
-                id="autoplayToggle"
-                class="accent-blue-600 dark:accent-blue-400 mt-1.75 size-3"
+                id="autoplay"
+                class="accent-blue-600 dark:accent-blue-400 size-3"
                 aria-label="Autoplay toggle"
               />
               <span class="flex flex-col">
-                <span>Autoplay</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400"
-                >Start playback automatically after decoding</span
-                >
+                <span>Enable Immediate Playback</span>
               </span>
             </span>
       </label>
 
-      <div id="playbackControls" class="flex items-center gap-4 hidden animate-fade-in">
+      <div id="controls" class="flex items-center gap-4 hidden animate-fade-in">
         <button
-          id="stopPlaybackBtn"
+          id="stop"
           class="px-4 py-2.5 bg-red-200 text-red-900 text-sm font-semibold rounded-lg shadow hover:bg-red-100 hover:text-red-950 leading-none focus:outline-none active:bg-red-50 transition-colors duration-50"
         >
           Stop Playback
         </button>
       </div>
     </div>
-    <section id="resultsSection" class="results-section pt-8 hidden animate-fade-in">
+    <section id="results" class="results-section pt-8 hidden animate-fade-in">
       <div class="mb-8">
         <h2 class="flex items-center gap-2 font-bold text-lg text-gray-800 dark:text-gray-100 mb-4">
-          <span id="progressIndicator" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+          <span id="progress" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
           Decoding Progress
         </h2>
         <div
           class="relative w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full mb-6 overflow-hidden shadow-inner"
         >
           <div
-            id="progressFill"
+            id="fill"
             class="h-full bg-gradient-to-r from-blue-500 to-indigo-500 w-0 transition-all duration-75 ease-out shadow-sm"
           ></div>
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
           <div
-            class="metric-card bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/50 dark:to-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800/80"
+            class="metric-card bg-gradient-to-br from-blue-s50 to-blue-100 dark:from-blue-900/50 dark:to-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800/80"
           >
             <div class="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">TTFA</div>
-            <div id="ttfaTime" class="font-bold text-xl text-blue-800 dark:text-blue-300 mt-1">-</div>
+            <div id="ttfa" class="font-bold text-xl text-blue-800 dark:text-blue-300 mt-1">-</div>
           </div>
           <div
             class="metric-card bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/50 dark:to-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800/80"
@@ -159,7 +158,7 @@
               Bytes Processed
             </div>
             <div
-              id="bytesProcessed"
+              id="bytes"
               class="font-bold text-xl text-green-800 dark:text-green-300 mt-1"
               title="1024 bytes = 1 KiB"
             >
@@ -172,7 +171,7 @@
             <div class="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide">
               Samples Decoded
             </div>
-            <div id="samplesDecoded" class="font-bold text-xl text-purple-800 dark:text-purple-300 mt-1">-</div>
+            <div id="samples" class="font-bold text-xl text-purple-800 dark:text-purple-300 mt-1">-</div>
           </div>
           <div
             class="metric-card bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/50 dark:to-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800/80"
@@ -181,7 +180,7 @@
               Throughput (MiB/s)
             </div>
             <div
-              id="decodingSpeed"
+              id="speed"
               class="font-bold text-xl text-orange-800 dark:text-orange-300 mt-1"
               title="MiB = 1024 × 1024 bytes"
             >
@@ -198,27 +197,27 @@
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
             <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Format</div>
-            <div id="formatInfo" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+            <div id="format" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
           </div>
           <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
             <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Sample Rate
             </div>
-            <div id="sampleRateInfo" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+            <div id="sampleRate" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
           </div>
           <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
             <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Channels</div>
-            <div id="channelsInfo" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+            <div id="channels" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
           </div>
           <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
             <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Bit Depth
             </div>
-            <div id="bitDepthInfo" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+            <div id="bitDepth" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
           </div>
           <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
             <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Duration</div>
-            <div id="durationInfo" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+            <div id="duration" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
           </div>
         </div>
       </div>
@@ -229,7 +228,7 @@
         </h2>
         <div
           class="bg-gray-900 dark:bg-black/20 rounded-lg p-4 font-mono text-sm max-h-48 overflow-y-auto border border-gray-700/50 shadow-inner"
-          id="logSection"
+          id="logs"
         ></div>
       </div>
     </section>
@@ -237,6 +236,7 @@
 </div>
 <script type="module">
   import { WavDecoder } from '../src';
+  import { WavFormatTagNames } from '../src/index.js';
 
   const formatBytes = (bytes) => {
     if (bytes === 0) return '0 bytes';
@@ -320,7 +320,7 @@
 
     init() {
       this.collectElements();
-      this.logger = new Logger(this.elements.logSection);
+      this.logger = new Logger(this.elements.logs);
       this.setupEventListeners();
       this.reset();
       this.logger.log('Application initialized. Ready for WAV files.', 'info');
@@ -329,25 +329,25 @@
     // Collects all DOM elements by their IDs
     collectElements() {
       const ids = [
-        'uploadZone',
-        'fileInput',
-        'resultsSection',
-        'progressFill',
-        'resetButton',
-        'progressIndicator',
-        'ttfaTime',
-        'bytesProcessed',
-        'samplesDecoded',
-        'decodingSpeed',
-        'formatInfo',
-        'sampleRateInfo',
-        'channelsInfo',
-        'bitDepthInfo',
-        'durationInfo',
-        'logSection',
-        'autoplayToggle',
-        'stopPlaybackBtn',
-        'playbackControls',
+        'upload',
+        'input',
+        'results',
+        'fill',
+        'reset',
+        'progress',
+        'ttfa',
+        'bytes',
+        'samples',
+        'speed',
+        'format',
+        'sampleRate',
+        'channels',
+        'bitDepth',
+        'duration',
+        'logs',
+        'autoplay',
+        'stop',
+        'controls',
       ];
       ids.forEach((id) => {
         this.elements[id] = document.getElementById(id);
@@ -358,25 +358,25 @@
     }
 
     setupEventListeners() {
-      this.elements.uploadZone.addEventListener('click', this.handleUploadZoneClick.bind(this));
-      this.elements.resetButton.addEventListener('click', this.reset.bind(this));
-      this.elements.autoplayToggle.addEventListener('change', this.handleAutoplayToggle.bind(this));
-      this.elements.stopPlaybackBtn.addEventListener('click', this.stopPlayback.bind(this));
-      this.elements.fileInput.addEventListener('change', this.handleFileInputChange.bind(this));
+      this.elements.upload.addEventListener('click', this.handleUploadZoneClick.bind(this));
+      this.elements.reset.addEventListener('click', this.reset.bind(this));
+      this.elements.autoplay.addEventListener('change', this.handleAutoplayToggle.bind(this));
+      this.elements.stop.addEventListener('click', this.stopPlayback.bind(this));
+      this.elements.input.addEventListener('change', this.handleFileInputChange.bind(this));
 
       ['dragover', 'dragleave', 'drop'].forEach((event) => {
-        this.elements.uploadZone.addEventListener(event, (e) => {
+        this.elements.upload.addEventListener(event, (e) => {
           e.preventDefault();
           e.stopPropagation();
-          this.elements.uploadZone.classList.toggle('border-blue-400', event === 'dragover');
+          this.elements.upload.classList.toggle('border-blue-400', event === 'dragover');
         });
       });
-      this.elements.uploadZone.addEventListener('drop', this.handleFileDrop.bind(this));
+      this.elements.upload.addEventListener('drop', this.handleFileDrop.bind(this));
     }
 
     handleUploadZoneClick() {
       this.ensureAudioContext();
-      this.elements.fileInput.click();
+      this.elements.input.click();
     }
 
     handleAutoplayToggle(e) {
@@ -390,7 +390,7 @@
     handleFileInputChange(e) {
       if (e.target.files.length > 0) {
         this.handleFile(e.target.files[0]);
-        e.target.value = ''; // Clear input for re-selection
+        e.target.value = '';
       }
     }
 
@@ -415,9 +415,9 @@
 
     updatePlaybackControlsVisibility() {
       if (this.autoplayEnabled && (this.isPlaying || this.audioQueue.length > 0)) {
-        this.elements.playbackControls.classList.remove('hidden');
+        this.elements.controls.classList.remove('hidden');
       } else {
-        this.elements.playbackControls.classList.add('hidden');
+        this.elements.controls.classList.add('hidden');
       }
     }
 
@@ -428,24 +428,24 @@
       this.decoder.reset();
       this.audioQueue = [];
 
-      this.elements.resultsSection.classList.add('hidden');
-      this.elements.resetButton.classList.add('hidden');
-      this.elements.uploadZone.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-      this.elements.uploadZone.setAttribute('aria-disabled', 'false');
-      this.elements.uploadZone.setAttribute('tabindex', '0');
-      this.elements.progressIndicator.classList.add('animate-pulse');
-      this.elements.progressFill.style.width = '0%';
+      this.elements.results.classList.add('hidden');
+      this.elements.reset.classList.add('hidden');
+      this.elements.upload.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+      this.elements.upload.setAttribute('aria-disabled', 'false');
+      this.elements.upload.setAttribute('tabindex', '0');
+      this.elements.progress.classList.add('animate-pulse');
+      this.elements.fill.style.width = '0%';
 
       const displayElements = [
-        'ttfaTime',
-        'bytesProcessed',
-        'samplesDecoded',
-        'decodingSpeed',
-        'formatInfo',
-        'sampleRateInfo',
-        'channelsInfo',
-        'bitDepthInfo',
-        'durationInfo',
+        'ttfa',
+        'bytes',
+        'samples',
+        'speed',
+        'format',
+        'sampleRate',
+        'channels',
+        'bitDepth',
+        'duration',
       ];
       displayElements.forEach((id) => {
         if (this.elements[id]) this.elements[id].textContent = '-';
@@ -455,27 +455,29 @@
     }
 
     updateProgress(progressRatio) {
-      this.elements.progressFill.style.width = `${Math.min(progressRatio * 100, 100)}%`;
+      this.elements.fill.style.width = `${Math.min(progressRatio * 100, 100)}%`;
     }
 
     updateMetrics(info, totalSamples) {
       const elapsed = (performance.now() - this.metrics.startTime) / 1000; // in seconds
-      this.elements.bytesProcessed.textContent = formatBytes(info.decodedBytes);
-      this.elements.samplesDecoded.textContent = totalSamples.toLocaleString();
+      this.elements.bytes.textContent = formatBytes(info.decodedBytes);
+      this.elements.samples.textContent = totalSamples.toLocaleString();
       if (elapsed > 0) {
-        this.elements.decodingSpeed.textContent = formatSpeed(info.decodedBytes / elapsed);
+        this.elements.speed.textContent = formatSpeed(info.decodedBytes / elapsed);
       }
+      const autoplaySpan = this.elements.autoplay.nextElementSibling.querySelector('span');
+      autoplaySpan.textContent = 'Start Playback';
+
     }
 
-    updateAudioInfo(formatTag, estimatedSamples) {
-      const formats = { 1: 'PCM', 3: 'IEEE Float', 6: 'A-Law', 7: 'µ-Law', 65534: 'Extensible' };
-      this.elements.formatInfo.textContent = formats[format.formatTag] || `Unknown (${format.formatTag})`;
-      this.elements.sampleRateInfo.textContent = `${format.sampleRate.toLocaleString()} Hz`;
-      this.elements.channelsInfo.textContent = format.channels;
-      this.elements.bitDepthInfo.textContent = `${format.bitsPerSample}-bit`;
+    updateAudioInfo(format, estimatedSamples) {
+      this.elements.format.textContent = WavFormatTagNames[format.formatTag] || `Unknown (${format.formatTag})`;
+      this.elements.sampleRate.textContent = `${format.sampleRate.toLocaleString()} Hz`;
+      this.elements.channels.textContent = format.channels;
+      this.elements.bitDepth.textContent = `${format.bitDepth}-bit`;
       if (estimatedSamples > 0 && format.sampleRate > 0) {
         const durationSeconds = estimatedSamples / format.sampleRate;
-        this.elements.durationInfo.textContent = formatTime(durationSeconds);
+        this.elements.duration.textContent = formatTime(durationSeconds);
       }
     }
 
@@ -534,10 +536,10 @@
         return;
       }
       this.reset();
-      this.elements.uploadZone.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-      this.elements.uploadZone.setAttribute('aria-disabled', 'true');
-      this.elements.uploadZone.setAttribute('tabindex', '-1');
-      this.elements.resultsSection.classList.remove('hidden');
+      this.elements.upload.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+      this.elements.upload.setAttribute('aria-disabled', 'true');
+      this.elements.upload.setAttribute('tabindex', '-1');
+      this.elements.results.classList.remove('hidden');
 
       this.logger.log(`Starting to process "${file.name}" (${formatBytes(file.size)})`, 'info');
       this.metrics.markStart();
@@ -546,12 +548,12 @@
         await this.processFileStream(file);
       } catch (error) {
         this.logger.log(`Processing error: ${error.message}`, 'error');
-        this.elements.uploadZone.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        this.elements.uploadZone.setAttribute('aria-disabled', 'false');
-        this.elements.uploadZone.setAttribute('tabindex', '0');
+        this.elements.upload.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+        this.elements.upload.setAttribute('aria-disabled', 'false');
+        this.elements.upload.setAttribute('tabindex', '0');
       } finally {
-        this.elements.progressIndicator.classList.remove('animate-pulse');
-        this.elements.resetButton.classList.remove('hidden');
+        this.elements.progress.classList.remove('animate-pulse');
+        this.elements.reset.classList.remove('hidden');
       }
     }
 
@@ -561,7 +563,16 @@
       let hasFirstAudioChunk = false;
       let hasAudioFormatInfo = false;
 
-      const readAndProcessChunk = async () => {
+      const PROGRESS_UPDATE_INTERVAL = 30;
+      let lastProgressUpdate = performance.now();
+
+      const updateProgressUI = () => {
+        const decoderInfo = this.decoder.info;
+        this.updateProgress(decoderInfo.progress);
+        this.updateMetrics(decoderInfo, totalSamplesDecoded);
+      };
+
+      while (true) {
         const { done, value } = await reader.read();
 
         if (done) {
@@ -570,7 +581,7 @@
             const finalResult = this.decoder.flush();
             if (finalResult?.samplesDecoded > 0) {
               totalSamplesDecoded += finalResult.samplesDecoded;
-              this.elements.samplesDecoded.textContent = totalSamplesDecoded.toLocaleString();
+              this.elements.samples.textContent = totalSamplesDecoded.toLocaleString();
               this.enqueuePlayback(finalResult.channelData, this.decoder.info.format.sampleRate);
             }
             const durationElapsed = (performance.now() - this.metrics.startTime) / 1000;
@@ -581,7 +592,7 @@
           } catch (err) {
             this.logger.log(`Finalization warning: ${err.message}`, 'warning');
           }
-          return;
+          break;
         }
 
         try {
@@ -594,15 +605,19 @@
             throw new Error(decoderInfo.errors[0].message);
           }
 
-          this.updateProgress(decoderInfo.progress);
-          this.updateMetrics(decoderInfo, totalSamplesDecoded);
+          const now = performance.now();
+          if (now - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL) {
+            updateProgressUI();
+            lastProgressUpdate = now;
+            await new Promise(requestAnimationFrame);
+          }
 
           if (decodeResult.samplesDecoded > 0) {
             totalSamplesDecoded += decodeResult.samplesDecoded;
 
             if (!hasFirstAudioChunk) {
               const ttfa = this.metrics.markFirstAudio();
-              this.elements.ttfaTime.textContent = `${ttfa.toFixed(1)}ms`;
+              this.elements.ttfa.textContent = `${ttfa.toFixed(1)}ms`;
               hasFirstAudioChunk = true;
             }
 
@@ -617,15 +632,12 @@
             this.enqueuePlayback(decodeResult.channelData, decoderInfo.format.sampleRate);
           }
 
-          requestAnimationFrame(readAndProcessChunk);
         } catch (err) {
           this.logger.log(`Chunk processing failed: ${err.message}`, 'error');
           reader.cancel();
           throw err;
         }
-      };
-
-      requestAnimationFrame(readAndProcessChunk);
+      }
     }
   }
 
@@ -634,8 +646,6 @@
       const app = new App();
     } catch (err) {
       console.error('Application initialization failed:', err);
-      document.body.innerHTML =
-        '<div class="text-red-500 p-8 text-center text-lg">Application failed to initialize. Please ensure your browser supports the necessary APIs (Web Audio API, Streams API).</div>';
     }
   });
 </script>

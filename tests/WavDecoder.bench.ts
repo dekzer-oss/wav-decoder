@@ -1,7 +1,7 @@
 import { beforeAll, bench, type BenchOptions, describe } from 'vitest';
 import { DecoderState, WavDecoder } from '../src';
 import { fixtureProperties } from './fixtures';
-import { loadFixture } from './fixtures/helpers.ts';
+import { loadFixture } from './fixtures/helpers';
 
 const loadedFixtures = new Map<string, Uint8Array>();
 

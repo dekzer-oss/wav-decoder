@@ -1,6 +1,6 @@
 {
   "name": "@dekzer/wav-decoder",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.0",
   "description": "A robust, streaming-capable WAV audio decoder with full PCM, float, A-law, and µ-law support — zero dependencies, works in browsers and Node.js.",
   "author": "Maikel Eckelboom",
   "license": "MIT",
@@ -16,8 +16,10 @@
   "engines": {
     "node": ">=20.0.0"
   },
+  "funding": "https://github.com/sponsors/maikeleckelboom",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "keywords": [
     "wav",
@@ -37,13 +39,12 @@
     "zero-dependencies"
   ],
   "type": "module",
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "default": "./dist/index.js"
     }
   },
   "files": [
@@ -56,15 +57,13 @@
     "format": "prettier --write .",
     "fixtures:generate": "python3 scripts/gen-wav-fixtures.py",
     "test": "vitest --run --reporter=verbose",
-    "test:watch": "vitest",
     "test:node": "vitest run --project node",
     "test:browser": "vitest run --project browser --poolOptions.browser.isolate=false --poolOptions.browser.concurrent=3",
-    "test:ci": "pnpm exec playwright install --with-deps && pnpm run test:node & pnpm run test:browser & wait",
     "bench": "vitest bench --run --outputJson bench/bench.json",
     "bench:browser": "vitest bench --run --project browser --outputJson bench/bench-browser.json",
     "bench:node": "vitest bench --run --project node --outputJson bench/bench-node.json",
     "build": "tsup",
-    "build:verify": "tsup && node --eval \"import('./dist/index.mjs').then(() => console.log('✓ Build verified'))\"",
+    "build:verify": "tsup && node --eval \"import('./dist/index.js').then(() => console.log('✓ Build verified'))\"",
     "release": "pnpm build && changeset publish",
     "bench:compare": "pnpm vitest bench --run && node scripts/compare-bench.js",
     "bench:update": "pnpm vitest bench --run && node scripts/update-badge.js"

@@ -2,8 +2,11 @@
 
 ![Browser throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-browser.json)
 ![Node throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-node.json)
-A small TypeScript/JavaScript library that **progressively decodes uncompressed WAV audio as the bytes arrive**.
-It was written for in-house streaming experiments inside *Dekzer*, but we decided to publish the code because it may save others some time. The API is intentionally minimal; please expect breaking changes until we tag a 1.0.0.
+
+A small TypeScript/JavaScript library that progressively decodes uncompressed WAV audio as the bytes arrive. It was
+written for in‑house streaming experiments inside Dekzer, but we decided to publish the code because it may save others
+some time. The decoder has been fine‑tuned for peak performance on Chrome’s V8 engine. The API is intentionally minimal;
+please expect breaking changes until we tag a 1.0.0.
 
 ---
 
@@ -13,10 +16,11 @@ It was written for in-house streaming experiments inside *Dekzer*, but we decide
 2. [Features](#features)
 3. [Installation](#installation)
 4. [Quick example](#quick-example)
-5. [Detailed API](#detailed-api)
-6. [Supported formats, platforms & limits](#supported-formats-platforms--limits)
-7. [Development & testing](#development--testing)
-8. [License](#license)
+5. [Live Demos](#live-demos)
+6. [Detailed API](#detailed-api)
+7. [Supported formats, platforms & limits](#supported-formats-platforms--limits)
+8. [Development & testing](#development--testing)
+9. [License](#license)
 
 ---
 
@@ -26,7 +30,7 @@ It was written for in-house streaming experiments inside *Dekzer*, but we decide
 |-----------------------|---------------------------------------------------------------------------------------------|
 | **Maturity**          | Internal prototype; usable, but not yet frozen.                                             |
 | **Stability promise** | Semantic-versioning will start at v1.0.0. Until then new releases *might* introduce breaks. |
-| **Road-map**          | Optional worker/Worklet wrapper.                                                            |
+| **Road-map**          | Optimize Node through-put. Optional worker/Worklet wrapper.                                 |
 
 ---
 
@@ -36,7 +40,8 @@ It was written for in-house streaming experiments inside *Dekzer*, but we decide
 * **No runtime dependencies** – the package.json lists only dev-deps and peer-less prod code.
 * **Broad PCM coverage** – 8/16/24/32-bit PCM, 32/64-bit float, A-law and µ-law, little- and big-endian.
   The unit-tests run those variants against ~20 fixtures.
-* **Works in Node 20+ and modern browsers**; for browsers you can pipe the decoded Float32Arrays straight into an `AudioContext`.
+* **Works in Node 20+ and modern browsers**; for browsers you can pipe the decoded Float32Arrays straight into an
+  `AudioContext`.
 
 ---
 
@@ -48,7 +53,7 @@ pnpm add @dekzer/wav-decoder
 
 # or npm
 npm install @dekzer/wav-decoder
-```
+````
 
 No post-install scripts, no optional binaries.
 
@@ -62,7 +67,7 @@ import { WavDecoder } from '@dekzer/wav-decoder';
 async function streamAndPlay(url: string) {
   const decoder = new WavDecoder();
   const response = await fetch(url);
-  const reader   = response.body!.getReader();
+  const reader = response.body!.getReader();
 
   while (true) {
     const { done, value } = await reader.read();
@@ -70,15 +75,36 @@ async function streamAndPlay(url: string) {
 
     const out = decoder.decode(value);
     if (out.samplesDecoded) {
-      // `out.channelData` is Float32Array[] (interleaved already split per channel)
+      // `out.channelData` is Float32Array[]
       playChunk(out.channelData, out.sampleRate);
     }
   }
 
   const tail = decoder.flush();
-  if (tail.samplesDecoded) playChunk(tail.channelData, tail.sampleRate);
+  if (tail.samplesDecoded) {
+    playChunk(tail.channelData, tail.sampleRate);
+  }
 }
 ```
+
+---
+
+## Live Demos
+
+Try the decoder in your browser or use these as **starter templates**:
+
+| Demo                                                    | Description                                                             | Source                                                |
+|---------------------------------------------------------|-------------------------------------------------------------------------|-------------------------------------------------------|
+| [Full UI demo](./public/index.html)                     | Drag & drop WAV, see detailed metrics, chunked decoding, playback, logs | [`index.html`](./public/index.html)                   |
+| [Starter demo](./public/starter-demo.html)              | 20 lines of code: pure decode, metrics, and progress bar                | [`starter-demo.html`](public/starter-demo.html)       |
+| [Streaming playback demo](./public/streaming-demo.html) | Streams a WAV file, progressive decode & low-latency playback           | [`streaming-demo.html`](./public/streaming-demo.html) |
+
+**Pro tip:**
+Fork and modify these to jump-start your integration.
+Each demo is standalone—just “view source” for a ready-made starter.
+
+---
+
 
 ---
 
@@ -100,11 +126,11 @@ async function streamAndPlay(url: string) {
 #### `DecodedWavAudio`
 
 ```ts
-{
-  channelData    : Float32Array[]; // one array per channel
-  samplesDecoded : number;         // samples added by *this* call
-  sampleRate     : number;         // independent copy for convenience
-  errors         : DecodeError[];  // non-fatal issues (clipped sample, NaN, …)
+interface DecodedWavAudio {
+  channelData: Float32Array[]; // one array per channel
+  samplesDecoded: number;      // samples added by *this* call
+  sampleRate: number;          // independent copy for convenience
+  errors: DecodeError[];       // non-fatal issues (clipped sample, NaN, …)
 }
 ```
 
@@ -123,7 +149,12 @@ async function streamAndPlay(url: string) {
 Exact numeric values are private – rely only on the names:
 
 ```ts
-IDLE = 0, DECODING = 1, ENDED = 2, ERROR = 3
+enum DecoderState {
+  DECODING,
+  ENDED,
+  ERROR,
+  UNINIT,
+}
 ```
 
 ---
@@ -157,7 +188,7 @@ pnpm demo             # vite – opens the browser demos
 
 CI runs `vitest`, Playwright browser tests and size-limited benchmarks on each PR.&#x20;
 
-Fixtures are generated from pure-Python (`scripts/generate_wav_fixtures.py`) – no copyrighted samples.&#x20;
+Fixtures are generated from pure-Python (`scripts/gen-wav-fixtures.py`) – no copyrighted samples.&#x20;
 
 ---
 
