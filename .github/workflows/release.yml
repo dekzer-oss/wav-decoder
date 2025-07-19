@@ -1,24 +1,15 @@
-name: Release (Changesets)
+name: Release
 
 on:
   push:
     branches: [main]
 
-concurrency:
-  group: release-${{ github.workflow }}
-  cancel-in-progress: true
-
 jobs:
   release:
     if: ${{ secrets.NPM_TOKEN != '' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
 
       - uses: pnpm/action-setup@v4
         with: { version: 10.13.1 }
@@ -26,15 +17,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: 'https://registry.npmjs.org'
           cache: pnpm
+          registry-url: https://registry.npmjs.org/
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build
 
-      # publish or open version-bump PR
-      - uses: changesets/action@v1
+      - name: Create GitHub Release and Publish to npm
+        uses: changesets/action@v1
         with:
-          publish: pnpm release
+          publish: pnpm publish --no-git-checks --access public
+          commit: "chore(release): publish"
+          createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN:    ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

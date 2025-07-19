@@ -59,6 +59,7 @@
     "test": "vitest --run --reporter=verbose",
     "test:node": "vitest run --project node",
     "test:browser": "vitest run --project browser --poolOptions.browser.isolate=false --poolOptions.browser.concurrent=3",
+    "test:ci": "pnpm exec playwright install --with-deps && pnpm run test:node & pnpm run test:browser & wait",
     "bench": "vitest bench --run --outputJson bench/bench.json",
     "bench:browser": "vitest bench --run --project browser --outputJson bench/bench-browser.json",
     "bench:node": "vitest bench --run --project node --outputJson bench/bench-node.json",
