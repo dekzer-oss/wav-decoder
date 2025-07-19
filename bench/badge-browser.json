@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "label": "decode speed (browser)",
-  "message": "459.5 MiB/s",
+  "label": "throughput (browser)",
+  "message": "530.3 MiB/s",
   "color": "brightgreen"
 }

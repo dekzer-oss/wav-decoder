@@ -467,12 +467,12 @@
       }
     }
 
-    updateAudioInfo(formatTag, estimatedSamples) {
+    updateAudioInfo(format, estimatedSamples) {
       const formats = { 1: 'PCM', 3: 'IEEE Float', 6: 'A-Law', 7: 'µ-Law', 65534: 'Extensible' };
       this.elements.formatInfo.textContent = formats[format.formatTag] || `Unknown (${format.formatTag})`;
       this.elements.sampleRateInfo.textContent = `${format.sampleRate.toLocaleString()} Hz`;
       this.elements.channelsInfo.textContent = format.channels;
-      this.elements.bitDepthInfo.textContent = `${format.bitsPerSample}-bit`;
+      this.elements.bitDepthInfo.textContent = `${format.bitDepth}-bit`;
       if (estimatedSamples > 0 && format.sampleRate > 0) {
         const durationSeconds = estimatedSamples / format.sampleRate;
         this.elements.durationInfo.textContent = formatTime(durationSeconds);

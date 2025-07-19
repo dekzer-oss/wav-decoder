@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "label": "decode speed (node)",
-  "message": "169.9 MiB/s",
-  "color": "brightgreen"
+  "label": "throughput (node)",
+  "message": "169.3 MiB/s",
+  "color": "red"
 }

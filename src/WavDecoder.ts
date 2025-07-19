@@ -341,21 +341,18 @@ export class WavDecoder implements WavDecoderInterface {
     const predictors = headers.map((h) => h.predictor);
     const stepIndices = headers.map((h) => Math.min(88, Math.max(0, h.stepIndex)));
 
-    // Initialize first sample for each channel
     for (let ch = 0; ch < channels; ch++) {
       channelData[ch]![outputOffset] = Math.max(-1, Math.min(1, predictors[ch]! / 32768));
     }
 
     const dataSize = compressed.length;
 
-    // Decode subsequent samples
     for (let s = 1; s < samplesPerBlock; s++) {
       for (let ch = 0; ch < channels; ch++) {
         const nibbleIndex = (s - 1) * channels + ch;
         const byteIndex = Math.floor(nibbleIndex / 2);
 
         if (byteIndex >= dataSize) {
-          // Should not happen in a valid file, but handle to prevent crash
           channelData[ch]![outputOffset + s] = channelData[ch]![outputOffset + s - 1]!;
           continue;
         }

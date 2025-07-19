@@ -1,38 +1,131 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 
-const files = ['bench/bench-browser.json', 'bench/bench-node.json']; // browser first
-const all = [];
+// Performance thresholds for WAV decoders (MiB/s)
+const PERFORMANCE_THRESHOLDS = {
+  EXCELLENT: 500,
+  GOOD: 400,
+  AVERAGE: 300,
+  POOR: 200,
+};
 
-for (const p of files) {
+/**
+ * Reads and parses JSON file safely
+ */
+async function readJsonFile(filePath) {
   try {
-    const data = JSON.parse(await fs.readFile(p, 'utf8'));
-    all.push(...data.files.flatMap((f) => f.groups.flatMap((g) => g.benchmarks)));
+    const content = await fs.readFile(filePath, 'utf-8');
+    return JSON.parse(content);
   } catch {
-    /* ignore missing */
+    console.error(`⚠️  File not found or invalid JSON: ${filePath}`);
+    return null;
   }
 }
 
-if (!all.length) {
-  console.error('no benchmarks to badge');
-  process.exit(1);
+/**
+ * Flattens benchmark data from nested structure
+ */
+function flattenBenchmarks(data) {
+  return data.files.flatMap((file) =>
+    file.groups.flatMap((group) =>
+      group.benchmarks.map((benchmark) => ({
+        ...benchmark,
+        fileSize: file.size,
+      }))
+    )
+  );
 }
 
-const best =
-  all
-    .filter(
-      (b) =>
-        b.name.includes('browser') ||
-        b.name.includes('chromium') ||
-        b.name.includes('firefox') ||
-        b.name.includes('webkit')
-    )
-    .sort((a, b) => b.hz - a.hz)[0] ?? all.sort((a, b) => b.hz - a.hz)[0];
+/**
+ * Finds the benchmark with highest Hz (performance)
+ */
+function findBestBenchmark(benchmarks) {
+  return benchmarks.reduce((best, current) => (current.hz > best.hz ? current : best));
+}
 
-const badge = {
-  schemaVersion: 1,
-  label: 'decode speed',
-  message: `${Math.round(best.hz).toLocaleString()} Hz`,
-  color: 'brightgreen',
-};
+/**
+ * Calculates throughput in MiB/s
+ */
+function calculateThroughput(hz, fileSizeBytes) {
+  return (hz * fileSizeBytes) / 2 ** 20;
+}
 
-await fs.writeFile('bench/badge.json', JSON.stringify(badge, null, 2));
+/**
+ * Determines badge color based on performance
+ */
+function getBadgeColor(throughput) {
+  if (throughput >= PERFORMANCE_THRESHOLDS.EXCELLENT) {
+    return 'brightgreen';
+  } else if (throughput >= PERFORMANCE_THRESHOLDS.AVERAGE) {
+    return 'yellow';
+  } else if (throughput >= PERFORMANCE_THRESHOLDS.GOOD) {
+    return 'orange';
+  } else {
+    return 'red';
+  }
+}
+
+/**
+ * Extracts mode from file path
+ */
+function extractMode(filePath) {
+  return path.basename(filePath).includes('browser') ? 'browser' : 'node';
+}
+
+/**
+ * Creates badge object with performance data
+ */
+function createBadge(mode, throughput) {
+  return {
+    schemaVersion: 1,
+    label: `throughput (${mode})`,
+    message: `${throughput.toFixed(1)} MiB/s`,
+    color: getBadgeColor(throughput),
+  };
+}
+
+/**
+ * Writes badge JSON to file
+ */
+async function writeBadgeFile(mode, badge) {
+  const outPath = `bench/badge-${mode}.json`;
+  await fs.writeFile(outPath, JSON.stringify(badge, null, 2));
+  console.log(`✅  Wrote ${outPath}`);
+}
+
+/**
+ * Processes a single benchmark file
+ */
+async function processBenchmarkFile(filePath) {
+  const data = await readJsonFile(filePath);
+  if (!data) return;
+
+  const benchmarks = flattenBenchmarks(data);
+
+  if (!benchmarks.length) {
+    console.error(`⚠️  No benchmarks in ${filePath}`);
+    return;
+  }
+
+  const best = findBestBenchmark(benchmarks);
+  const fileSizeBytes = best.fileSize ?? 44100 * 2; // Default fallback
+  const throughput = calculateThroughput(best.hz, fileSizeBytes);
+  const mode = extractMode(filePath);
+
+  const badge = createBadge(mode, throughput);
+  await writeBadgeFile(mode, badge);
+}
+
+/**
+ * Main function to process all benchmark files
+ */
+async function main() {
+  const files = ['bench/bench-browser.json', 'bench/bench-node.json'];
+
+  for (const filePath of files) {
+    await processBenchmarkFile(filePath);
+  }
+}
+
+// Run the main function
+main().catch(console.error);

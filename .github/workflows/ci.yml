@@ -25,7 +25,5 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-
-      # runs Vitest (node + browser) and builds artifacts
       - run: pnpm test:ci
       - run: pnpm build
