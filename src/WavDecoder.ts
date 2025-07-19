@@ -16,7 +16,6 @@ const WAVE_FORMAT_MULAW = 0x0007;
 const WAVE_FORMAT_PCM = 0x0001;
 const WAVE_FORMAT_IMA_ADPCM = 0x0011;
 
-// IMA ADPCM tables
 const imaStepTable = new Int32Array([
   7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97, 107, 118,
   130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494, 544, 598, 658, 724, 796, 876, 963, 1060,
@@ -77,7 +76,7 @@ export class WavDecoder implements WavDecoderInterface {
   private channelData: Float32Array[] = [];
   private decodeBuffer!: ArrayBuffer;
   private decodedBytes = 0;
-  private readonly errors: DecodeError[] = [];
+  private errors: DecodeError[] = [];
   private factChunkSamples = 0;
   private format = {} as WavFormat;
   private formatTag = 0;
@@ -180,7 +179,6 @@ export class WavDecoder implements WavDecoderInterface {
     if (this.state !== DecoderState.DECODING || frame.length !== this.format.blockSize) {
       return null;
     }
-    // Frame decoding is not supported for compressed formats like IMA ADPCM
     if (this.formatTag === WAVE_FORMAT_IMA_ADPCM) {
       return null;
     }
@@ -455,9 +453,6 @@ export class WavDecoder implements WavDecoderInterface {
       samplesDecoded = frames.length / blockSize;
     }
 
-    // The this.channelData arrays are reused as scratch space for decoding the current chunk.
-    // If the new chunk requires larger arrays, they are re-allocated. The data is not cumulative
-    // within the decoder instance itself; the caller receives discrete chunks of audio.
     if (this.channelData.length !== channels || (this.channelData[0] && this.channelData[0].length < samplesDecoded)) {
       this.channelData = Array.from({ length: channels }, () => new Float32Array(samplesDecoded));
     }
@@ -531,7 +526,6 @@ export class WavDecoder implements WavDecoderInterface {
     const errors = [...this.errors];
     this.errors.length = 0;
 
-    // IMA ADPCM is decoded to 16-bit PCM equivalent
     const outputBitDepth = this.formatTag === WAVE_FORMAT_IMA_ADPCM ? 16 : this.format.bitDepth || 0;
 
     return {
@@ -649,7 +643,6 @@ export class WavDecoder implements WavDecoderInterface {
     }
 
     if (this.formatTag === WAVE_FORMAT_IMA_ADPCM) {
-      // For compressed formats, bytesPerSample is not a fixed value. Set to 0 to avoid foot-guns.
       this.bytesPerSample = 0;
       if (chunk.size >= 20) {
         const cbSize = view.getUint16(offset + 16, this.isLittleEndian);
@@ -726,7 +719,7 @@ export class WavDecoder implements WavDecoderInterface {
       case 16:
         return view.getInt16(off, this.isLittleEndian) * 0.000030517578125;
       case 24: {
-        if (off + 3 > view.byteLength) return 0; // Boundary check
+        if (off + 3 > view.byteLength) return 0;
         const b0 = view.getUint8(off);
         const b1 = view.getUint8(off + 1);
         const b2 = view.getUint8(off + 2);
@@ -911,7 +904,6 @@ export class WavDecoder implements WavDecoderInterface {
         this.format.bytesPerSecond = expectedByteRate;
       }
     } else {
-      // For PCM, FLOAT, etc.
       const expectedBlockAlign = (this.format.bitDepth / 8) * this.format.channels;
       if (this.format.blockSize !== expectedBlockAlign && expectedBlockAlign > 0) {
         this.errors.push(

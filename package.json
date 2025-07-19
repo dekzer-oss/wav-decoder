@@ -16,6 +16,11 @@
   "engines": {
     "node": ">=20.0.0"
   },
+  "funding": "https://github.com/sponsors/maikeleckelboom",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "keywords": [
     "wav",
     "streaming",
@@ -52,10 +57,8 @@
     "format": "prettier --write .",
     "fixtures:generate": "python3 scripts/gen-wav-fixtures.py",
     "test": "vitest --run --reporter=verbose",
-    "test:watch": "vitest",
     "test:node": "vitest run --project node",
     "test:browser": "vitest run --project browser --poolOptions.browser.isolate=false --poolOptions.browser.concurrent=3",
-    "test:ci": "pnpm exec playwright install --with-deps && pnpm run test:node & pnpm run test:browser & wait",
     "bench": "vitest bench --run --outputJson bench/bench.json",
     "bench:browser": "vitest bench --run --project browser --outputJson bench/bench-browser.json",
     "bench:node": "vitest bench --run --project node --outputJson bench/bench-node.json",

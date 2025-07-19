@@ -16,7 +16,7 @@ beforeAll(async () => {
 
 const benchOptions: BenchOptions = {
   warmupIterations: 20,
-  time: 2_000,
+  time: 1_000,
 };
 
 describe('WavDecoder full decode() performance', () => {

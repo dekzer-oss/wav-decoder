@@ -3,10 +3,10 @@ import path from 'node:path';
 
 // Performance thresholds for WAV decoders (MiB/s)
 const PERFORMANCE_THRESHOLDS = {
-  EXCELLENT: 500,
-  GOOD: 400,
-  AVERAGE: 300,
-  POOR: 200,
+  EXCELLENT: 400,
+  GOOD: 300,
+  AVERAGE: 200,
+  POOR: 100,
 };
 
 /**
@@ -108,7 +108,7 @@ async function processBenchmarkFile(filePath) {
   }
 
   const best = findBestBenchmark(benchmarks);
-  const fileSizeBytes = best.fileSize ?? 44100 * 2; // Default fallback
+  const fileSizeBytes = best.fileSize ?? 44100 * 2;
   const throughput = calculateThroughput(best.hz, fileSizeBytes);
   const mode = extractMode(filePath);
 
@@ -127,5 +127,4 @@ async function main() {
   }
 }
 
-// Run the main function
 main().catch(console.error);

@@ -14,7 +14,7 @@ export default defineConfig({
       {
         test: {
           name: 'browser',
-          environment: 'happy-dom',
+          environment: 'browser',
           globals: true,
           include: ['tests/**/*.test.ts'],
           browser: {
