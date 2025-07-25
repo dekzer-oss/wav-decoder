@@ -1,4 +1,4 @@
-# @dekzer/wav-decoder <!-- omit from toc -->
+# @dekzer/wav-decoder
 
 ![Browser throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-browser.json)
 ![Node throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-node.json)
@@ -118,7 +118,7 @@ Each demo is standalone—just “view source” for a ready-made starter.
 | **decode(chunk: Uint8Array): DecodedWavAudio** | Feed arbitrary-sized data. Returns samples (may be zero) and non-fatal error list.                                                                                                     |
 | **decodeFrames(chunkAlignedToBlock)**          | Same as `decode`, but *requires* that `chunk.length % format.blockSize === 0` for maximum throughput.                                                                                  |
 | **decodeFrame(frame)**                         | Decodes *one* interleaved frame and returns a `Float32Array` with `channels` elements, or `null` if the frame is incomplete. Used in performance-critical code paths (see benchmarks). |
-| **flush()**                                    | Drains any remaining bytes (including a partial final block). Useful when the stream closes.                                                                                           |
+| **flush()**                                    | Drains any remaining bytes (including a partial final block). Useful when the decodeStream closes.                                                                                           |
 | **reset()**                                    | Clears internal state so the instance can be re-used.                                                                                                                                  |
 | **free()**                                     | Releases the ring-buffer and changes `info.state` to `ENDED`; subsequent calls are no-ops.                                                                                             |
 | **info** *(read-only)*                         | Live diagnostics object described below.                                                                                                                                               |
@@ -168,7 +168,7 @@ enum DecoderState {
 | **Bits per sample** | 8/16/24/32-bit integer, 32/64-bit float.                                              |
 | **Channels**        | 1 … 8 tested; more should work, memory permitting.                                    |
 | **Sample-rate**     | Any positive integer ≤ 192 kHz (no fixed list).                                       |
-| **File size**       | Limited only by the host stream; decoding is constant-memory.                         |
+| **File size**       | Limited only by the host decodeStream; decoding is constant-memory.                         |
 | **Not supported**   | ADPCM, MPEG-encoded “WAV”, broadcast extensions, cue lists.                           |
 | **Browsers**        | Requires `ReadableStream` and `AudioContext` (≈ Chrome 94+, Firefox 92+, Safari 15+). |
 | **Node**            | Node 20 or newer (streams with BYOB readers were simplified in 20).                   |

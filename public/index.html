@@ -557,7 +557,7 @@
     }
 
     async processFileStream(file) {
-      const reader = file.stream().getReader();
+      const reader = file.decodeStream().getReader();
       let totalSamplesDecoded = 0;
       let hasFirstAudioChunk = false;
       let hasAudioFormatInfo = false;

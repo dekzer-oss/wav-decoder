@@ -264,7 +264,7 @@ export class WavDecoder implements WavDecoderInterface {
     this.channelData = [];
   }
 
-  public async *stream(stream: ReadableStream<Uint8Array>): AsyncIterableIterator<DecodedWavAudio> {
+  public async *decodeStream(stream: ReadableStream<Uint8Array>): AsyncIterableIterator<DecodedWavAudio> {
     this.reset();
     const reader = stream.getReader();
 
