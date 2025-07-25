@@ -154,7 +154,6 @@ export class WavDecoder implements WavDecoderInterface {
           return {
             bitDepth: this.format.bitDepth,
             channelData: [],
-            duration: this.format.sampleRate > 0 ? this.estimatedSamples / this.format.sampleRate : 0,
             errors: [...this.errors],
             sampleRate: 0,
             samplesDecoded: 0,
@@ -193,6 +192,7 @@ export class WavDecoder implements WavDecoderInterface {
     return output;
   }
 
+  // todo: refactor parameter signature to accept Uint8Array[] instead of Uint8Array
   public decodeFrames(frames: Uint8Array): DecodedWavAudio {
     if (this.state !== DecoderState.DECODING) {
       return this.createErrorResult('Decoder must be initialized before decodeFrames().');
@@ -238,7 +238,6 @@ export class WavDecoder implements WavDecoderInterface {
       return {
         bitDepth: this.format.bitDepth || 0,
         channelData: [],
-        duration: this.format.sampleRate > 0 ? this.estimatedSamples / this.format.sampleRate : 0,
         errors: finalErrors,
         sampleRate: this.format.sampleRate || 0,
         samplesDecoded: 0,
@@ -313,7 +312,6 @@ export class WavDecoder implements WavDecoderInterface {
     return {
       bitDepth: this.format.bitDepth,
       channelData: [],
-      duration: 0,
       errors,
       sampleRate: this.format.sampleRate,
       samplesDecoded: 0,
@@ -531,7 +529,6 @@ export class WavDecoder implements WavDecoderInterface {
     return {
       bitDepth: outputBitDepth,
       channelData: this.channelData.map((arr) => arr.subarray(0, samplesDecoded)),
-      duration: sampleRate > 0 ? samplesDecoded / sampleRate : 0,
       errors,
       sampleRate,
       samplesDecoded,
