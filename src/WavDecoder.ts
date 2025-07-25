@@ -216,6 +216,31 @@ export class WavDecoder implements WavDecoderInterface {
     }
   }
 
+  public async *decodeStream(stream: ReadableStream<Uint8Array>): AsyncIterableIterator<DecodedWavAudio> {
+    this.reset();
+    const reader = stream.getReader();
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          yield this.flush();
+          break;
+        }
+
+        try {
+          yield this.decode(value);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          this.errors.push(this.createError(`Decode error: ${message}`));
+          yield this.createErrorResult('Decode error');
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
   public flush(): DecodedWavAudio {
     if (this.state === DecoderState.ENDED || this.state === DecoderState.ERROR) {
       return this.createEmptyResult();
@@ -262,31 +287,6 @@ export class WavDecoder implements WavDecoderInterface {
     this.isLittleEndian = true;
     this.headerBuffer = new Uint8Array(0);
     this.channelData = [];
-  }
-
-  public async *decodeStream(stream: ReadableStream<Uint8Array>): AsyncIterableIterator<DecodedWavAudio> {
-    this.reset();
-    const reader = stream.getReader();
-
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) {
-          yield this.flush();
-          break;
-        }
-
-        try {
-          yield this.decode(value);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          this.errors.push(this.createError(`Decode error: ${message}`));
-          yield this.createErrorResult('Decode error');
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
   }
 
   private arraysEqual(a: Uint8Array, b: Uint8Array): boolean {

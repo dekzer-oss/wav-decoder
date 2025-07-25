@@ -95,7 +95,7 @@ Try the decoder in your browser or use these as **starter templates**:
 
 | Demo                                                  | Description                                                             | Source                                              |
 |-------------------------------------------------------|-------------------------------------------------------------------------|-----------------------------------------------------|
-| [Full UI demo](./public/index.html)                   | Drag & drop WAV, see detailed metrics, chunked decoding, playback, logs | [`index.html`](./public/index.html)                 |
+| [Full UI demo](index.html)                   | Drag & drop WAV, see detailed metrics, chunked decoding, playback, logs | [`index.html`](index.html)                 |
 | [Starter demo](public/starter-demo.html)              | 20 lines of code: pure decode, metrics, and progress bar                | [`starter-demo.html`](public/starter-demo.html)     |
 | [Streaming playback demo](public/streaming-demo.html) | Streams a WAV file, progressive decode & low-latency playback           | [`streaming-demo.html`](public/streaming-demo.html) |
 
