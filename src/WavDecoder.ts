@@ -154,7 +154,6 @@ export class WavDecoder implements WavDecoderInterface {
           return {
             bitDepth: this.format.bitDepth,
             channelData: [],
-            duration: this.format.sampleRate > 0 ? this.estimatedSamples / this.format.sampleRate : 0,
             errors: [...this.errors],
             sampleRate: 0,
             samplesDecoded: 0,
@@ -175,45 +174,34 @@ export class WavDecoder implements WavDecoderInterface {
     }
   }
 
-  public decodeFrame(frame: Uint8Array): Float32Array | null {
-    if (this.state !== DecoderState.DECODING || frame.length !== this.format.blockSize) {
-      return null;
-    }
-    if (this.formatTag === WAVE_FORMAT_IMA_ADPCM) {
-      return null;
-    }
-    const { channels, bitDepth } = this.format;
+  public decodeFrame(frame: Uint8Array): Float32Array {
+    const { blockSize, channels = 1, bitDepth = 16, formatTag } = this.format;
     const output = new Float32Array(channels);
+
+    if (this.state !== DecoderState.DECODING) {
+      this.errors.push(this.createError(`not in decoding state`));
+      return output;
+    }
+
+    if (frame.length !== blockSize) {
+      this.errors.push(this.createError(`invalid frame length: expected ${blockSize}, got ${frame.length}`));
+      return output;
+    }
+
+    if (formatTag === WAVE_FORMAT_IMA_ADPCM) {
+      this.errors.push(this.createError(`decodeFrame not supported for ima adpcm`));
+      return output;
+    }
+
     const view = new DataView(frame.buffer, frame.byteOffset, frame.length);
     const bytesPerSample = bitDepth / 8;
+
     for (let ch = 0; ch < channels; ch++) {
       const offset = ch * bytesPerSample;
-      output[ch] = this.readSample(view, offset, bitDepth, this.formatTag);
+      output[ch] = this.readSample(view, offset, bitDepth, formatTag);
     }
-    return output;
-  }
 
-  public decodeFrames(frames: Uint8Array): DecodedWavAudio {
-    if (this.state !== DecoderState.DECODING) {
-      return this.createErrorResult('Decoder must be initialized before decodeFrames().');
-    }
-    if (frames.length === 0) {
-      return this.createEmptyResult();
-    }
-    if (this.format.blockSize <= 0 || frames.length % this.format.blockSize !== 0) {
-      return this.createErrorResult('Data for decodeFrames must be a multiple of the `frameLength` (blockSize).');
-    }
-    try {
-      const decoded = this.decodeInterleavedFrames(frames);
-      this.decodedBytes += frames.length;
-      this.remainingBytes = Math.max(0, this.remainingBytes - frames.length);
-      return decoded;
-    } catch (err) {
-      this.state = DecoderState.ERROR;
-      const message = err instanceof Error ? err.message : String(err);
-      this.errors.push(this.createError(`Block decode error: ${message}`));
-      return this.createErrorResult('Block decode error');
-    }
+    return output;
   }
 
   public flush(): DecodedWavAudio {
@@ -238,7 +226,6 @@ export class WavDecoder implements WavDecoderInterface {
       return {
         bitDepth: this.format.bitDepth || 0,
         channelData: [],
-        duration: this.format.sampleRate > 0 ? this.estimatedSamples / this.format.sampleRate : 0,
         errors: finalErrors,
         sampleRate: this.format.sampleRate || 0,
         samplesDecoded: 0,
@@ -313,7 +300,6 @@ export class WavDecoder implements WavDecoderInterface {
     return {
       bitDepth: this.format.bitDepth,
       channelData: [],
-      duration: 0,
       errors,
       sampleRate: this.format.sampleRate,
       samplesDecoded: 0,
@@ -531,7 +517,6 @@ export class WavDecoder implements WavDecoderInterface {
     return {
       bitDepth: outputBitDepth,
       channelData: this.channelData.map((arr) => arr.subarray(0, samplesDecoded)),
-      duration: sampleRate > 0 ? samplesDecoded / sampleRate : 0,
       errors,
       sampleRate,
       samplesDecoded,
@@ -882,7 +867,6 @@ export class WavDecoder implements WavDecoderInterface {
       }
 
       const { channels, samplesPerBlock } = this.format;
-      // Recalculate and correct block align if it's wrong, using ceil as per spec
       const expectedBlockSize = 4 * channels + Math.ceil(((samplesPerBlock - 1) * channels) / 2);
       if (this.format.blockSize !== expectedBlockSize) {
         this.errors.push(
@@ -893,7 +877,6 @@ export class WavDecoder implements WavDecoderInterface {
         this.format.blockSize = expectedBlockSize;
       }
 
-      // Recalculate and correct byte rate based on the corrected block size
       const expectedByteRate = Math.ceil((this.format.sampleRate * this.format.blockSize) / samplesPerBlock);
       if (this.format.bytesPerSecond !== expectedByteRate) {
         this.errors.push(

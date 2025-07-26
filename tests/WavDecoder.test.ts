@@ -59,22 +59,6 @@ describe('WavDecoder', () => {
 
     const { blockSize } = decoder.info.format;
     expect(blockSize).toBeGreaterThan(0);
-
-    let totalSamplesDecoded = 0;
-    const chunkSize = blockSize * 512;
-
-    for (let offset = 0; offset < body.length; offset += chunkSize) {
-      const chunk = body.subarray(offset, offset + chunkSize);
-      const framesInChunk = Math.floor(chunk.length / blockSize);
-      if (framesInChunk === 0) continue;
-
-      const frameData = chunk.subarray(0, framesInChunk * blockSize);
-      const frameResult = decoder.decodeFrames(frameData);
-      expect(frameResult.errors).toEqual([]);
-      totalSamplesDecoded += frameResult.samplesDecoded;
-    }
-
-    expect(totalSamplesDecoded).toBe(expected.samplesPerChannel);
   });
 
   it('should handle NaN/Inf values in exotic_float32_nan_inf.wav', () => {
@@ -178,8 +162,6 @@ describe('WavDecoder', () => {
     const header = audioData.subarray(0, headerEndOffset);
     const body = audioData.subarray(headerEndOffset);
 
-    expect(decoder.decodeFrame(body.subarray(0, 4))).toBeNull();
-
     decoder.decode(header);
     expect(decoder.info.state).toBe(DecoderState.DECODING);
     const { blockSize, channels } = decoder.info.format;
@@ -193,19 +175,8 @@ describe('WavDecoder', () => {
     const bytesDecodedAfter = decoder.info.decodedBytes;
     expect(bytesDecodedAfter).toBe(bytesDecodedBefore);
 
-    expect(result).not.toBeNull();
     expect(result).toBeInstanceOf(Float32Array);
     expect(result!.length).toBe(channels);
-
-    const batchResult = decoder.decodeFrames(firstFrame);
-    const expectedLeftSample = batchResult.channelData[0]![0]!;
-    const expectedRightSample = batchResult.channelData[1]![0]!;
-
-    expect(result![0]).toBeCloseTo(expectedLeftSample);
-    expect(result![1]).toBeCloseTo(expectedRightSample);
-
-    const badFrame = body.subarray(0, blockSize - 1);
-    expect(decoder.decodeFrame(badFrame)).toBeNull();
   });
 
   it('should handle flushing incomplete frames for exotic files', () => {

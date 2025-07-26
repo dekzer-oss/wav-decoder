@@ -562,6 +562,7 @@
       let totalSamplesDecoded = 0;
       let hasFirstAudioChunk = false;
       let hasAudioFormatInfo = false;
+      let hadFatalError = false;
 
       const PROGRESS_UPDATE_INTERVAL = 30;
       let lastProgressUpdate = performance.now();
@@ -579,7 +580,7 @@
           this.updateProgress(1);
           try {
             const finalResult = this.decoder.flush();
-            if (finalResult?.samplesDecoded > 0) {
+            if (!hadFatalError && finalResult?.samplesDecoded > 0) {
               totalSamplesDecoded += finalResult.samplesDecoded;
               this.elements.samples.textContent = totalSamplesDecoded.toLocaleString();
               this.enqueuePlayback(finalResult.channelData, this.decoder.info.format.sampleRate);
@@ -599,10 +600,42 @@
           const decodeResult = this.decoder.decode(value);
           const decoderInfo = this.decoder.info;
 
-          if (decoderInfo.errors.length) {
-            this.logger.log(`Decoder critical error: ${decoderInfo.errors[0].message}. Stopping.`, 'error');
+          if (decoderInfo.errors.length > 0) {
+            const errMsg = decoderInfo.errors[0].message;
+            this.logger.log(`Decoder critical error: ${errMsg}. Stopping.`, 'error');
+            hadFatalError = true;
             reader.cancel();
-            throw new Error(decoderInfo.errors[0].message);
+            throw new Error(errMsg);
+          }
+
+          if (decoderInfo.format.sampleRate > 0) {
+            const decodedDurationSeconds = totalSamplesDecoded / decoderInfo.format.sampleRate;
+            this.elements.duration.textContent = formatTime(decodedDurationSeconds);
+          }
+
+          if (decodeResult.samplesDecoded > 0) {
+            totalSamplesDecoded += decodeResult.samplesDecoded;
+
+            // Update UI metric every time we decode
+            this.elements.samples.textContent = totalSamplesDecoded.toLocaleString();
+
+            if (!hasFirstAudioChunk) {
+              const ttfa = this.metrics.markFirstAudio();
+              this.elements.ttfa.textContent = `${ttfa.toFixed(1)}ms`;
+              hasFirstAudioChunk = true;
+            }
+
+            if (!hasAudioFormatInfo && decoderInfo.format.sampleRate) {
+              // ✅ Use actual total samples instead of estimated
+              this.updateAudioInfo(decoderInfo.format, totalSamplesDecoded);
+              this.logger.log(
+                `Audio Format: ${decoderInfo.format.channels}ch, ${decoderInfo.format.sampleRate}Hz, ${decoderInfo.format.bitDepth}-bit`,
+                'info',
+              );
+              hasAudioFormatInfo = true;
+            }
+
+            this.enqueuePlayback(decodeResult.channelData, decoderInfo.format.sampleRate);
           }
 
           const now = performance.now();
@@ -612,28 +645,9 @@
             await new Promise(requestAnimationFrame);
           }
 
-          if (decodeResult.samplesDecoded > 0) {
-            totalSamplesDecoded += decodeResult.samplesDecoded;
-
-            if (!hasFirstAudioChunk) {
-              const ttfa = this.metrics.markFirstAudio();
-              this.elements.ttfa.textContent = `${ttfa.toFixed(1)}ms`;
-              hasFirstAudioChunk = true;
-            }
-
-            if (!hasAudioFormatInfo && decoderInfo.format.sampleRate) {
-              this.updateAudioInfo(decoderInfo.format, this.decoder.estimatedSamples);
-              this.logger.log(
-                `Audio Format: ${decoderInfo.format.channels}ch, ${decoderInfo.format.sampleRate}Hz, ${decoderInfo.format.bitDepth}-bit`,
-                'info',
-              );
-              hasAudioFormatInfo = true;
-            }
-            this.enqueuePlayback(decodeResult.channelData, decoderInfo.format.sampleRate);
-          }
-
         } catch (err) {
           this.logger.log(`Chunk processing failed: ${err.message}`, 'error');
+          hadFatalError = true;
           reader.cancel();
           throw err;
         }

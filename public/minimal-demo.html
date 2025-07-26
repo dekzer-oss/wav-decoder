@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WAV Decoder – Minimal</title>
+  <style>
+      body {
+          font-family: system-ui, sans-serif;
+          background: #0f172a;
+          color: #f8fafc;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+      }
+      .drop {
+          border: 2px dashed #334155;
+          border-radius: 8px;
+          padding: 2rem;
+          width: min(90vw, 400px);
+          text-align: center;
+          cursor: pointer;
+          margin-bottom: 1rem;
+      }
+      .drop.dragover {
+          border-color: #3b82f6;
+          background: #1e293b;
+      }
+      progress {
+          width: 100%;
+          height: 12px;
+      }
+      pre {
+          text-align: left;
+          white-space: pre-wrap;
+          background: #1e293b;
+          padding: 1rem;
+          border-radius: 6px;
+          margin-top: 1rem;
+          font-size: 0.9rem;
+      }
+  </style>
+</head>
+<body>
+<h1>WAV Decoder</h1>
+<div id="drop" class="drop">Drop WAV file or click</div>
+<input id="file" type="file" accept=".wav,audio/wav" hidden />
+<progress id="progress" max="1" value="0" hidden></progress>
+<pre id="log"></pre>
+
+<script type="module">
+  import { WavDecoder } from '../src';
+
+  const drop = document.getElementById('drop');
+  const fileInput = document.getElementById('file');
+  const progress = document.getElementById('progress');
+  const log = document.getElementById('log');
+
+  function logMetric(label, value) {
+    log.textContent += `${label}: ${value}\n`;
+  }
+
+  function format(bytes) {
+    return `${(bytes / 1048576).toFixed(1)} MiB`;
+  }
+
+  function speed(bytes, elapsed) {
+    return `${(bytes / 1048576 / elapsed).toFixed(1)} MiB/s`;
+  }
+
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+  });
+
+  ['dragenter', 'dragover'].forEach((type) => {
+    drop.addEventListener(type, (e) => {
+      e.preventDefault();
+      drop.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach((type) => {
+    drop.addEventListener(type, (e) => {
+      e.preventDefault();
+      drop.classList.remove('dragover');
+    });
+  });
+  drop.addEventListener('drop', (e) => {
+    const file = Array.from(e.dataTransfer.files).find((f) => f.name.endsWith('.wav'));
+    if (file) handleFile(file);
+  });
+
+  async function handleFile(file) {
+    drop.textContent = `Decoding "${file.name}"...`;
+    log.textContent = '';
+    progress.hidden = false;
+    progress.value = 0;
+
+    const decoder = new WavDecoder();
+    const reader = file.stream().getReader();
+    let total = 0;
+    const start = performance.now();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const res = decoder.decode(value);
+      if (res?.samplesDecoded) total += res.samplesDecoded;
+      progress.value = decoder.info.progress;
+    }
+
+    const flushed = decoder.flush();
+    if (flushed?.samplesDecoded) total += flushed.samplesDecoded;
+    const elapsed = (performance.now() - start) / 1000;
+
+    progress.value = 1;
+    drop.textContent = `Done: ${file.name}`;
+    logMetric('Samples', total.toLocaleString());
+    logMetric('Bytes', format(decoder.info.decodedBytes));
+    logMetric('Time', `${elapsed.toFixed(3)}s`);
+    logMetric('Speed', speed(decoder.info.decodedBytes, elapsed));
+  }
+</script>
+</body>
+</html>

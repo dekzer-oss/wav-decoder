@@ -136,7 +136,6 @@ export interface DecodeError {
 export interface DecodedWavAudio {
   bitDepth: WavBitDepth;
   channelData: Float32Array[];
-  duration: number;
   errors: DecodeError[];
   sampleRate: WavSampleRate;
   samplesDecoded: number;
@@ -219,12 +218,11 @@ export interface WavDecoderInfo {
  */
 export interface WavDecoderInterface {
   decode(chunk: Uint8Array): DecodedWavAudio;
-  decodeFrame(frame: Uint8Array): Float32Array | null;
-  decodeFrames(frames: Uint8Array): DecodedWavAudio;
+  decodeFrame(frame: Uint8Array): Float32Array;
   free(): void;
   flush(): DecodedWavAudio;
-  info: WavDecoderInfo;
   reset(): void;
+  info: WavDecoderInfo;
 }
 
 /**
