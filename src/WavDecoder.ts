@@ -42,6 +42,15 @@ const WAVE_FORMAT_MULAW = 0x0007;
 const WAVE_FORMAT_PCM = 0x0001;
 const WAVE_FORMAT_IMA_ADPCM = 0x0011;
 
+// Precomputed constants for optimized math
+const SCALE_8 = 1 / 128;
+const SCALE_16 = 1 / 32768;
+const SCALE_24 = 1 / 8388608;
+const SCALE_32 = 1 / 2147483648;
+
+// Branchless clamp helper
+const clamp1 = (v: number): number => (v < -1 ? -1 : v > 1 ? 1 : v);
+
 const imaStepTable = new Int32Array([
   7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73,
   80, 88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494,
@@ -255,7 +264,7 @@ export class WavDecoder implements WavDecoderInterface {
             let headerOffset = 0;
             for (let ch = 0; ch < channels; ch++) {
               const predictor = view.getInt16(headerOffset, this.isLittleEndian);
-              output[ch][0] = Math.max(-1, Math.min(1, predictor / 32768));
+              output[ch][0] = clamp1(predictor * SCALE_16);
               headerOffset += 4;
             }
           }
@@ -387,7 +396,7 @@ export class WavDecoder implements WavDecoderInterface {
     const stepIndices = headers.map((h) => Math.min(88, Math.max(0, h.stepIndex)));
 
     for (let ch = 0; ch < channels; ch++) {
-      channelData[ch][outputOffset] = Math.max(-1, Math.min(1, predictors[ch] / 32768));
+      channelData[ch][outputOffset] = clamp1(predictors[ch] * SCALE_16);
     }
 
     for (let s = 1; s < samplesPerBlock; s++) {
@@ -409,7 +418,7 @@ export class WavDecoder implements WavDecoderInterface {
         predictors[ch] = Math.max(-32768, Math.min(32767, predictors[ch]));
         stepIndices[ch] = Math.min(88, Math.max(0, stepIndices[ch] + imaIndexAdjustTable[nibble]));
 
-        channelData[ch][outputOffset + s] = Math.max(-1, Math.min(1, predictors[ch] / 32768));
+        channelData[ch][outputOffset + s] = clamp1(predictors[ch] * SCALE_16);
       }
     }
   }
@@ -441,19 +450,25 @@ export class WavDecoder implements WavDecoderInterface {
     switch (this.formatTag) {
       case WAVE_FORMAT_PCM: {
         if (channels === 1) {
-          if (bitDepth === 8) decodePCM8Mono(bytes, this.channelData[0]);
-          else if (bitDepth === 16) decodePCM16Mono(view, this.channelData[0], this.isLittleEndian);
-          else if (bitDepth === 24)
+          if (bitDepth === 8) {
+            decodePCM8Mono(bytes, this.channelData[0]);
+          } else if (bitDepth === 16) {
+            decodePCM16Mono(view, this.channelData[0], this.isLittleEndian);
+          } else if (bitDepth === 24) {
             decodePCM24Mono(bytes, this.channelData[0], this.isLittleEndian);
-          else if (bitDepth === 32) decodePCM32Mono(view, this.channelData[0], this.isLittleEndian);
+          } else if (bitDepth === 32) {
+            decodePCM32Mono(view, this.channelData[0], this.isLittleEndian);
+          }
         } else if (channels === 2) {
-          if (bitDepth === 8) decodePCM8Stereo(bytes, this.channelData[0], this.channelData[1]);
-          else if (bitDepth === 16)
+          if (bitDepth === 8) {
+            decodePCM8Stereo(bytes, this.channelData[0], this.channelData[1]);
+          } else if (bitDepth === 16) {
             decodePCM16Stereo(view, this.channelData[0], this.channelData[1], this.isLittleEndian);
-          else if (bitDepth === 24)
+          } else if (bitDepth === 24) {
             decodePCM24Stereo(bytes, this.channelData[0], this.channelData[1], this.isLittleEndian);
-          else if (bitDepth === 32)
+          } else if (bitDepth === 32) {
             decodePCM32Stereo(view, this.channelData[0], this.channelData[1], this.isLittleEndian);
+          }
         } else {
           if (bitDepth === 8) decodePCM8N(bytes, this.channelData);
           else if (bitDepth === 16) decodePCM16N(view, this.channelData, this.isLittleEndian);

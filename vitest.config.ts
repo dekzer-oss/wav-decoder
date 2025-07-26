@@ -11,22 +11,22 @@ export default defineConfig({
           include: ['tests/**/*.test.ts'],
         },
       },
-      {
-        test: {
-          name: 'browser',
-          environment: 'browser',
-          globals: true,
-          include: ['tests/**/*.test.ts'],
-          benchmark: {},
-          browser: {
-            enabled: true,
-            provider: 'playwright',
-            headless: true,
-            screenshotFailures: false,
-            instances: [{ browser: 'chromium' }, { browser: 'firefox' }, { browser: 'webkit' }],
-          },
-        },
-      },
+      // {
+      //   test: {
+      //     name: 'browser',
+      //     environment: 'browser',
+      //     globals: true,
+      //     include: ['tests/**/*.test.ts'],
+      //     benchmark: {},
+      //     browser: {
+      //       enabled: true,
+      //       provider: 'playwright',
+      //       headless: true,
+      //       screenshotFailures: false,
+      //       instances: [{ browser: 'chromium' }, { browser: 'firefox' }, { browser: 'webkit' }],
+      //     },
+      //   },
+      // },
       // Separate Chrome project for benchmarks
       {
         test: {

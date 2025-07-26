@@ -1,13 +1,31 @@
-// Pre-computed scaling constants - use multiplication instead of division
+/**
+ * @fileoverview A collection of highly optimized audio decoding functions.
+ * This module provides functions to decode various raw audio formats (PCM,
+ * floating-point, A-law, μ-law) into 32-bit floating-point samples, normalized
+ * to the range `$[-1.0, 1.0]$`. Functions are specialized for mono, stereo, and
+ * multichannel (N-channel) layouts to maximize performance.
+ */
+
+// --- Pre-computed Constants ---
+
+/** Scaling constant for 8-bit PCM. Converts `$[-128, 127]$` to `$[-1.0, 1.0]$`. */
 const SCALE_8 = 1 / 128;
+/** Scaling constant for 16-bit PCM. Converts `$[-32768, 32767]$` to `$[-1.0, 1.0]$`. */
 const SCALE_16 = 1 / 32768;
+/** Scaling constant for 24-bit PCM. Converts `$[-8388608, 8388607]$` to `$[-1.0, 1.0]$`. */
 const SCALE_24 = 1 / 8388608;
+/** Scaling constant for 32-bit PCM. Converts `$[-2147483648, 2147483647]$` to `$[-1.0, 1.0]$`. */
 const SCALE_32 = 1 / 2147483648;
 
-// Pre-computed constants
+/** Offset for converting unsigned 8-bit PCM to signed. */
 const PCM8_OFFSET = 128;
 
-// Optimized lookup tables - single-pass generation
+// --- Lookup Tables ---
+
+/**
+ * Pre-computed lookup table for fast A-law to 32-bit float conversion.
+ * @type {Float32Array}
+ */
 const ALAW_TABLE = (() => {
   const table = new Float32Array(256);
   for (let i = 0; i < 256; i++) {
@@ -22,6 +40,10 @@ const ALAW_TABLE = (() => {
   return table;
 })();
 
+/**
+ * Pre-computed lookup table for fast μ-law to 32-bit float conversion.
+ * @type {Float32Array}
+ */
 const MULAW_TABLE = (() => {
   const MULAW_BIAS = 0x84;
   const table = new Float32Array(256);
@@ -37,12 +59,19 @@ const MULAW_TABLE = (() => {
   return table;
 })();
 
-// 8-bit PCM - highly optimized with loop unrolling for large buffers
+// --- 8-bit PCM Decoders ---
+
+/**
+ * Decodes 8-bit unsigned PCM mono audio data into a 32-bit float array.
+ * @param {Uint8Array} bytes - The input buffer of 8-bit samples.
+ * @param {Float32Array} out - The output array to store decoded samples.
+ * @returns {void}
+ */
 function decodePCM8Mono(bytes: Uint8Array, out: Float32Array): void {
   const len = out.length;
   let i = 0;
 
-  // Unroll loop for better performance on large buffers
+  // Unroll loop for better performance on large buffers.
   const unrollEnd = len - (len % 4);
   for (; i < unrollEnd; i += 4) {
     out[i] = (bytes[i] - PCM8_OFFSET) * SCALE_8;
@@ -51,18 +80,25 @@ function decodePCM8Mono(bytes: Uint8Array, out: Float32Array): void {
     out[i + 3] = (bytes[i + 3] - PCM8_OFFSET) * SCALE_8;
   }
 
-  // Handle remaining samples
+  // Handle remaining samples.
   for (; i < len; i++) {
     out[i] = (bytes[i] - PCM8_OFFSET) * SCALE_8;
   }
 }
 
+/**
+ * Decodes 8-bit unsigned PCM stereo audio data into two 32-bit float arrays.
+ * @param {Uint8Array} bytes - The input buffer of interleaved 8-bit samples.
+ * @param {Float32Array} left - The output array for the left channel.
+ * @param {Float32Array} right - The output array for the right channel.
+ * @returns {void}
+ */
 function decodePCM8Stereo(bytes: Uint8Array, left: Float32Array, right: Float32Array): void {
   const len = left.length;
   let offset = 0;
   let i = 0;
 
-  // Unroll for stereo pairs
+  // Unroll for stereo pairs.
   const unrollEnd = len - (len % 2);
   for (; i < unrollEnd; i += 2, offset += 4) {
     left[i] = (bytes[offset] - PCM8_OFFSET) * SCALE_8;
@@ -71,34 +107,44 @@ function decodePCM8Stereo(bytes: Uint8Array, left: Float32Array, right: Float32A
     right[i + 1] = (bytes[offset + 3] - PCM8_OFFSET) * SCALE_8;
   }
 
-  // Handle remaining samples
+  // Handle remaining samples.
   for (; i < len; i++, offset += 2) {
     left[i] = (bytes[offset] - PCM8_OFFSET) * SCALE_8;
     right[i] = (bytes[offset + 1] - PCM8_OFFSET) * SCALE_8;
   }
 }
 
+/**
+ * Decodes N-channel 8-bit unsigned PCM audio into an array of float arrays.
+ * @param {Uint8Array} bytes - The input buffer of interleaved 8-bit samples.
+ * @param {Float32Array[]} outs - An array of output float arrays for each channel.
+ * @returns {void}
+ */
 function decodePCM8N(bytes: Uint8Array, outs: Float32Array[]): void {
   const numChannels = outs.length;
   const samples = outs[0].length;
   let offset = 0;
 
-  // Pre-cache channel arrays to avoid property lookups
-  const channels = outs;
-
   for (let i = 0; i < samples; i++) {
     for (let ch = 0; ch < numChannels; ch++) {
-      channels[ch][i] = (bytes[offset++] - PCM8_OFFSET) * SCALE_8;
+      outs[ch][i] = (bytes[offset++] - PCM8_OFFSET) * SCALE_8;
     }
   }
 }
 
-// 16-bit PCM - optimized with minimal DataView overhead
+// --- 16-bit PCM Decoders ---
+
+/**
+ * Decodes 16-bit signed PCM mono audio data into a 32-bit float array.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array} out - The output array to store decoded samples.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodePCM16Mono(view: DataView, out: Float32Array, isLE: boolean): void {
   const len = out.length;
   let offset = 0;
 
-  // Hoist endianness check outside loop
   if (isLE) {
     for (let i = 0; i < len; i++, offset += 2) {
       out[i] = view.getInt16(offset, true) * SCALE_16;
@@ -110,6 +156,14 @@ function decodePCM16Mono(view: DataView, out: Float32Array, isLE: boolean): void
   }
 }
 
+/**
+ * Decodes 16-bit signed PCM stereo audio data into two 32-bit float arrays.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array} left - The output array for the left channel.
+ * @param {Float32Array} right - The output array for the right channel.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodePCM16Stereo(
   view: DataView,
   left: Float32Array,
@@ -132,56 +186,69 @@ function decodePCM16Stereo(
   }
 }
 
+/**
+ * Decodes N-channel 16-bit signed PCM audio into an array of float arrays.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array[]} outs - An array of output float arrays for each channel.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodePCM16N(view: DataView, outs: Float32Array[], isLE: boolean): void {
   const numChannels = outs.length;
   const samples = outs[0].length;
   let offset = 0;
 
-  const channels = outs;
-
   if (isLE) {
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++, offset += 2) {
-        channels[ch][i] = view.getInt16(offset, true) * SCALE_16;
+        outs[ch][i] = view.getInt16(offset, true) * SCALE_16;
       }
     }
   } else {
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++, offset += 2) {
-        channels[ch][i] = view.getInt16(offset, false) * SCALE_16;
+        outs[ch][i] = view.getInt16(offset, false) * SCALE_16;
       }
     }
   }
 }
 
-// 24-bit PCM - direct byte manipulation for maximum speed
+// --- 24-bit PCM Decoders ---
+
+/**
+ * Decodes 24-bit signed PCM mono audio data into a 32-bit float array.
+ * @param {Uint8Array} bytes - The input buffer of 24-bit samples.
+ * @param {Float32Array} out - The output array to store decoded samples.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodePCM24Mono(bytes: Uint8Array, out: Float32Array, isLE: boolean): void {
   const len = out.length;
   let offset = 0;
 
-  // Hoist endianness and length checks out of hot loop
   if (isLE) {
     for (let i = 0; i < len; i++, offset += 3) {
-      // Direct byte manipulation - faster than DataView for 24-bit
-      const b0 = bytes[offset];
-      const b1 = bytes[offset + 1];
-      const b2 = bytes[offset + 2];
-      let v = (b2 << 16) | (b1 << 8) | b0;
-      v = (v << 8) >> 8; // Sign extend from 24 to 32 bits
+      let v = (bytes[offset + 2] << 16) | (bytes[offset + 1] << 8) | bytes[offset];
+      v = (v << 8) >> 8;
       out[i] = v * SCALE_24;
     }
   } else {
     for (let i = 0; i < len; i++, offset += 3) {
-      const b0 = bytes[offset];
-      const b1 = bytes[offset + 1];
-      const b2 = bytes[offset + 2];
-      let v = (b0 << 16) | (b1 << 8) | b2;
+      let v = (bytes[offset] << 16) | (bytes[offset + 1] << 8) | bytes[offset + 2];
       v = (v << 8) >> 8;
       out[i] = v * SCALE_24;
     }
   }
 }
 
+/**
+ * Decodes 24-bit signed PCM stereo audio data into two 32-bit float arrays.
+ * @param {Uint8Array} bytes - The input buffer of interleaved 24-bit samples.
+ * @param {Float32Array} left - The output array for the left channel.
+ * @param {Float32Array} right - The output array for the right channel.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodePCM24Stereo(
   bytes: Uint8Array,
   left: Float32Array,
@@ -193,82 +260,69 @@ function decodePCM24Stereo(
 
   if (isLE) {
     for (let i = 0; i < len; i++) {
-      // Left channel
-      const lb0 = bytes[offset];
-      const lb1 = bytes[offset + 1];
-      const lb2 = bytes[offset + 2];
-      let vL = (lb2 << 16) | (lb1 << 8) | lb0;
+      let vL = (bytes[offset + 2] << 16) | (bytes[offset + 1] << 8) | bytes[offset];
       vL = (vL << 8) >> 8;
       offset += 3;
-
-      // Right channel
-      const rb0 = bytes[offset];
-      const rb1 = bytes[offset + 1];
-      const rb2 = bytes[offset + 2];
-      let vR = (rb2 << 16) | (rb1 << 8) | rb0;
+      let vR = (bytes[offset + 2] << 16) | (bytes[offset + 1] << 8) | bytes[offset];
       vR = (vR << 8) >> 8;
       offset += 3;
-
       left[i] = vL * SCALE_24;
       right[i] = vR * SCALE_24;
     }
   } else {
     for (let i = 0; i < len; i++) {
-      // Left channel
-      const lb0 = bytes[offset];
-      const lb1 = bytes[offset + 1];
-      const lb2 = bytes[offset + 2];
-      let vL = (lb0 << 16) | (lb1 << 8) | lb2;
+      let vL = (bytes[offset] << 16) | (bytes[offset + 1] << 8) | bytes[offset + 2];
       vL = (vL << 8) >> 8;
       offset += 3;
-
-      // Right channel
-      const rb0 = bytes[offset];
-      const rb1 = bytes[offset + 1];
-      const rb2 = bytes[offset + 2];
-      let vR = (rb0 << 16) | (rb1 << 8) | rb2;
+      let vR = (bytes[offset] << 16) | (bytes[offset + 1] << 8) | bytes[offset + 2];
       vR = (vR << 8) >> 8;
       offset += 3;
-
       left[i] = vL * SCALE_24;
       right[i] = vR * SCALE_24;
     }
   }
 }
 
+/**
+ * Decodes N-channel 24-bit signed PCM audio into an array of float arrays.
+ * @param {Uint8Array} bytes - The input buffer of interleaved 24-bit samples.
+ * @param {Float32Array[]} outs - An array of output float arrays for each channel.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodePCM24N(bytes: Uint8Array, outs: Float32Array[], isLE: boolean): void {
   const numChannels = outs.length;
   const samples = outs[0].length;
   let offset = 0;
 
-  const channels = outs;
-
   if (isLE) {
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++, offset += 3) {
-        const b0 = bytes[offset];
-        const b1 = bytes[offset + 1];
-        const b2 = bytes[offset + 2];
-        let v = (b2 << 16) | (b1 << 8) | b0;
+        let v = (bytes[offset + 2] << 16) | (bytes[offset + 1] << 8) | bytes[offset];
         v = (v << 8) >> 8;
-        channels[ch][i] = v * SCALE_24;
+        outs[ch][i] = v * SCALE_24;
       }
     }
   } else {
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++, offset += 3) {
-        const b0 = bytes[offset];
-        const b1 = bytes[offset + 1];
-        const b2 = bytes[offset + 2];
-        let v = (b0 << 16) | (b1 << 8) | b2;
+        let v = (bytes[offset] << 16) | (bytes[offset + 1] << 8) | bytes[offset + 2];
         v = (v << 8) >> 8;
-        channels[ch][i] = v * SCALE_24;
+        outs[ch][i] = v * SCALE_24;
       }
     }
   }
 }
 
-// 32-bit PCM - hoisted endianness checks
+// --- 32-bit PCM Decoders ---
+
+/**
+ * Decodes 32-bit signed PCM mono audio data into a 32-bit float array.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array} out - The output array to store decoded samples.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodePCM32Mono(view: DataView, out: Float32Array, isLE: boolean): void {
   const len = out.length;
   let offset = 0;
@@ -284,6 +338,14 @@ function decodePCM32Mono(view: DataView, out: Float32Array, isLE: boolean): void
   }
 }
 
+/**
+ * Decodes 32-bit signed PCM stereo audio data into two 32-bit float arrays.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array} left - The output array for the left channel.
+ * @param {Float32Array} right - The output array for the right channel.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodePCM32Stereo(
   view: DataView,
   left: Float32Array,
@@ -306,29 +368,42 @@ function decodePCM32Stereo(
   }
 }
 
+/**
+ * Decodes N-channel 32-bit signed PCM audio into an array of float arrays.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array[]} outs - An array of output float arrays for each channel.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodePCM32N(view: DataView, outs: Float32Array[], isLE: boolean): void {
   const numChannels = outs.length;
   const samples = outs[0].length;
   let offset = 0;
 
-  const channels = outs;
-
   if (isLE) {
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++, offset += 4) {
-        channels[ch][i] = view.getInt32(offset, true) * SCALE_32;
+        outs[ch][i] = view.getInt32(offset, true) * SCALE_32;
       }
     }
   } else {
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++, offset += 4) {
-        channels[ch][i] = view.getInt32(offset, false) * SCALE_32;
+        outs[ch][i] = view.getInt32(offset, false) * SCALE_32;
       }
     }
   }
 }
 
-// Float32 - fastest possible clamping with hoisted endianness
+// --- 32-bit Float Decoders ---
+
+/**
+ * Decodes 32-bit float mono audio data, clamping values to `$[-1.0, 1.0]$`.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array} out - The output array to store decoded samples.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodeFloat32Mono(view: DataView, out: Float32Array, isLE: boolean): void {
   const len = out.length;
   let offset = 0;
@@ -346,6 +421,14 @@ function decodeFloat32Mono(view: DataView, out: Float32Array, isLE: boolean): vo
   }
 }
 
+/**
+ * Decodes 32-bit float stereo audio, clamping values to `$[-1.0, 1.0]$`.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array} left - The output array for the left channel.
+ * @param {Float32Array} right - The output array for the right channel.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodeFloat32Stereo(
   view: DataView,
   left: Float32Array,
@@ -372,31 +455,44 @@ function decodeFloat32Stereo(
   }
 }
 
+/**
+ * Decodes N-channel 32-bit float audio, clamping values to `$[-1.0, 1.0]$`.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array[]} outs - An array of output float arrays for each channel.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodeFloat32N(view: DataView, outs: Float32Array[], isLE: boolean): void {
   const numChannels = outs.length;
   const samples = outs[0].length;
   let offset = 0;
 
-  const channels = outs;
-
   if (isLE) {
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++, offset += 4) {
         const val = view.getFloat32(offset, true);
-        channels[ch][i] = val < -1 ? -1 : val > 1 ? 1 : val;
+        outs[ch][i] = val < -1 ? -1 : val > 1 ? 1 : val;
       }
     }
   } else {
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++, offset += 4) {
         const val = view.getFloat32(offset, false);
-        channels[ch][i] = val < -1 ? -1 : val > 1 ? 1 : val;
+        outs[ch][i] = val < -1 ? -1 : val > 1 ? 1 : val;
       }
     }
   }
 }
 
-// Float64 - hoisted endianness with optimized clamping
+// --- 64-bit Float Decoders ---
+
+/**
+ * Decodes 64-bit float mono audio data, clamping values to `$[-1.0, 1.0]$`.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array} out - The output array to store decoded samples.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodeFloat64Mono(view: DataView, out: Float32Array, isLE: boolean): void {
   const len = out.length;
   let offset = 0;
@@ -414,6 +510,14 @@ function decodeFloat64Mono(view: DataView, out: Float32Array, isLE: boolean): vo
   }
 }
 
+/**
+ * Decodes 64-bit float stereo audio, clamping values to `$[-1.0, 1.0]$`.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array} left - The output array for the left channel.
+ * @param {Float32Array} right - The output array for the right channel.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodeFloat64Stereo(
   view: DataView,
   left: Float32Array,
@@ -440,36 +544,47 @@ function decodeFloat64Stereo(
   }
 }
 
+/**
+ * Decodes N-channel 64-bit float audio, clamping values to `$[-1.0, 1.0]$`.
+ * @param {DataView} view - The DataView over the input buffer.
+ * @param {Float32Array[]} outs - An array of output float arrays for each channel.
+ * @param {boolean} isLE - True for little-endian, false for big-endian.
+ * @returns {void}
+ */
 function decodeFloat64N(view: DataView, outs: Float32Array[], isLE: boolean): void {
   const numChannels = outs.length;
   const samples = outs[0].length;
   let offset = 0;
 
-  const channels = outs;
-
   if (isLE) {
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++, offset += 8) {
         const val = view.getFloat64(offset, true);
-        channels[ch][i] = val < -1 ? -1 : val > 1 ? 1 : val;
+        outs[ch][i] = val < -1 ? -1 : val > 1 ? 1 : val;
       }
     }
   } else {
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++, offset += 8) {
         const val = view.getFloat64(offset, false);
-        channels[ch][i] = val < -1 ? -1 : val > 1 ? 1 : val;
+        outs[ch][i] = val < -1 ? -1 : val > 1 ? 1 : val;
       }
     }
   }
 }
 
-// A-law and μ-law - already optimal with lookup tables, no per-sample branching
+// --- A-law Decoders ---
+
+/**
+ * Decodes A-law mono audio data into a 32-bit float array using a lookup table.
+ * @param {Uint8Array} bytes - The input buffer of A-law samples.
+ * @param {Float32Array} out - The output array to store decoded samples.
+ * @returns {void}
+ */
 function decodeAlaw(bytes: Uint8Array, out: Float32Array): void {
   const len = out.length;
   let i = 0;
 
-  // Unroll for large buffers
   const unrollEnd = len - (len % 4);
   for (; i < unrollEnd; i += 4) {
     out[i] = ALAW_TABLE[bytes[i]];
@@ -483,6 +598,13 @@ function decodeAlaw(bytes: Uint8Array, out: Float32Array): void {
   }
 }
 
+/**
+ * Decodes A-law stereo audio data into two 32-bit float arrays.
+ * @param {Uint8Array} bytes - The input buffer of interleaved A-law samples.
+ * @param {Float32Array} left - The output array for the left channel.
+ * @param {Float32Array} right - The output array for the right channel.
+ * @returns {void}
+ */
 function decodeAlawStereo(bytes: Uint8Array, left: Float32Array, right: Float32Array): void {
   const len = left.length;
   let offset = 0;
@@ -493,25 +615,36 @@ function decodeAlawStereo(bytes: Uint8Array, left: Float32Array, right: Float32A
   }
 }
 
+/**
+ * Decodes N-channel A-law audio into an array of float arrays.
+ * @param {Uint8Array} bytes - The input buffer of interleaved A-law samples.
+ * @param {Float32Array[]} outs - An array of output float arrays for each channel.
+ * @returns {void}
+ */
 function decodeAlawN(bytes: Uint8Array, outs: Float32Array[]): void {
   const numChannels = outs.length;
   const samples = outs[0].length;
   let offset = 0;
 
-  const channels = outs;
-
   for (let i = 0; i < samples; i++) {
     for (let ch = 0; ch < numChannels; ch++) {
-      channels[ch][i] = ALAW_TABLE[bytes[offset++]];
+      outs[ch][i] = ALAW_TABLE[bytes[offset++]];
     }
   }
 }
 
+// --- μ-law Decoders ---
+
+/**
+ * Decodes μ-law mono audio data into a 32-bit float array using a lookup table.
+ * @param {Uint8Array} bytes - The input buffer of μ-law samples.
+ * @param {Float32Array} out - The output array to store decoded samples.
+ * @returns {void}
+ */
 function decodeMulaw(bytes: Uint8Array, out: Float32Array): void {
   const len = out.length;
   let i = 0;
 
-  // Unroll for large buffers
   const unrollEnd = len - (len % 4);
   for (; i < unrollEnd; i += 4) {
     out[i] = MULAW_TABLE[bytes[i]];
@@ -525,6 +658,13 @@ function decodeMulaw(bytes: Uint8Array, out: Float32Array): void {
   }
 }
 
+/**
+ * Decodes μ-law stereo audio data into two 32-bit float arrays.
+ * @param {Uint8Array} bytes - The input buffer of interleaved μ-law samples.
+ * @param {Float32Array} left - The output array for the left channel.
+ * @param {Float32Array} right - The output array for the right channel.
+ * @returns {void}
+ */
 function decodeMulawStereo(bytes: Uint8Array, left: Float32Array, right: Float32Array): void {
   const len = left.length;
   let offset = 0;
@@ -535,16 +675,20 @@ function decodeMulawStereo(bytes: Uint8Array, left: Float32Array, right: Float32
   }
 }
 
+/**
+ * Decodes N-channel μ-law audio into an array of float arrays.
+ * @param {Uint8Array} bytes - The input buffer of interleaved μ-law samples.
+ * @param {Float32Array[]} outs - An array of output float arrays for each channel.
+ * @returns {void}
+ */
 function decodeMulawN(bytes: Uint8Array, outs: Float32Array[]): void {
   const numChannels = outs.length;
   const samples = outs[0].length;
   let offset = 0;
 
-  const channels = outs;
-
   for (let i = 0; i < samples; i++) {
     for (let ch = 0; ch < numChannels; ch++) {
-      channels[ch][i] = MULAW_TABLE[bytes[offset++]];
+      outs[ch][i] = MULAW_TABLE[bytes[offset++]];
     }
   }
 }
