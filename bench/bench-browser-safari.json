@@ -1,0 +1,119 @@
+{
+  "files": [
+    {
+      "filepath": "/home/www/dekzer-oss/decoders/wav-decoder/tests/WavDecoder.bench.ts",
+      "groups": [
+        {
+          "fullName": "tests/WavDecoder.bench.ts > WavDecoder full decode() performance",
+          "benchmarks": [
+            {
+              "id": "1660616501_0_0",
+              "name": "sine_alaw_8bit_le_mono.wav - decode",
+              "rank": 3,
+              "rme": 4.389399826973462,
+              "samples": [],
+              "totalTime": 1000.9999999999998,
+              "min": 0,
+              "max": 5.000000000000227,
+              "hz": 486.5134865134866,
+              "period": 2.0554414784394246,
+              "mean": 2.0554414784394246,
+              "variance": 1.0318993417328017,
+              "sd": 1.015824464035397,
+              "sem": 0.04603140035620453,
+              "df": 486,
+              "critical": 1.96,
+              "moe": 0.09022154469816088,
+              "p75": 3,
+              "p99": 5,
+              "p995": 5,
+              "p999": 5.000000000000227,
+              "sampleCount": 487,
+              "median": 2
+            },
+            {
+              "id": "1660616501_0_1",
+              "name": "sine_pcm_16bit_le_stereo.wav - decode",
+              "rank": 1,
+              "rme": 5.99164765461412,
+              "samples": [],
+              "totalTime": 1001.9999999999998,
+              "min": 0,
+              "max": 7,
+              "hz": 548.9021956087826,
+              "period": 1.8218181818181813,
+              "mean": 1.8218181818181813,
+              "variance": 1.7058983275376505,
+              "sd": 1.3061004278146648,
+              "sem": 0.05569230936849116,
+              "df": 549,
+              "critical": 1.96,
+              "moe": 0.10915692636224267,
+              "p75": 3,
+              "p99": 5.000000000000227,
+              "p995": 6,
+              "p999": 7,
+              "sampleCount": 550,
+              "median": 2
+            },
+            {
+              "id": "1660616501_0_2",
+              "name": "sine_pcm_24bit_be_stereo.wav - decode",
+              "rank": 2,
+              "rme": 5.826516020817665,
+              "samples": [],
+              "totalTime": 1002,
+              "min": 0,
+              "max": 6.000000000000455,
+              "hz": 507.98403193612774,
+              "period": 1.968565815324165,
+              "mean": 1.968565815324165,
+              "variance": 1.7431044351283342,
+              "sd": 1.3202668045241213,
+              "sem": 0.05851979725010324,
+              "df": 508,
+              "critical": 1.96,
+              "moe": 0.11469880261020235,
+              "p75": 3,
+              "p99": 5,
+              "p995": 5.000000000000455,
+              "p999": 6.000000000000455,
+              "sampleCount": 509,
+              "median": 2
+            }
+          ]
+        },
+        {
+          "fullName": "tests/WavDecoder.bench.ts > WavDecoder API comparison under looping conditions",
+          "benchmarks": [
+            {
+              "id": "1660616501_1_0",
+              "name": "block-by-block (using decode)",
+              "rank": 1,
+              "rme": 6.811824223749308,
+              "samples": [],
+              "totalTime": 1000.9999999999986,
+              "min": 0,
+              "max": 7,
+              "hz": 530.4695304695312,
+              "period": 1.8851224105461368,
+              "mean": 1.8851224105461368,
+              "variance": 2.2792310698930716,
+              "sd": 1.509712247381292,
+              "sem": 0.06551593112699419,
+              "df": 530,
+              "critical": 1.96,
+              "moe": 0.1284112250089086,
+              "p75": 3,
+              "p99": 5.0000000000009095,
+              "p995": 6,
+              "p999": 7,
+              "sampleCount": 531,
+              "median": 1.9999999999995453
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

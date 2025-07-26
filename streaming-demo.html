@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="./favicon/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="public/favicon/favicon.svg" type="image/svg+xml" />
     <title>WAV Decoder - Streaming Demo</title>
     <style>
       :root {
@@ -139,7 +139,7 @@
     </div>
 
     <script type="module">
-      import { WavDecoder } from '../dist';
+      import { WavDecoder } from './src';
 
       const audioState = {
         context: /** AudioContext or null */ null,
