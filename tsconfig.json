@@ -13,7 +13,7 @@
     "isolatedModules": true,
     "allowJs": false,
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": false,
+    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
     "outDir": "dist",
