@@ -8,10 +8,10 @@ Thank you for your interest in improving `@dekzer/wav-decoder`! This project wel
 
 **`@dekzer/wav-decoder`** is a streaming‑capable WAV audio decoder written in TypeScript:
 
-* Zero dependencies
-* Works in Node.js, browsers, and AudioWorklets
-* Supports PCM (8/16/24/32‑bit), IEEE float, A‑law, μ‑law
-* Fully endianness‑aware
+- Zero dependencies
+- Works in Node.js, browsers, and AudioWorklets
+- Supports PCM (8/16/24/32‑bit), IEEE float, A‑law, μ‑law
+- Fully endianness‑aware
 
 ---
 
@@ -46,15 +46,15 @@ Thank you for your interest in improving `@dekzer/wav-decoder`! This project wel
 
 ## 🛠️ Development Guidelines
 
-* **Keep code modular & minimal.** Avoid adding runtime dependencies.
-* **Type everything.** Leverage our strict TS settings.
-* **Write or update tests** for any new behavior (using Vitest):
+- **Keep code modular & minimal.** Avoid adding runtime dependencies.
+- **Type everything.** Leverage our strict TS settings.
+- **Write or update tests** for any new behavior (using Vitest):
+  - Node: `pnpm test:node`
+  - Browser: `pnpm test:browser`
+  - All: `pnpm test:all`
+  - Watch mode: `pnpm dev`
 
-   * Node: `pnpm test:node`
-   * Browser: `pnpm test:browser`
-   * All: `pnpm test:all`
-   * Watch mode: `pnpm dev`
-* **Format code** with Prettier before commit:
+- **Format code** with Prettier before commit:
 
   ```bash
   pnpm format
@@ -71,14 +71,13 @@ We use GitHub Actions to automate testing, benchmarking, and releases across thr
 2. **Benchmarks** (`.github/workflows/bench.yml`): On PRs touching `src/**` or `tests/**`, and on pushes to `main`, it runs `pnpm bench:compare`. When on `main`, it also updates our browser & Node throughput badges (`.json` endpoints) and pushes the results.
 
 3. **Release** (`.github/workflows/release.yml`): Triggered on every push to `main`:
+   - If `NPM_TOKEN` is set, the workflow uses the [Changesets Action](https://github.com/changesets/action) to:
+     1. **Detect** any `.changeset/*.md` files you’ve committed
+     2. **Run** `changeset version` to bump versions and update `CHANGELOG.md`
+     3. **Commit** the version bump back to `main`
+     4. **Publish** to npm (`pnpm release`), using the `beta` tag in prerelease mode or `latest` otherwise
 
-   * If `NPM_TOKEN` is set, the workflow uses the [Changesets Action](https://github.com/changesets/action) to:
-
-      1. **Detect** any `.changeset/*.md` files you’ve committed
-      2. **Run** `changeset version` to bump versions and update `CHANGELOG.md`
-      3. **Commit** the version bump back to `main`
-      4. **Publish** to npm (`pnpm release`), using the `beta` tag in prerelease mode or `latest` otherwise
-   * If `NPM_TOKEN` is missing, it skips publishing.
+   - If `NPM_TOKEN` is missing, it skips publishing.
 
 ---
 
@@ -92,9 +91,9 @@ We rely on [Changesets](https://github.com/changesets/changesets) to manage vers
    pnpm changeset
    ```
 
-   * Select the package (only one), choose `patch`/`minor`/`major`, and write a summary.
+   - Select the package (only one), choose `patch`/`minor`/`major`, and write a summary.
 
-2. *(For prereleases)* Enter beta mode (optional):
+2. _(For prereleases)_ Enter beta mode (optional):
 
    ```bash
    pnpm changeset pre enter beta
@@ -115,7 +114,7 @@ We rely on [Changesets](https://github.com/changesets/changesets) to manage vers
 
    The **Release** workflow will then bump the version, update the changelog, and publish to npm under the correct dist‑tag.
 
-5. *(To exit prerelease)*
+5. _(To exit prerelease)_
 
    ```bash
    pnpm changeset pre exit

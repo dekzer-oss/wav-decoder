@@ -31,8 +31,8 @@ function flattenBenchmarks(data) {
       group.benchmarks.map((benchmark) => ({
         ...benchmark,
         fileSize: file.size,
-      }))
-    )
+      })),
+    ),
   );
 }
 
@@ -69,7 +69,13 @@ function getBadgeColor(throughput) {
  * Extracts mode from file path
  */
 function extractMode(filePath) {
-  return path.basename(filePath).includes('browser') ? 'browser' : 'node';
+  const basename = path.basename(filePath);
+  if (basename.includes('browser')) {
+    return 'browser';
+  } else if (basename.includes('node')) {
+    return 'node';
+  }
+  return 'unknown';
 }
 
 /**
@@ -120,7 +126,7 @@ async function processBenchmarkFile(filePath) {
  * Main function to process all benchmark files
  */
 async function main() {
-  const files = ['bench/bench-browser.json', 'bench/bench-node.json'];
+  const files = ['bench/bench-browser-chrome.json', 'bench/bench-node.json'];
 
   for (const filePath of files) {
     await processBenchmarkFile(filePath);

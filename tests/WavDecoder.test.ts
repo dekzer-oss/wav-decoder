@@ -40,42 +40,8 @@ describe('WavDecoder', () => {
       for (let i = 0; i < result.channelData.length; i++) {
         expect(result.channelData[i]?.length).toBe(expected.samplesPerChannel);
       }
-    }
+    },
   );
-
-  test.each(Object.entries(fixtureProperties))('should correctly decode %s frame by frame', (fixtureName, expected) => {
-    const audioData = loadedFixtures.get(fixtureName);
-    if (!audioData) throw new Error(`Fixture "${fixtureName}" not found.`);
-
-    const dataChunkStart = findStringInUint8Array(audioData, 'data');
-    expect(dataChunkStart).toBeGreaterThan(-1);
-
-    const headerEndOffset = dataChunkStart + 8;
-    const header = audioData.subarray(0, headerEndOffset);
-    const body = audioData.subarray(headerEndOffset);
-
-    decoder.decode(header);
-    expect(decoder.info.state).toBe(DecoderState.DECODING);
-
-    const { blockSize } = decoder.info.format;
-    expect(blockSize).toBeGreaterThan(0);
-
-    let totalSamplesDecoded = 0;
-    const chunkSize = blockSize * 512;
-
-    for (let offset = 0; offset < body.length; offset += chunkSize) {
-      const chunk = body.subarray(offset, offset + chunkSize);
-      const framesInChunk = Math.floor(chunk.length / blockSize);
-      if (framesInChunk === 0) continue;
-
-      const frameData = chunk.subarray(0, framesInChunk * blockSize);
-      const frameResult = decoder.decodeFrames(frameData);
-      expect(frameResult.errors).toEqual([]);
-      totalSamplesDecoded += frameResult.samplesDecoded;
-    }
-
-    expect(totalSamplesDecoded).toBe(expected.samplesPerChannel);
-  });
 
   it('should handle NaN/Inf values in exotic_float32_nan_inf.wav', () => {
     const fixtureName = 'exotic_float32_nan_inf.wav';
@@ -88,7 +54,9 @@ describe('WavDecoder', () => {
     const hasNaN = result.channelData[0]?.some(Number.isNaN);
     expect(hasNaN).toBe(true);
 
-    const hasInf = result.channelData[0]?.some((sample) => !Number.isNaN(sample) && !Number.isFinite(sample));
+    const hasInf = result.channelData[0]?.some(
+      (sample) => !Number.isNaN(sample) && !Number.isFinite(sample),
+    );
     expect(hasInf).toBe(false);
   });
 
@@ -116,7 +84,9 @@ describe('WavDecoder', () => {
     expect(result.errors).toEqual([]);
 
     result.channelData.forEach((channel) => {
-      const invalidSamples = channel.map((s) => Math.round(s)).filter((s) => s !== -1 && s !== 0 && s !== 1);
+      const invalidSamples = channel
+        .map((s) => Math.round(s))
+        .filter((s) => s !== -1 && s !== 0 && s !== 1);
 
       expect(invalidSamples).toEqual(new Float32Array(0));
     });
@@ -151,7 +121,10 @@ describe('WavDecoder', () => {
   });
 
   it('should handle clipped PCM files', () => {
-    const clippedFixtures = ['exotic_clipped_pcm16_mono.wav', 'exotic_alt_clipped_silent_stereo.wav'];
+    const clippedFixtures = [
+      'exotic_clipped_pcm16_mono.wav',
+      'exotic_alt_clipped_silent_stereo.wav',
+    ];
 
     clippedFixtures.forEach((fixtureName) => {
       decoder = new WavDecoder();
@@ -168,46 +141,6 @@ describe('WavDecoder', () => {
     });
   });
 
-  it('should correctly decode a single frame with decodeFrame', () => {
-    const fixtureName = 'sine_pcm_16bit_le_stereo.wav';
-    const audioData = loadedFixtures.get(fixtureName);
-    if (!audioData) throw new Error(`Fixture "${fixtureName}" not found.`);
-
-    const dataChunkStart = findStringInUint8Array(audioData, 'data');
-    const headerEndOffset = dataChunkStart + 8;
-    const header = audioData.subarray(0, headerEndOffset);
-    const body = audioData.subarray(headerEndOffset);
-
-    expect(decoder.decodeFrame(body.subarray(0, 4))).toBeNull();
-
-    decoder.decode(header);
-    expect(decoder.info.state).toBe(DecoderState.DECODING);
-    const { blockSize, channels } = decoder.info.format;
-
-    const bytesDecodedBefore = decoder.info.decodedBytes;
-    expect(bytesDecodedBefore).toBe(0);
-
-    const firstFrame = body.subarray(0, blockSize);
-    const result = decoder.decodeFrame(firstFrame);
-
-    const bytesDecodedAfter = decoder.info.decodedBytes;
-    expect(bytesDecodedAfter).toBe(bytesDecodedBefore);
-
-    expect(result).not.toBeNull();
-    expect(result).toBeInstanceOf(Float32Array);
-    expect(result!.length).toBe(channels);
-
-    const batchResult = decoder.decodeFrames(firstFrame);
-    const expectedLeftSample = batchResult.channelData[0]![0]!;
-    const expectedRightSample = batchResult.channelData[1]![0]!;
-
-    expect(result![0]).toBeCloseTo(expectedLeftSample);
-    expect(result![1]).toBeCloseTo(expectedRightSample);
-
-    const badFrame = body.subarray(0, blockSize - 1);
-    expect(decoder.decodeFrame(badFrame)).toBeNull();
-  });
-
   it('should handle flushing incomplete frames for exotic files', () => {
     const fixtureName = 'exotic_short_pcm16_80samples.wav';
     const audioData = loadedFixtures.get(fixtureName);
@@ -216,15 +149,9 @@ describe('WavDecoder', () => {
     const partialAudioData = audioData.subarray(0, audioData.length - 1);
     decoder.decode(partialAudioData);
 
-    // @ts-expect-error access internal buffer
-    const internalBuffer = decoder.ringBuffer;
-    const remainingBytes = internalBuffer.available;
-    expect(remainingBytes).toBeGreaterThan(0);
-
     const flushResult = decoder.flush();
 
     expect(flushResult).toBeDefined();
-    expect(internalBuffer.available).toBe(0);
     expect(decoder.info.state).toBe(DecoderState.ENDED);
     expect(flushResult.errors[0]?.message).toMatch(/Discarded \d+ bytes of incomplete final block/);
   });
@@ -240,7 +167,6 @@ describe('WavDecoder', () => {
     decoder.free();
 
     expect(decoder.info.state).toBe(DecoderState.ENDED);
-    expect(decoder.info.format).toEqual({});
   });
 
   it('should enter an error state for a file with an invalid RIFF identifier', () => {

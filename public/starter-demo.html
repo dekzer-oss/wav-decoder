@@ -202,7 +202,7 @@
             e.preventDefault();
             if (ev === 'drop') {
               const file = Array.from(e.dataTransfer.files).find(
-                (f) => f.type === 'audio/wav' || f.name.endsWith('.wav')
+                (f) => f.type === 'audio/wav' || f.name.endsWith('.wav'),
               );
               if (file) handleFile(file);
             }

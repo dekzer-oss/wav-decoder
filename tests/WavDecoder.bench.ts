@@ -29,7 +29,7 @@ describe('WavDecoder full decode() performance', () => {
       decoder.decode(data);
       decoder.free();
     },
-    benchOptions
+    benchOptions,
   );
 
   bench(
@@ -41,7 +41,7 @@ describe('WavDecoder full decode() performance', () => {
       decoder.decode(data);
       decoder.free();
     },
-    benchOptions
+    benchOptions,
   );
 
   bench(
@@ -53,7 +53,7 @@ describe('WavDecoder full decode() performance', () => {
       decoder.decode(data);
       decoder.free();
     },
-    benchOptions
+    benchOptions,
   );
 });
 
@@ -69,7 +69,7 @@ describe('WavDecoder API comparison under looping conditions', () => {
         String.fromCharCode(byte) === 'd' &&
         String.fromCharCode(fileData[i + 1]!) === 'a' &&
         String.fromCharCode(fileData[i + 2]!) === 't' &&
-        String.fromCharCode(fileData[i + 3]!) === 'a'
+        String.fromCharCode(fileData[i + 3]!) === 'a',
     );
     const headerEndOffset = dataChunkStart + 8;
     const header = fileData.subarray(0, headerEndOffset);
@@ -81,25 +81,6 @@ describe('WavDecoder API comparison under looping conditions', () => {
     }
     return { decoder, body, format: decoder.info.format };
   };
-
-  bench(
-    'block-by-block (using decodeFrames)',
-    () => {
-      const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
-      const { blockSize } = format;
-      const chunkSize = blockSize * 512;
-
-      for (let i = 0; i < body.length; i += chunkSize) {
-        const chunk = body.subarray(i, i + chunkSize);
-        if (chunk.length % blockSize === 0) {
-          decoder.decodeFrames(chunk);
-        }
-      }
-
-      decoder.free();
-    },
-    benchOptions
-  );
 
   bench(
     'block-by-block (using decode)',
@@ -117,6 +98,6 @@ describe('WavDecoder API comparison under looping conditions', () => {
 
       decoder.free();
     },
-    benchOptions
+    benchOptions,
   );
 });

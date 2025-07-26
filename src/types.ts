@@ -218,7 +218,6 @@ export interface WavDecoderInfo {
 export interface WavDecoderInterface {
   decode(chunk: Uint8Array): DecodedWavAudio;
   decodeFrame(frame: Uint8Array): Float32Array | null; // todo: refactor to return Float32Array (not null)
-  decodeFrames(frames: Uint8Array): DecodedWavAudio; // todo: refactor to accept Uint8Array[]
   free(): void;
   flush(): DecodedWavAudio;
   info: WavDecoderInfo;

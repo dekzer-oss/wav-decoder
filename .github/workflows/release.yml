@@ -41,7 +41,7 @@ jobs:
         with:
           # this runs `pnpm publish --no-git-checks --access public`
           publish: pnpm publish --no-git-checks --access public
-          commit: "chore(release): publish"
+          commit: 'chore(release): publish'
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
