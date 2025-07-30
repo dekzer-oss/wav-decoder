@@ -69,18 +69,23 @@
     "bench:browser:firefox": "vitest bench --run --project browser-firefox --outputJson bench/bench-browser-firefox.json",
     "bench:browser:safari": "vitest bench --run --project browser-safari --outputJson bench/bench-browser-safari.json",
     "bench:compare": "pnpm vitest bench --run && node scripts/compare-bench.js",
-    "bench:update": "node scripts/update-badge.js"
+    "bench:update": "node scripts/update-badge.js",
+    "fixtures:generate:lg": "python3 scripts/gen_large_wav.py"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "@playwright/test": "^1.53.1",
     "@types/node": "^24.0.5",
     "@vitest/browser": "4.0.0-beta.2",
-    "vitest": "4.0.0-beta.2",
     "happy-dom": "^18.0.1",
     "prettier": "^3.6.2",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
-    "vite": "^7.0.0"
+    "vite": "^7.0.0",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "4.0.0-beta.2"
+  },
+  "dependencies": {
+    "clang-format": "^1.8.0"
   }
 }

@@ -1,9 +1,13 @@
 import { defineConfig } from 'vitest/config';
+import * as path from 'node:path';
 
 export default defineConfig({
   test: {
+    globals: true,
+
     projects: [
       {
+        extends: './vite.config.ts',
         test: {
           name: 'node',
           environment: 'node',
@@ -11,27 +15,11 @@ export default defineConfig({
           include: ['tests/**/*.test.ts'],
         },
       },
-      // {
-      //   test: {
-      //     name: 'browser',
-      //     environment: 'browser',
-      //     globals: true,
-      //     include: ['tests/**/*.test.ts'],
-      //     benchmark: {},
-      //     browser: {
-      //       enabled: true,
-      //       provider: 'playwright',
-      //       headless: true,
-      //       screenshotFailures: false,
-      //       instances: [{ browser: 'chromium' }, { browser: 'firefox' }, { browser: 'webkit' }],
-      //     },
-      //   },
-      // },
-      // Separate Chrome project for benchmarks
       {
+        extends: './vite.config.ts',
         test: {
           name: 'browser-chrome',
-          environment: 'browser',
+          environment: 'happy-dom',
           globals: true,
           include: ['tests/**/*.test.ts'],
           benchmark: {},
@@ -44,11 +32,11 @@ export default defineConfig({
           },
         },
       },
-      // Separate Firefox project for benchmarks
       {
+        extends: './vite.config.ts',
         test: {
           name: 'browser-firefox',
-          environment: 'browser',
+          environment: 'happy-dom',
           globals: true,
           include: ['tests/**/*.test.ts'],
           benchmark: {},
@@ -61,11 +49,11 @@ export default defineConfig({
           },
         },
       },
-      // Separate Safari/WebKit project for benchmarks
       {
+        extends: './vite.config.ts',
         test: {
           name: 'browser-safari',
-          environment: 'browser',
+          environment: 'happy-dom',
           globals: true,
           include: ['tests/**/*.test.ts'],
           benchmark: {},

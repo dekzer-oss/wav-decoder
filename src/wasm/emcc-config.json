@@ -1,0 +1,42 @@
+{
+  "source": "decoder.c",
+  "output_js": "build/decoder.js",
+  "opt_level": "O3",
+  "simd": true,
+  "export_name": "createWavDecoderModule",
+  "export_es6": true,
+  "include_paths": [
+    "."
+  ],
+  "exported_functions": [
+    "_malloc",
+    "_free",
+    "_parse_header",
+    "_decode_pcm8_mono",
+    "_decode_pcm8_stereo",
+    "_decode_pcm16_mono",
+    "_decode_pcm16_stereo",
+    "_decode_pcm24_mono",
+    "_decode_pcm24_stereo",
+    "_decode_pcm32_mono",
+    "_decode_pcm32_stereo",
+    "_decode_float32_mono",
+    "_decode_float32_stereo",
+    "_decode_float64_mono",
+    "_decode_float64_stereo",
+    "_decode_alaw_mono",
+    "_decode_alaw_stereo",
+    "_decode_ulaw_mono",
+    "_decode_ulaw_stereo",
+    "_decode_ima_adpcm_mono",
+    "_decode_ima_adpcm_stereo"
+  ],
+  "exported_runtime_methods": [
+    "ccall",
+    "cwrap",
+    "getValue",
+    "setValue",
+    "HEAPU8",
+    "HEAPF32"
+  ]
+}

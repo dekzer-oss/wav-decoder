@@ -36,3 +36,5 @@ source_code.md
 
 public/samples/*
 #!public/samples/.gitkeep
+
+.venv

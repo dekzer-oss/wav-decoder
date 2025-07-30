@@ -141,24 +141,31 @@ export interface DecodedWavAudio {
 }
 
 /**
- * Represents various states of a decoding process.
+ * Represents the current state of a decoding operation.
  *
- * The `DecoderState` enum is used to track and manage the current state
- * of a decoding operation. It helps ensure proper handling and transitions
- * during the decoding lifecycle.
- *
- * Enumerated Values:
- * - DECODING: Indicates that decoding is currently in progress.
- * - ENDED: Indicates that decoding has successfully completed.
- * - ERROR: Indicates that an error occurred during decoding.
- * - UNINIT: Represents an uninitialized or default state, typically
- *   before decoding has started.
+ * This enum tracks the decoder lifecycle and helps coordinate behavior
+ * such as buffering, resetting, or error handling.
  */
 export enum DecoderState {
+  /**
+   * Decoder is idle and ready, but decoding has not yet begun.
+   */
+  IDLE,
+
+  /**
+   * Decoding is currently in progress.
+   */
   DECODING,
+
+  /**
+   * Decoding has completed successfully and reached the end of stream.
+   */
   ENDED,
+
+  /**
+   * An error occurred during decoding.
+   */
   ERROR,
-  UNINIT,
 }
 
 /**
@@ -202,7 +209,6 @@ export interface WavDecoderInfo {
   decodedBytes: number;
   errors: DecodeError[];
   format: WavFormat;
-  formatTag: number;
   parsedChunks: ChunkInfo[];
   progress: number;
   remainingBytes: number;
@@ -215,36 +221,41 @@ export interface WavDecoderInfo {
 /**
  * Interface representing a WAV decoder for handling audio data.
  */
-export interface WavDecoderInterface {
+export interface WavAudioDecoder {
   decode(chunk: Uint8Array): DecodedWavAudio;
-  decodeFrame(frame: Uint8Array): Float32Array | null; // todo: refactor to return Float32Array (not null)
+
   free(): void;
+
   flush(): DecodedWavAudio;
-  info: WavDecoderInfo;
+
   reset(): void;
+
+  info: WavDecoderInfo;
 }
 
 /**
- * Represents the WAV file format details.
- * This interface defines properties describing the structure
- * and properties of a WAV file.
+ * Describes the format details of a WAV (RIFF) audio stream.
+ * This structure defines how the audio data is encoded, including
+ * sample resolution, channel layout, and data alignment.
  *
  * Properties:
- * - `bitDepth`: Specifies the number of bits used to represent each sample (e.g., 16, 24, 32 bits).
- * - `blockSize`: Defines the size in bytes of each block of audio data.
- * - `bytesPerSecond`: Indicates the average number of bytes processed per second of audio.
- * - `channels`: Number of audio channels (e.g., 1 for mono, 2 for stereo).
- * - `samplesPerBlock`: Specifies the number of audio samples contained in each block of data.
- * - `channelMask`: (Optional) Bit mask that specifies the mapping of channels to speaker positions.
- * - `extensionSize`: (Optional) Size of the optional format extension data section.
- * - `formatTag`: Describes the encoding format of the WAV file (e.g., PCM, IEEE Float).
- * - `sampleRate`: Number of audio samples per second (frequency in Hz).
- * - `subFormat`: (Optional) Subformat identifier in the form of a unique identifier (GUID).
- * - `validBitsPerSample`: (Optional) Indicates the number of valid bits used per sample, useful in certain extended formats.
+ * - `bitDepth`: Number of bits used to represent each channel sample (e.g., 8, 16, 24, 32).
+ * - `blockAlign`: Number of bytes per sample frame (1 sample from each channel). Must equal `channels × bitDepth / 8`.
+ *                Used to align audio frames in the data chunk.
+ * - `bytesPerSecond`: Average byte rate of the audio stream. Calculated as `sampleRate × blockAlign`.
+ * - `channels`: Number of audio channels (e.g., 1 = mono, 2 = stereo, etc.).
+ * - `samplesPerBlock`: For compressed formats (e.g., IMA ADPCM), indicates how many decoded PCM samples are produced per block.
+ *                      Maybe zero for uncompressed formats like PCM or IEEE float.
+ * - `channelMask`: (Optional) Bitmask indicating speaker positions (used with WAVE_FORMAT_EXTENSIBLE).
+ * - `extensionSize`: (Optional) Number of extra bytes following the standard format header (e.g., 22 for WAVE_FORMAT_EXTENSIBLE).
+ * - `formatTag`: Numeric identifier of the audio format (e.g., `0x0001` = PCM, `0x0003` = IEEE float, `0xfffe` = extensible).
+ * - `sampleRate`: Number of samples per second per channel (Hz).
+ * - `subFormat`: (Optional) 16-byte GUID used with WAVE_FORMAT_EXTENSIBLE to identify the precise format.
+ * - `validBitsPerSample`: (Optional) Actual number of valid bits per sample when `bitDepth` includes padding (e.g., 20-bit audio in 24-bit container).
  */
 export interface WavFormat {
   bitDepth: WavBitDepth;
-  blockSize: number;
+  blockAlign: number;
   bytesPerSecond: number;
   channels: number;
   samplesPerBlock: number;
@@ -254,4 +265,6 @@ export interface WavFormat {
   sampleRate: WavSampleRate;
   subFormat?: Uint8Array;
   validBitsPerSample?: number;
+  dataChunkOffset?: number;
+  dataChunkSize?: number;
 }

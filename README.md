@@ -115,7 +115,7 @@ Each demo is standalone—just “view source” for a ready-made starter.
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **constructor()**                              | Allocates internal ring-buffer (default 64 KiB).                                                                                                                                       |
 | **decode(chunk: Uint8Array): DecodedWavAudio** | Feed arbitrary-sized data. Returns samples (may be zero) and non-fatal error list.                                                                                                     |
-| **decodeFrames(chunkAlignedToBlock)**          | Same as `decode`, but _requires_ that `chunk.length % format.blockSize === 0` for maximum throughput.                                                                                  |
+| **decodeFrames(chunkAlignedToBlock)**          | Same as `decode`, but _requires_ that `chunk.length % format.blockAlign === 0` for maximum throughput.                                                                                  |
 | **decodeFrame(frame)**                         | Decodes _one_ interleaved frame and returns a `Float32Array` with `channels` elements, or `null` if the frame is incomplete. Used in performance-critical code paths (see benchmarks). |
 | **flush()**                                    | Drains any remaining bytes (including a partial final block). Useful when the decodeStream closes.                                                                                     |
 | **reset()**                                    | Clears internal state so the instance can be re-used.                                                                                                                                  |
@@ -138,7 +138,7 @@ interface DecodedWavAudio {
 | Field          | Notes                                                                                                   |
 | -------------- | ------------------------------------------------------------------------------------------------------- |
 | `state`        | `DecoderState.IDLE \| DECODING \| ENDED \| ERROR`.                                                      |
-| `format`       | Populated after the `fmt ` chunk is parsed: `{ formatTag, channels, sampleRate, bitDepth, blockSize }`. |
+| `format`       | Populated after the `fmt ` chunk is parsed: `{ formatTag, channels, sampleRate, bitDepth, blockAlign }`. |
 | `decodedBytes` | Total bytes written into PCM output so far.                                                             |
 | `progress`     | Fraction 0–1 based on WAV `data` chunk size (falls back to `NaN` if size unknown).                      |
 | `errors`       | Array of the last few `DecodeError`s; a _fatal_ error switches `state` to `ERROR`.                      |
@@ -152,7 +152,7 @@ enum DecoderState {
   DECODING,
   ENDED,
   ERROR,
-  UNINIT,
+  IDLE,
 }
 ```
 

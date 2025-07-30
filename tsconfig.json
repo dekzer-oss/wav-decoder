@@ -2,24 +2,37 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "moduleResolution": "bundler",
-    "moduleDetection": "force",
     "strict": true,
     "skipLibCheck": true,
-    "noUncheckedIndexedAccess": false,
-    "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "allowJs": false,
-    "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "noEmit": true,
-    "outDir": "dist",
     "baseUrl": ".",
-    "types": ["node", "vite/client"]
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@/wasm/*": [
+        "src/wasm/*"
+      ]
+    }
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "tests", ".changeset"]
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "src/wasm/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

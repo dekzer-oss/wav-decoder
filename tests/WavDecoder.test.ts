@@ -17,8 +17,12 @@ beforeAll(async () => {
 describe('WavDecoder', () => {
   let decoder: WavDecoder;
 
-  beforeEach(() => {
+  beforeAll(() => {
     decoder = new WavDecoder();
+  });
+
+  beforeEach(() => {
+    decoder.reset();
   });
 
   test.each(Object.entries(fixtureProperties))(
@@ -110,7 +114,6 @@ describe('WavDecoder', () => {
     ];
 
     multiChannelFixtures.forEach((fixtureName) => {
-      decoder = new WavDecoder();
       const audioData = loadedFixtures.get(fixtureName);
       if (!audioData) throw new Error(`Fixture "${fixtureName}" not found.`);
 
@@ -127,7 +130,6 @@ describe('WavDecoder', () => {
     ];
 
     clippedFixtures.forEach((fixtureName) => {
-      decoder = new WavDecoder();
       const audioData = loadedFixtures.get(fixtureName);
       if (!audioData) throw new Error(`Fixture "${fixtureName}" not found.`);
 

@@ -15,8 +15,8 @@ beforeAll(async () => {
 });
 
 const benchOptions: BenchOptions = {
-  warmupIterations: 20,
-  time: 1_000,
+  time: 1500,
+  warmupTime: 500,
 };
 
 describe('WavDecoder full decode() performance', () => {
@@ -82,22 +82,41 @@ describe('WavDecoder API comparison under looping conditions', () => {
     return { decoder, body, format: decoder.info.format };
   };
 
-  bench(
-    'block-by-block (using decode)',
-    () => {
-      const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
-      const { blockSize } = format;
-      const chunkSize = blockSize * 512;
-
-      for (let i = 0; i < body.length; i += chunkSize) {
-        const chunk = body.subarray(i, i + chunkSize);
-        if (chunk.length > 0) {
-          decoder.decode(chunk);
-        }
-      }
-
-      decoder.free();
-    },
-    benchOptions,
-  );
+  // bench(
+  //   'block-by-block (using decodeFrames)',
+  //   () => {
+  //     const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
+  //     const { blockSize } = format;
+  //     const chunkSize = blockSize * 512;
+  //
+  //     for (let i = 0; i < body.length; i += chunkSize) {
+  //       const chunk = body.subarray(i, i + chunkSize);
+  //       if (chunk.length % blockSize === 0) {
+  //         decoder.decodeFrames(chunk);
+  //       }
+  //     }
+  //
+  //     decoder.free();
+  //   },
+  //   benchOptions,
+  // );
+  //
+  // bench(
+  //   'block-by-block (using decode)',
+  //   () => {
+  //     const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
+  //     const { blockSize } = format;
+  //     const chunkSize = blockSize * 512;
+  //
+  //     for (let i = 0; i < body.length; i += chunkSize) {
+  //       const chunk = body.subarray(i, i + chunkSize);
+  //       if (chunk.length > 0) {
+  //         decoder.decode(chunk);
+  //       }
+  //     }
+  //
+  //     decoder.free();
+  //   },
+  //   benchOptions,
+  // );
 });

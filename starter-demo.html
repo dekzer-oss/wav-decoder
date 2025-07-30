@@ -1,297 +1,407 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WAV Decoder – Starter Demo</title>
-    <link rel="icon" href="public/favicon/favicon.svg" type="image/svg+xml" />
-    <style>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WAV Decoder – Starter Demo</title>
+  <link rel="icon" href="public/favicon/favicon.svg" type="image/svg+xml" />
+  <style>
       :root {
-        --bg: #f8fafc;
-        --fg: #0f172a;
-        --border: #cbd5e1;
-        --accent: #2563eb;
+          --bg: #f8fafc;
+          --fg: #0f172a;
+          --border: #cbd5e1;
+          --accent: #2563eb;
       }
+
       @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #0f172a;
-          --fg: #f8fafc;
-          --border: #334155;
-          --accent: #3b82f6;
-        }
+          :root {
+              --bg: #0f172a;
+              --fg: #f8fafc;
+              --border: #334155;
+              --accent: #3b82f6;
+          }
       }
 
       * {
-        box-sizing: border-box;
+          box-sizing: border-box;
       }
 
       body {
-        font-family:
-          system-ui,
+          font-family: system-ui,
           -apple-system,
           'Segoe UI',
           Roboto,
           Helvetica,
           Arial,
           sans-serif;
-        background: var(--bg);
-        color: var(--fg);
-        line-height: 1.6;
-        margin: 0;
-        padding: 2rem 1rem 4rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+          background: var(--bg);
+          color: var(--fg);
+          line-height: 1.6;
+          margin: 0;
+          padding: 2rem 1rem 4rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
       }
 
       h1 {
-        font-size: 1.5rem;
-        margin-bottom: 1.5rem;
-        text-align: center;
+          font-size: 1.5rem;
+          margin-bottom: 1.5rem;
+          text-align: center;
       }
 
       .drop-zone {
-        width: min(420px, 90vw);
-        padding: 3rem 1.5rem;
-        border: 2px dashed var(--border);
-        border-radius: 8px;
-        text-align: center;
-        cursor: pointer;
-        transition:
-          background 150ms ease,
+          width: min(420px, 90vw);
+          padding: 3rem 1.5rem;
+          border: 2px dashed var(--border);
+          border-radius: 8px;
+          text-align: center;
+          cursor: pointer;
+          transition: background 150ms ease,
           border-color 150ms ease;
       }
+
       .drop-zone:hover,
       .drop-zone.dragover {
-        background: color-mix(in srgb, var(--accent) 7%, transparent);
-        border-color: var(--accent);
+          background: color-mix(in srgb, var(--accent) 7%, transparent);
+          border-color: var(--accent);
       }
+
       .drop-zone[aria-disabled='true'] {
-        opacity: 0.5;
-        cursor: not-allowed;
+          opacity: 0.5;
+          cursor: not-allowed;
       }
 
       progress {
-        width: min(420px, 90vw);
-        height: 10px;
-        margin: 1.25rem 0;
-        appearance: none;
+          width: min(420px, 90vw);
+          height: 10px;
+          margin: 1.25rem 0;
+          appearance: none;
       }
+
       progress[value]::-webkit-progress-bar {
-        background: var(--border);
-        border-radius: 6px;
+          background: var(--border);
+          border-radius: 6px;
       }
+
       progress[value]::-webkit-progress-value {
-        background: var(--accent);
-        border-radius: 6px;
-        transition: width 0.15s;
+          background: var(--accent);
+          border-radius: 6px;
+          transition: width 0.15s;
       }
 
       #metrics {
-        width: min(420px, 90vw);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 1rem;
-        margin-top: 1.25rem;
+          width: min(420px, 90vw);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 1rem;
+          margin-top: 1.25rem;
       }
+
       #metrics ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.75rem 0.5rem;
-        font-size: 0.925rem;
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.75rem 0.5rem;
+          font-size: 0.925rem;
       }
+
       #metrics li span {
-        font-weight: 600;
+          font-weight: 600;
       }
 
       button {
-        margin-top: 1.5rem;
-        padding: 0.65rem 1.25rem;
-        font-size: 0.95rem;
-        border: none;
-        border-radius: 6px;
-        color: var(--bg);
-        background: var(--accent);
-        cursor: pointer;
-        transition: background 150ms;
+          margin-top: 1.5rem;
+          padding: 0.65rem 1.25rem;
+          font-size: 0.95rem;
+          border: none;
+          border-radius: 6px;
+          color: var(--bg);
+          background: var(--accent);
+          cursor: pointer;
+          transition: background 150ms;
       }
+
       button:hover {
-        background: color-mix(in srgb, var(--accent) 85%, black 15%);
+          background: color-mix(in srgb, var(--accent) 85%, black 15%);
       }
+
       button:disabled {
-        background: var(--border);
-        cursor: not-allowed;
+          background: var(--border);
+          cursor: not-allowed;
       }
-    </style>
-  </head>
-  <body>
-    <h1>WAV Decoder — Starter Demo</h1>
+  </style>
+</head>
+<body>
+<h1>WAV Decoder — Starter Demo</h1>
 
-    <div id="uploadZone" class="drop-zone" role="button" tabindex="0" aria-label="Upload WAV file">
-      Drop a .wav file here<br />or click to select
-    </div>
+<div id="uploadZone" class="drop-zone" role="button" tabindex="0" aria-label="Upload WAV file">
+  Drop a .wav file here<br />or click to select
+</div>
 
-    <input id="fileInput" type="file" accept="audio/wav,.wav" hidden />
+<input id="fileInput" type="file" accept="audio/wav,.wav" hidden />
 
-    <progress id="progressBar" value="0" max="1" hidden></progress>
+<progress id="progressBar" value="0" aria-valuemax="1" aria-valuemin="0" max="1"  aria-label="Decoding progress"></progress>
 
-    <section id="metrics" class="hidden">
-      <ul>
-        <li>TTFA: <span id="ttfa">-</span></li>
-        <li>Bytes: <span id="bytes">-</span></li>
-        <li>Samples: <span id="samples">-</span></li>
-        <li>Speed: <span id="speed">-</span></li>
-      </ul>
-    </section>
+<section id="metrics" class="hidden" aria-live="polite" aria-atomic="false">
+  <ul>
+    <li>TTFA: <span id="ttfa">-</span></li>
+    <li>Bytes: <span id="bytes">-</span></li>
+    <li>Samples: <span id="samples">-</span></li>
+    <li>Speed: <span id="speed">-</span></li>
+  </ul>
+</section>
 
-    <button id="resetBtn" hidden>Decode Another File</button>
+<button id="resetBtn" hidden>Decode Another File</button>
 
-    <script type="module">
-      import { WavDecoder } from './src';
+<script type="module">
+  import { WavDecoder, WasmDecoder } from '@';
 
-      const els = {
-        drop: document.getElementById('uploadZone'),
-        input: document.getElementById('fileInput'),
-        bar: document.getElementById('progressBar'),
-        metrics: document.getElementById('metrics'),
-        ttfa: document.getElementById('ttfa'),
-        bytes: document.getElementById('bytes'),
-        samples: document.getElementById('samples'),
-        speed: document.getElementById('speed'),
-        reset: document.getElementById('resetBtn'),
-      };
+  const els = {
+    drop: document.getElementById('uploadZone'),
+    input: document.getElementById('fileInput'),
+    bar: document.getElementById('progressBar'),
+    metrics: document.getElementById('metrics'),
+    ttfa: document.getElementById('ttfa'),
+    bytes: document.getElementById('bytes'),
+    samples: document.getElementById('samples'),
+    speed: document.getElementById('speed'),
+    avgSpeed: document.getElementById('avgSpeed'),
+    peakSpeed: document.getElementById('peakSpeed'),
+    reset: document.getElementById('resetBtn'),
+  };
 
-      const state = {
-        startTime: 0,
-        ttfaMarked: false,
-      };
+  const INITIAL_DROP_TEXT = 'Drop a .wav file here\nor click to select';
 
-      function formatBytes(bytes) {
-        if (!bytes) return '0';
-        const units = ['B', 'KiB', 'MiB', 'GiB'];
-        const i = Math.floor(Math.log2(bytes) / 10);
-        return `${(bytes / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-      }
+  function setDropText(text) {
+    els.drop.textContent = '';
+    els.drop.append(document.createTextNode(text));
+  }
 
-      function formatSpeed(bps) {
-        return `${(bps / 1048576).toFixed(1)} MiB/s`;
-      }
+  function formatBytes(bytes) {
+    if (!bytes || bytes <= 0) return '0 B';
+    const units = ['B','kB','MB','GB','TB'];
+    const i = Math.min(units.length - 1, Math.max(0, Math.floor(Math.log10(bytes) / 3)));
+    const value = bytes / (10 ** (3 * i));
+    return `${value.toFixed(i ? 1 : 0)} ${units[i]}`;
+  }
 
-      function resetUI() {
-        els.metrics.classList.add('hidden');
-        els.bar.hidden = true;
-        els.bar.value = 0;
-        els.drop.removeAttribute('aria-disabled');
-        els.drop.classList.remove('dragover');
-        els.reset.hidden = true;
-        [els.ttfa, els.bytes, els.samples, els.speed].forEach((el) => (el.textContent = '-'));
-      }
+  function formatSpeed(bps) {
+    if (!bps || bps <= 0) return '0 MB/s';
+    const mbps = bps / 1e6;
+    return `${mbps.toFixed(mbps >= 10 ? 0 : 1)} MB/s`;
+  }
 
-      function initDragAndDrop() {
-        ['dragenter', 'dragover'].forEach((ev) => {
-          els.drop.addEventListener(ev, (e) => {
-            e.preventDefault();
-            els.drop.classList.add('dragover');
-          });
-        });
-        ['dragleave', 'drop'].forEach((ev) => {
-          els.drop.addEventListener(ev, (e) => {
-            e.preventDefault();
-            if (ev === 'drop') {
-              const file = Array.from(e.dataTransfer.files).find(
-                (f) => f.type === 'audio/wav' || f.name.endsWith('.wav'),
-              );
-              if (file) handleFile(file);
-            }
-            els.drop.classList.remove('dragover');
-          });
-        });
-      }
+  function resetUI() {
+    els.metrics.classList.add('hidden');
+    els.bar.hidden = true;
+    els.bar.value = 0;
+    els.drop.removeAttribute('aria-disabled');
+    els.drop.classList.remove('dragover');
+    els.reset.hidden = true;
+    [els.ttfa, els.bytes, els.samples, els.speed].forEach(el => el.textContent = '-');
+    setDropText(INITIAL_DROP_TEXT);
+  }
 
-      function handleFileSelect() {
-        els.drop.addEventListener('click', () => els.input.click());
-        els.input.addEventListener('change', (e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
-          e.target.value = '';
-        });
-      }
-
-      function handleFile(file) {
-        resetUI();
-        els.drop.setAttribute('aria-disabled', 'true');
-        els.bar.hidden = false;
-        els.metrics.classList.remove('hidden');
-        els.drop.textContent = `Decoding \"${file.name}\" …`;
-
-        const decoder = new WavDecoder();
-        const reader = file.stream().getReader();
-        state.startTime = performance.now();
-        state.ttfaMarked = false;
-        let totalSamples = 0;
-
-        const read = ({ done, value }) => {
-          if (done) return finalize();
-          try {
-            const res = decoder.decode(value);
-            updateUI(decoder.info, res.samplesDecoded, totalSamples);
-            if (res.samplesDecoded) {
-              totalSamples += res.samplesDecoded;
-              markTTFA();
-            }
-            return reader.read().then(read);
-          } catch (err) {
-            console.error(err);
-            els.drop.textContent = `Error: ${err.message}`;
-            els.drop.removeAttribute('aria-disabled');
-            els.bar.hidden = true;
-          }
-        };
-
-        function finalize() {
-          try {
-            const fin = decoder.flush();
-            if (fin?.samplesDecoded) totalSamples += fin.samplesDecoded;
-            els.samples.textContent = totalSamples.toLocaleString();
-          } catch (err) {
-            console.warn('flush error', err);
-          }
-
-          els.drop.textContent = `Done – ${file.name}`;
-          els.reset.hidden = false;
-          els.drop.removeAttribute('aria-disabled');
-        }
-
-        function updateUI(info, newlyDecoded, runningTotal) {
-          if (info.progress) els.bar.value = info.progress;
-          const elapsed = (performance.now() - state.startTime) / 1000;
-          els.bytes.textContent = formatBytes(info.decodedBytes);
-          els.samples.textContent = (runningTotal + newlyDecoded).toLocaleString();
-          if (elapsed > 0) els.speed.textContent = formatSpeed(info.decodedBytes / elapsed);
-        }
-
-        function markTTFA() {
-          if (!state.ttfaMarked) {
-            const ms = performance.now() - state.startTime;
-            els.ttfa.textContent = `${ms.toFixed(1)} ms`;
-            state.ttfaMarked = true;
-          }
-        }
-
-        reader.read().then(read);
-      }
-
-      els.reset.addEventListener('click', () => {
-        resetUI();
-        els.drop.textContent = 'Drop a .wav file here\nor click to select';
+  function initDragAndDrop() {
+    ['dragenter','dragover'].forEach(type => {
+      els.drop.addEventListener(type, e => {
+        e.preventDefault();
+        if (els.drop.getAttribute('aria-disabled') === 'true') return;
+        els.drop.classList.add('dragover');
       });
+    });
 
-      resetUI();
-      initDragAndDrop();
-      handleFileSelect();
-    </script>
-  </body>
+    ['dragleave','drop'].forEach(type => {
+      els.drop.addEventListener(type, e => {
+        e.preventDefault();
+        if (type === 'drop') {
+          const file = Array.from(e.dataTransfer.files ?? [])
+            .find(f => f.type === 'audio/wav' || f.name.toLowerCase().endsWith('.wav'));
+          if (file) handleFile(file);
+        }
+        els.drop.classList.remove('dragover');
+      });
+    });
+  }
+
+  function handleFileSelect() {
+    els.drop.addEventListener('click', () => {
+      if (els.drop.getAttribute('aria-disabled') === 'true') return;
+      els.input.click();
+    });
+    els.input.addEventListener('change', e => {
+      const file = e.target.files?.[0];
+      if (file) handleFile(file);
+      e.target.value = '';
+    });
+  }
+
+  const decoder = new WasmDecoder();
+  await decoder.ready;
+
+  // Timing / speed state
+  const state = {
+    decodeStartTs: 0,      // performance.now() at start
+    lastTickTs: 0,         // timestamp of last processed chunk
+    firstDecodeTs: null,   // timestamp when first decode finished (absolute)
+    prevBytes: 0,          // decoded bytes at previous tick
+    peakBps: 0,            // peak instantaneous bytes/sec
+    smoothBps: 0,          // EWMA smoothed instantaneous bps (shown in UI)
+    ewmaAlpha: 0.1,        // smoothing factor (0..1). Higher = more reactive
+    ttfaMarked: false,     // whether TTFA displayed
+    totalSamples: 0,       // running total of decoded samples
+    uiPending: false,
+    uiSnapshot: {
+      instBps: 0,
+      avgBps: 0,
+      peakBps: 0,
+      bytes: 0,
+      samples: 0,
+      progress: 0,
+    },
+  };
+
+  function queueUIRender() {
+    if (state.uiPending) return;
+    state.uiPending = true;
+    requestAnimationFrame(() => {
+      state.uiPending = false;
+      const s = state.uiSnapshot;
+      els.speed.textContent = formatSpeed(s.instBps);
+      els.bytes.textContent = formatBytes(s.bytes);
+      els.samples.textContent = s.samples.toLocaleString();
+      els.bar.value = decoder.info.progress
+    });
+  }
+
+  function pushMetricsToUI(instBps) {
+    const now = performance.now();
+    const totalBytes = decoder.info.decodedBytes ?? 0;
+
+    state.smoothBps = state.smoothBps
+      ? (state.ewmaAlpha * instBps) + ((1 - state.ewmaAlpha) * state.smoothBps)
+      : instBps;
+
+    const elapsedSec = Math.max(0.0001, (now - state.decodeStartTs) / 1000);
+    const avgBps = totalBytes / elapsedSec;
+
+    state.uiSnapshot.instBps = state.smoothBps;
+    state.uiSnapshot.avgBps = avgBps;
+    state.uiSnapshot.peakBps = state.peakBps;
+    state.uiSnapshot.bytes = totalBytes;
+    state.uiSnapshot.samples = state.totalSamples;
+    state.uiSnapshot.progress = decoder.info.progress;
+
+    queueUIRender();
+  }
+
+
+  async function handleFile(file) {
+    resetUI();
+    els.drop.setAttribute('aria-disabled','true');
+    els.bar.hidden = false;
+    els.metrics.classList.remove('hidden');
+    setDropText(`Decoding “${file.name}”…`);
+
+    // Reset decoder & state
+    decoder.reset();
+
+    state.decodeStartTs = performance.now();
+    state.lastTickTs = state.decodeStartTs;
+    state.firstDecodeTs = null;
+    state.prevBytes = 0;
+    state.peakBps = 0;
+    state.smoothBps = 0;
+    state.ttfaMarked = false;
+    state.totalSamples = 0;
+
+    const reader = file.stream().getReader();
+
+    const processChunk = async ({ done, value }) => {
+      if (done) return finalize();
+
+      // Decode
+      const { samplesDecoded = 0 } = decoder.decode(value) ?? {};
+      const now = performance.now();
+
+      // Mark TTFA when first decode produces something
+      if (!state.ttfaMarked && (samplesDecoded > 0 || (decoder.info?.decodedBytes ?? 0) > 0)) {
+        const ttfaMs = now - state.decodeStartTs;
+        els.ttfa.textContent = `${ttfaMs.toFixed(1)} ms`;
+        state.ttfaMarked = true;
+        state.firstDecodeTs = now;
+      }
+
+      // Bytes progressed since last tick
+      const totalBytes = decoder.info.decodedBytes ?? 0;
+      const deltaBytes = Math.max(0, totalBytes - state.prevBytes);
+      state.prevBytes = totalBytes;
+
+      // Time since last tick
+      const deltaSec = Math.max(0.000001, (now - state.lastTickTs) / 1000);
+      state.lastTickTs = now;
+
+      // Instantaneous speed (bytes/sec)
+      const instBps = deltaBytes / deltaSec;
+
+      // Update peak
+      if (instBps > state.peakBps) state.peakBps = instBps;
+
+      // Samples & progress
+      if (samplesDecoded) state.totalSamples += samplesDecoded;
+
+      pushMetricsToUI(instBps);
+
+      // Continue reading
+      return reader.read().then(processChunk);
+    };
+
+    function finalize() {
+      // Flush any buffered data
+      const flushed = decoder.flush();
+      const now = performance.now();
+
+      if (flushed?.samplesDecoded) {
+        state.totalSamples += flushed.samplesDecoded;
+
+        const totalBytes = decoder.info.decodedBytes ?? 0;
+        const deltaBytes = Math.max(0, totalBytes - state.prevBytes);
+        const deltaSec = Math.max(0.000001, (now - state.lastTickTs) / 1000);
+        const instBps = deltaBytes / deltaSec;
+        if (instBps > state.peakBps) state.peakBps = instBps;
+
+        // Force final UI push
+        state.prevBytes = totalBytes;
+        state.lastTickTs = now;
+        pushMetricsToUI(instBps);
+      } else {
+        // Still ensure final UI numbers (avg/bytes) are correct
+        const totalBytes = decoder.info.decodedBytes ?? 0;
+        const deltaBytes = Math.max(0, totalBytes - state.prevBytes);
+        const deltaSec = Math.max(0.000001, (now - state.lastTickTs) / 1000);
+        const instBps = deltaBytes / deltaSec;
+        if (instBps > state.peakBps) state.peakBps = instBps;
+        pushMetricsToUI(instBps);
+      }
+
+      els.samples.textContent = state.totalSamples.toLocaleString();
+      setDropText(`Done — ${file.name}`);
+      els.reset.hidden = false;
+      els.drop.removeAttribute('aria-disabled');
+    }
+
+    reader.read().then(processChunk);
+  }
+
+  els.reset.addEventListener('click', resetUI);
+
+  // Initialize
+  resetUI();
+  initDragAndDrop();
+  handleFileSelect();
+</script>
+</body>
 </html>

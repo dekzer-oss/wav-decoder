@@ -1,0 +1,156 @@
+{
+  "sine_pcm_8bit_le_mono.wav": {
+    "channels": 1,
+    "sampleRate": 44100,
+    "bitDepth": 8,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "sine_pcm_16bit_le_stereo.wav": {
+    "channels": 2,
+    "sampleRate": 44100,
+    "bitDepth": 16,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "sine_pcm_24bit_le_mono.wav": {
+    "channels": 1,
+    "sampleRate": 44100,
+    "bitDepth": 24,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "sine_pcm_32bit_le_stereo.wav": {
+    "channels": 2,
+    "sampleRate": 44100,
+    "bitDepth": 32,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "sine_pcm_16bit_be_mono.wav": {
+    "channels": 1,
+    "sampleRate": 44100,
+    "bitDepth": 16,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "sine_pcm_24bit_be_stereo.wav": {
+    "channels": 2,
+    "sampleRate": 44100,
+    "bitDepth": 24,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "sine_float_32bit_le_mono.wav": {
+    "channels": 1,
+    "sampleRate": 44100,
+    "bitDepth": 32,
+    "formatTag": 3,
+    "samplesPerChannel": 44100
+  },
+  "sine_float_64bit_le_stereo.wav": {
+    "channels": 2,
+    "sampleRate": 44100,
+    "bitDepth": 64,
+    "formatTag": 3,
+    "samplesPerChannel": 44100
+  },
+  "sine_float_32bit_be_stereo.wav": {
+    "channels": 2,
+    "sampleRate": 44100,
+    "bitDepth": 32,
+    "formatTag": 3,
+    "samplesPerChannel": 44100
+  },
+  "sine_alaw_8bit_le_mono.wav": {
+    "channels": 1,
+    "sampleRate": 44100,
+    "bitDepth": 8,
+    "formatTag": 6,
+    "samplesPerChannel": 44100
+  },
+  "sine_ulaw_8bit_le_stereo.wav": {
+    "channels": 2,
+    "sampleRate": 44100,
+    "bitDepth": 8,
+    "formatTag": 7,
+    "samplesPerChannel": 44100
+  },
+  "sine_pcm_24bit_le_8ch.wav": {
+    "channels": 8,
+    "sampleRate": 44100,
+    "bitDepth": 24,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "sine_float_32bit_le_8ch.wav": {
+    "channels": 8,
+    "sampleRate": 44100,
+    "bitDepth": 32,
+    "formatTag": 3,
+    "samplesPerChannel": 44100
+  },
+  "sweep_pcm_16bit_le_stereo.wav": {
+    "channels": 2,
+    "sampleRate": 44100,
+    "bitDepth": 16,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "sweep_pcm_24bit_le_8ch.wav": {
+    "channels": 8,
+    "sampleRate": 44100,
+    "bitDepth": 24,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "sweep_float_32bit_le_stereo.wav": {
+    "channels": 2,
+    "sampleRate": 44100,
+    "bitDepth": 32,
+    "formatTag": 3,
+    "samplesPerChannel": 44100
+  },
+  "sweep_float_32bit_le_8ch.wav": {
+    "channels": 8,
+    "sampleRate": 44100,
+    "bitDepth": 32,
+    "formatTag": 3,
+    "samplesPerChannel": 44100
+  },
+  "exotic_silent_pcm16_mono.wav": {
+    "channels": 1,
+    "sampleRate": 44100,
+    "bitDepth": 16,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "exotic_clipped_pcm16_mono.wav": {
+    "channels": 1,
+    "sampleRate": 44100,
+    "bitDepth": 16,
+    "formatTag": 1,
+    "samplesPerChannel": 44100
+  },
+  "exotic_alt_clipped_silent_stereo.wav": {
+    "channels": 2,
+    "sampleRate": 44100,
+    "bitDepth": 16,
+    "formatTag": 1,
+    "samplesPerChannel": 22050
+  },
+  "exotic_short_pcm16_80samples.wav": {
+    "channels": 1,
+    "sampleRate": 44100,
+    "bitDepth": 16,
+    "formatTag": 1,
+    "samplesPerChannel": 80
+  },
+  "exotic_float32_nan_inf.wav": {
+    "channels": 1,
+    "sampleRate": 44100,
+    "bitDepth": 32,
+    "formatTag": 3,
+    "samplesPerChannel": 44100
+  }
+}

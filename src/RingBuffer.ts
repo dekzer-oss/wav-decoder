@@ -1,3 +1,5 @@
+export const INITIAL_RING_BUFFER_CAPACITY = 16384 as const;
+
 /**
  * A high-performance, dependency-free circular buffer optimized for low-latency streaming.
  * Capacity must be a power of two.
@@ -14,7 +16,7 @@ export class RingBuffer {
    * Creates an instance of RingBuffer.
    * @param capacity The capacity of the buffer. Must be a power of two and at least 2.
    */
-  constructor(capacity: number) {
+  constructor(capacity: number = INITIAL_RING_BUFFER_CAPACITY) {
     if ((capacity & (capacity - 1)) !== 0 || capacity < 2) {
       throw new Error('Capacity must be a power of two and at least 2');
     }
@@ -136,9 +138,26 @@ export class RingBuffer {
   peek(len: number, offset = 0): Uint8Array {
     const start = (this.readPos + offset) & (this.capacity - 1);
     const end = (start + len) & (this.capacity - 1);
-
     if (start < end || end === 0) return this.buffer.subarray(start, start + len);
-
     return this.buffer.subarray(0, end);
+  }
+
+  /**
+   * Returns a copy of the next `length` bytes from the read position without advancing the read pointer.
+   * Handles wrap-around at the end of the ring buffer automatically.
+   * If `length` is greater than the available data, returns null.
+   * @param length The number of bytes to peek.
+   * @returns A Uint8Array containing the peeked data, or null if not enough data is available.
+   */
+  peekCopy(length: number): Uint8Array | null {
+    if (length > this.size) return null;
+    const result = new Uint8Array(length);
+    const rp = this.readPos;
+    const firstChunk = Math.min(length, this.capacity - rp);
+    result.set(this.buffer.subarray(rp, rp + firstChunk), 0);
+    if (length > firstChunk) {
+      result.set(this.buffer.subarray(0, length - firstChunk), firstChunk);
+    }
+    return result;
   }
 }

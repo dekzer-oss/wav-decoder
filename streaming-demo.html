@@ -139,7 +139,9 @@
     </div>
 
     <script type="module">
-      import { WavDecoder } from './src';
+      import { WasmDecoder } from './src';
+      import createWavDecoderModule from '@/wasm/build/decoder';
+      import { WavDecoder } from '@';
 
       const state = {
         audioContext: null,
@@ -293,6 +295,8 @@
         addToBuffer(buf);
       }
 
+      const decoder = new WasmDecoder();
+      await decoder.ready
       async function playStream(url) {
         if (state.isPlaying) return;
         try {
@@ -313,7 +317,8 @@
           ui.setProgress(0);
           ui.updateBufferInfo(0, state.minBufferDuration);
 
-          const decoder = new WavDecoder();
+          console.log('WAV Decoder ready');
+
           let finalCalled = false;
 
           await streamFetch(
