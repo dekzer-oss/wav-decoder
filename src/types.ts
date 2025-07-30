@@ -128,7 +128,6 @@ export interface DecodeError {
  * Properties:
  * - `bitDepth`: The number of bits used to represent each audio sample.
  * - `channelData`: An array containing Float32Array objects where each array represents the audio data for a channel.
- * - `duration`: The total duration of the audio in seconds.
  * - `errors`: An array of decoding errors, if any, encountered during the decoding process.
  * - `sampleRate`: The number of samples per second of the audio (hertz).
  * - `samplesDecoded`: The total number of audio samples decoded from the file.
@@ -136,7 +135,6 @@ export interface DecodeError {
 export interface DecodedWavAudio {
   bitDepth: WavBitDepth;
   channelData: Float32Array[];
-  duration: number;
   errors: DecodeError[];
   sampleRate: WavSampleRate;
   samplesDecoded: number;
@@ -153,14 +151,14 @@ export interface DecodedWavAudio {
  * - DECODING: Indicates that decoding is currently in progress.
  * - ENDED: Indicates that decoding has successfully completed.
  * - ERROR: Indicates that an error occurred during decoding.
- * - UNINIT: Represents an uninitialized or default state, typically
+ * - IDLE: Represents an uninitialized or default state, typically
  *   before decoding has started.
  */
 export enum DecoderState {
   DECODING,
   ENDED,
   ERROR,
-  UNINIT,
+  IDLE,
 }
 
 /**
@@ -204,13 +202,10 @@ export interface WavDecoderInfo {
   decodedBytes: number;
   errors: DecodeError[];
   format: WavFormat;
-  formatTag: number;
   parsedChunks: ChunkInfo[];
-  progress: number;
   remainingBytes: number;
   state: DecoderState;
   totalBytes: number;
-  totalDuration: number;
   unhandledChunks: ChunkInfo[];
 }
 
@@ -219,8 +214,8 @@ export interface WavDecoderInfo {
  */
 export interface WavDecoderInterface {
   decode(chunk: Uint8Array): DecodedWavAudio;
-  decodeFrame(frame: Uint8Array): Float32Array | null;
-  decodeFrames(frames: Uint8Array): DecodedWavAudio;
+  decodeFrame(frame: Uint8Array): Float32Array | null; // todo: refactor to return Float32Array (not null)
+  decodeFrames(frames: Uint8Array): DecodedWavAudio; // todo: refactor to accept Uint8Array[]
   free(): void;
   flush(): DecodedWavAudio;
   info: WavDecoderInfo;

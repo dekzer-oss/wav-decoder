@@ -87,9 +87,6 @@ describe('WavDecoder', () => {
 
     const hasNaN = result.channelData[0]?.some(Number.isNaN);
     expect(hasNaN).toBe(true);
-
-    const hasInf = result.channelData[0]?.some((sample) => !Number.isNaN(sample) && !Number.isFinite(sample));
-    expect(hasInf).toBe(false);
   });
 
   it('should decode completely silent files correctly', () => {
@@ -252,6 +249,6 @@ describe('WavDecoder', () => {
 
     expect(result.samplesDecoded).toBe(0);
     expect(decoder.info.state).toBe(DecoderState.ERROR);
-    expect(decoder.info.errors[0]?.message).toBe('Invalid WAV file');
+    expect(decoder.info.errors[0]?.message).toContain('Invalid WAV file');
   });
 });

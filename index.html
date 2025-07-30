@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>WAV Decoder - Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="favicon/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml" />
   <script src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <style>
       html {
@@ -68,7 +68,7 @@
 <div class="max-w-4xl mx-auto py-4 px-3 md:py-4 md:px-6">
   <main>
     <div class="text-center mb-6">
-      <img src="favicon/favicon.svg" alt="Logo" class="max-w-full h-24 mx-auto mb-4" />
+      <img src="/favicon/favicon.svg" alt="Logo" class="max-w-full h-24 mx-auto mb-4" />
       <div>
         <h1 class="text-xl font-bold mb-2">WAV Decoder — Demo</h1>
         <p class="text-gray-600 dark:text-gray-400 text-balance max-w-lg mx-auto">
@@ -235,8 +235,7 @@
   </main>
 </div>
 <script type="module">
-  import { WavDecoder } from '../src';
-  import { WavFormatTagNames } from '../src/index.js';
+  import { WavDecoder, WavFormatTagNames } from './dist/index.js';
 
   const formatBytes = (bytes) => {
     if (bytes === 0) return '0 bytes';
@@ -567,9 +566,8 @@
       let lastProgressUpdate = performance.now();
 
       const updateProgressUI = () => {
-        const decoderInfo = this.decoder.info;
-        this.updateProgress(decoderInfo.progress);
-        this.updateMetrics(decoderInfo, totalSamplesDecoded);
+        this.updateProgress(this.decoder.progress);
+        this.updateMetrics(this.decoder.info, totalSamplesDecoded);
       };
 
       while (true) {

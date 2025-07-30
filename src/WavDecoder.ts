@@ -9,12 +9,199 @@ import {
 } from './types';
 import { RingBuffer } from './RingBuffer';
 
+function decodePCM8Mono_unrolled(input: Uint8Array, out: Float32Array, frames: number): void {
+  const k = 1 / 128;
+  let i = 0;
+  for (; i + 4 <= frames; i += 4) {
+    out[i] = (input[i]! - 128) * k;
+    out[i + 1] = (input[i + 1]! - 128) * k;
+    out[i + 2] = (input[i + 2]! - 128) * k;
+    out[i + 3] = (input[i + 3]! - 128) * k;
+  }
+  for (; i < frames; ++i) out[i] = (input[i]! - 128) * k;
+}
+
+function decodePCM8Stereo_unrolled(input: Uint8Array, left: Float32Array, right: Float32Array, frames: number): void {
+  const k = 1 / 128;
+  let i = 0,
+    j = 0;
+  for (; i + 4 <= frames; i += 4, j += 8) {
+    left[i] = (input[j]! - 128) * k;
+    right[i] = (input[j + 1]! - 128) * k;
+    left[i + 1] = (input[j + 2]! - 128) * k;
+    right[i + 1] = (input[j + 3]! - 128) * k;
+    left[i + 2] = (input[j + 4]! - 128) * k;
+    right[i + 2] = (input[j + 5]! - 128) * k;
+    left[i + 3] = (input[j + 6]! - 128) * k;
+    right[i + 3] = (input[j + 7]! - 128) * k;
+  }
+  for (; i < frames; ++i, j += 2) {
+    left[i] = (input[j]! - 128) * k;
+    right[i] = (input[j + 1]! - 128) * k;
+  }
+}
+
+function decodePCM16Mono_unrolled(input: Int16Array, out: Float32Array, frames: number): void {
+  const k = 1 / 32768;
+  let i = 0;
+  for (; i + 4 <= frames; i += 4) {
+    out[i] = input[i]! * k;
+    out[i + 1] = input[i + 1]! * k;
+    out[i + 2] = input[i + 2]! * k;
+    out[i + 3] = input[i + 3]! * k;
+  }
+  for (; i < frames; ++i) out[i] = input[i]! * k;
+}
+
+function decodePCM16Stereo_unrolled(input: Int16Array, left: Float32Array, right: Float32Array, frames: number): void {
+  const k = 1 / 32768;
+  let i = 0,
+    j = 0;
+  for (; i + 4 <= frames; i += 4, j += 8) {
+    left[i] = input[j]! * k;
+    right[i] = input[j + 1]! * k;
+    left[i + 1] = input[j + 2]! * k;
+    right[i + 1] = input[j + 3]! * k;
+    left[i + 2] = input[j + 4]! * k;
+    right[i + 2] = input[j + 5]! * k;
+    left[i + 3] = input[j + 6]! * k;
+    right[i + 3] = input[j + 7]! * k;
+  }
+  for (; i < frames; ++i, j += 2) {
+    left[i] = input[j]! * k;
+    right[i] = input[j + 1]! * k;
+  }
+}
+
+function decodePCM24Mono_unrolled(input: Uint8Array, out: Float32Array, frames: number): void {
+  const k = 1 / 8388608;
+  let i = 0,
+    ofs = 0;
+  for (; i + 4 <= frames; i += 4, ofs += 12) {
+    for (let u = 0; u < 4; ++u) {
+      const o = ofs + u * 3;
+      let v = (input[o + 2]! << 16) | (input[o + 1]! << 8) | input[o]!;
+      v = (v << 8) >> 8;
+      out[i + u] = v * k;
+    }
+  }
+  for (; i < frames; ++i, ofs += 3) {
+    let v = (input[ofs + 2]! << 16) | (input[ofs + 1]! << 8) | input[ofs]!;
+    v = (v << 8) >> 8;
+    out[i] = v * k;
+  }
+}
+
+function decodePCM24Stereo_unrolled(input: Uint8Array, left: Float32Array, right: Float32Array, frames: number): void {
+  const k = 1 / 8388608;
+  let i = 0,
+    ofs = 0;
+  for (; i + 4 <= frames; i += 4, ofs += 24) {
+    for (let u = 0; u < 4; ++u) {
+      const o = ofs + u * 6;
+      let lv = (input[o + 2]! << 16) | (input[o + 1]! << 8) | input[o]!;
+      lv = (lv << 8) >> 8;
+      left[i + u] = lv * k;
+      let rv = (input[o + 5]! << 16) | (input[o + 4]! << 8) | input[o + 3]!;
+      rv = (rv << 8) >> 8;
+      right[i + u] = rv * k;
+    }
+  }
+  for (; i < frames; ++i, ofs += 6) {
+    let lv = (input[ofs + 2]! << 16) | (input[ofs + 1]! << 8) | input[ofs]!;
+    lv = (lv << 8) >> 8;
+    left[i] = lv * k;
+    let rv = (input[ofs + 5]! << 16) | (input[ofs + 4]! << 8) | input[ofs + 3]!;
+    rv = (rv << 8) >> 8;
+    right[i] = rv * k;
+  }
+}
+
+function decodePCM32Mono_unrolled(input: Int32Array, out: Float32Array, frames: number): void {
+  const k = 1 / 2147483648;
+  let i = 0;
+  for (; i + 4 <= frames; i += 4) {
+    out[i] = input[i]! * k;
+    out[i + 1] = input[i + 1]! * k;
+    out[i + 2] = input[i + 2]! * k;
+    out[i + 3] = input[i + 3]! * k;
+  }
+  for (; i < frames; ++i) out[i] = input[i]! * k;
+}
+
+function decodePCM32Stereo_unrolled(input: Int32Array, left: Float32Array, right: Float32Array, frames: number): void {
+  const k = 1 / 2147483648;
+  let i = 0,
+    j = 0;
+  for (; i + 4 <= frames; i += 4, j += 8) {
+    left[i] = input[j]! * k;
+    right[i] = input[j + 1]! * k;
+    left[i + 1] = input[j + 2]! * k;
+    right[i + 1] = input[j + 3]! * k;
+    left[i + 2] = input[j + 4]! * k;
+    right[i + 2] = input[j + 5]! * k;
+    left[i + 3] = input[j + 6]! * k;
+    right[i + 3] = input[j + 7]! * k;
+  }
+  for (; i < frames; ++i, j += 2) {
+    left[i] = input[j]! * k;
+    right[i] = input[j + 1]! * k;
+  }
+}
+
+function decodeFloat32Mono_unrolled(input: Float32Array, out: Float32Array, frames: number): void {
+  let i = 0;
+  for (; i + 4 <= frames; i += 4) {
+    out[i] = input[i]!;
+    out[i + 1] = input[i + 1]!;
+    out[i + 2] = input[i + 2]!;
+    out[i + 3] = input[i + 3]!;
+  }
+  for (; i < frames; ++i) out[i] = input[i]!;
+}
+
+function decodeFloat32Stereo_unrolled(
+  input: Float32Array,
+  left: Float32Array,
+  right: Float32Array,
+  frames: number
+): void {
+  let i = 0,
+    j = 0;
+  for (; i + 4 <= frames; i += 4, j += 8) {
+    left[i] = input[j]!;
+    right[i] = input[j + 1]!;
+    left[i + 1] = input[j + 2]!;
+    right[i + 1] = input[j + 3]!;
+    left[i + 2] = input[j + 4]!;
+    right[i + 2] = input[j + 5]!;
+    left[i + 3] = input[j + 6]!;
+    right[i + 3] = input[j + 7]!;
+  }
+  for (; i < frames; ++i, j += 2) {
+    left[i] = input[j]!;
+    right[i] = input[j + 1]!;
+  }
+}
+
 const WAVE_FORMAT_ALAW = 0x0006;
 const WAVE_FORMAT_EXTENSIBLE = 0xfffe;
 const WAVE_FORMAT_IEEE_FLOAT = 0x0003;
 const WAVE_FORMAT_MULAW = 0x0007;
 const WAVE_FORMAT_PCM = 0x0001;
 const WAVE_FORMAT_IMA_ADPCM = 0x0011;
+
+const INV_128 = 1 / 128;
+const INV_32768 = 1 / 32768;
+const INV_8388608 = 1 / 8388608;
+const INV_2147483648 = 1 / 2147483648;
+
+const ID_RIFF = 0x52494646;
+const ID_RIFX = 0x52494658;
+const ID_WAVE = 0x57415645;
+const ID_FMT = 0x666d7420;
+const ID_DATA = 0x64617461;
+const ID_FACT = 0x66616374;
 
 const imaStepTable = new Int32Array([
   7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97, 107, 118,
@@ -38,7 +225,7 @@ const ALAW_TABLE = (() => {
     } else {
       sample = ((mantissa + 16) << (exponent + 3)) - 2048;
     }
-    table[i] = (sign * sample) / 32768;
+    table[i] = sign * sample * INV_32768;
   }
   return table;
 })();
@@ -61,7 +248,7 @@ const MULAW_TABLE = (() => {
     let mantissa = muVal & 0x0f;
     let sample = ((mantissa << 3) + MULAW_BIAS) << exponent;
     sample -= MULAW_BIAS;
-    table[i] = (sign * sample) / 32768;
+    table[i] = sign * sample * INV_32768;
   }
   return table;
 })();
@@ -74,7 +261,8 @@ export class WavDecoder implements WavDecoderInterface {
 
   private bytesPerSample = 0;
   private channelData: Float32Array[] = [];
-  private decodeBuffer!: ArrayBuffer;
+  private decodeBuffer: ArrayBuffer;
+  private scratchPool: ArrayBuffer[] = [];
   private decodedBytes = 0;
   private errors: DecodeError[] = [];
   private factChunkSamples = 0;
@@ -85,14 +273,21 @@ export class WavDecoder implements WavDecoderInterface {
   private parsedChunks: ChunkInfo[] = [];
   private remainingBytes = 0;
   private ringBuffer: RingBuffer;
-  private state = DecoderState.UNINIT;
+  private state = DecoderState.IDLE;
   private totalBytes = 0;
   private unhandledChunks: ChunkInfo[] = [];
+  private errorTemplate: DecodeError = {
+    frameLength: 0,
+    frameNumber: 0,
+    inputBytes: 0,
+    message: '',
+    outputSamples: 0,
+  };
 
   constructor(options: DecoderOptions = {}) {
     const bufferSize = options.maxBufferSize ?? WavDecoder.MAX_BUFFER_SIZE;
     this.ringBuffer = new RingBuffer(bufferSize);
-    this.decodeBuffer = new ArrayBuffer(4096);
+    this.decodeBuffer = this.getScratchBuffer(4096);
   }
 
   public get estimatedSamples(): number {
@@ -112,15 +307,20 @@ export class WavDecoder implements WavDecoderInterface {
       decodedBytes: this.decodedBytes,
       errors: [...this.errors],
       format: { ...this.format },
-      formatTag: this.formatTag,
       parsedChunks: [...this.parsedChunks],
-      progress: this.totalBytes > 0 ? (this.totalBytes - this.remainingBytes) / this.totalBytes : 0,
       remainingBytes: this.remainingBytes,
       state: this.state,
       totalBytes: this.totalBytes,
-      totalDuration: this.format.sampleRate > 0 ? this.estimatedSamples / this.format.sampleRate : 0,
       unhandledChunks: [...this.unhandledChunks],
     };
+  }
+
+  get progress(): number {
+    return this.totalBytes > 0 ? this.decodedBytes / this.totalBytes : 0;
+  }
+
+  get totalDuration(): number {
+    return this.estimatedSamples / (this.format.sampleRate || 1);
   }
 
   public static supports(formatTag: number): boolean {
@@ -138,7 +338,7 @@ export class WavDecoder implements WavDecoderInterface {
       return this.createErrorResult('Decoder is in a terminal state.');
     }
     try {
-      if (this.state === DecoderState.UNINIT) {
+      if (this.state === DecoderState.IDLE) {
         if (this.headerBuffer.length + chunk.length > WavDecoder.MAX_HEADER_SIZE) {
           this.state = DecoderState.ERROR;
           return this.createErrorResult('Header size exceeds maximum limit.');
@@ -148,13 +348,12 @@ export class WavDecoder implements WavDecoderInterface {
         combined.set(chunk, this.headerBuffer.length);
         this.headerBuffer = combined;
         this.tryParseHeader();
-        if (this.state === DecoderState.UNINIT) {
+        if (this.state === DecoderState.IDLE) {
           return this.createEmptyResult();
         } else if (this.state === DecoderState.ERROR) {
           return {
             bitDepth: this.format.bitDepth,
             channelData: [],
-            duration: this.format.sampleRate > 0 ? this.estimatedSamples / this.format.sampleRate : 0,
             errors: [...this.errors],
             sampleRate: 0,
             samplesDecoded: 0,
@@ -238,7 +437,6 @@ export class WavDecoder implements WavDecoderInterface {
       return {
         bitDepth: this.format.bitDepth || 0,
         channelData: [],
-        duration: this.format.sampleRate > 0 ? this.estimatedSamples / this.format.sampleRate : 0,
         errors: finalErrors,
         sampleRate: this.format.sampleRate || 0,
         samplesDecoded: 0,
@@ -247,12 +445,14 @@ export class WavDecoder implements WavDecoderInterface {
   }
 
   public free(): void {
+    this.releaseScratchBuffer(this.decodeBuffer);
+    this.scratchPool = [];
     this.reset();
     this.state = DecoderState.ENDED;
   }
 
   public reset(): void {
-    this.state = DecoderState.UNINIT;
+    this.state = DecoderState.IDLE;
     this.ringBuffer.clear();
     this.errors.length = 0;
     this.format = {} as WavFormat;
@@ -265,29 +465,25 @@ export class WavDecoder implements WavDecoderInterface {
     this.channelData = [];
   }
 
-  public async *stream(stream: ReadableStream<Uint8Array>): AsyncIterableIterator<DecodedWavAudio> {
-    this.reset();
-    const reader = stream.getReader();
-
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) {
-          yield this.flush();
-          break;
-        }
-
-        try {
-          yield this.decode(value);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          this.errors.push(this.createError(`Decode error: ${message}`));
-          yield this.createErrorResult('Decode error');
-        }
+  private getScratchBuffer(size: number): ArrayBuffer {
+    if (this.scratchPool.length > 0) {
+      const buf = this.scratchPool.pop()!;
+      if (buf.byteLength >= size) {
+        return buf;
       }
-    } finally {
-      reader.releaseLock();
     }
+    return new ArrayBuffer(size);
+  }
+
+  private releaseScratchBuffer(buf: ArrayBuffer): void {
+    this.scratchPool.push(buf);
+  }
+
+  private initChannelData(channels: number, samples: number): void {
+    if (this.channelData.length === channels && this.channelData[0]!.length >= samples) {
+      return;
+    }
+    this.channelData = Array.from({ length: channels }, () => new Float32Array(samples));
   }
 
   private arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
@@ -298,13 +494,13 @@ export class WavDecoder implements WavDecoderInterface {
 
   private createError(message: string): DecodeError {
     const blockSize = this.format.blockSize ?? 0;
-    return {
-      frameLength: blockSize,
-      frameNumber: blockSize > 0 ? Math.floor(this.decodedBytes / blockSize) : 0,
-      inputBytes: this.decodedBytes,
-      message: message,
-      outputSamples: this.estimatedSamples,
-    };
+    const error = { ...this.errorTemplate };
+    error.frameLength = blockSize;
+    error.frameNumber = blockSize > 0 ? Math.floor(this.decodedBytes / blockSize) : 0;
+    error.inputBytes = this.decodedBytes;
+    error.message = message;
+    error.outputSamples = this.estimatedSamples;
+    return error;
   }
 
   private createEmptyResult(): DecodedWavAudio {
@@ -313,7 +509,6 @@ export class WavDecoder implements WavDecoderInterface {
     return {
       bitDepth: this.format.bitDepth,
       channelData: [],
-      duration: 0,
       errors,
       sampleRate: this.format.sampleRate,
       samplesDecoded: 0,
@@ -333,46 +528,48 @@ export class WavDecoder implements WavDecoderInterface {
     }[],
     samplesPerBlock: number,
     channels: number,
-    channelData: Float32Array[],
     outputOffset: number
   ): void {
     const predictors = headers.map((h) => h.predictor);
     const stepIndices = headers.map((h) => Math.min(88, Math.max(0, h.stepIndex)));
 
     for (let ch = 0; ch < channels; ch++) {
-      channelData[ch]![outputOffset] = Math.max(-1, Math.min(1, predictors[ch]! / 32768));
+      this.channelData[ch]![outputOffset] = predictors[ch]! * INV_32768;
     }
 
-    const dataSize = compressed.length;
+    let sampleIndex = 1;
+    let nibbleIndex = 0;
+    const processNibble = (nibble: number, ch: number) => {
+      const step = imaStepTable[stepIndices[ch]!]!;
+      let diff = step >> 3;
+      if (nibble & 1) diff += step >> 2;
+      if (nibble & 2) diff += step >> 1;
+      if (nibble & 4) diff += step;
+      if (nibble & 8) diff = -diff;
 
-    for (let s = 1; s < samplesPerBlock; s++) {
-      for (let ch = 0; ch < channels; ch++) {
-        const nibbleIndex = (s - 1) * channels + ch;
-        const byteIndex = Math.floor(nibbleIndex / 2);
+      predictors[ch]! += diff;
+      predictors[ch] = Math.max(-32768, Math.min(32767, predictors[ch]!));
+      stepIndices[ch] = Math.min(88, Math.max(0, stepIndices[ch]! + imaIndexAdjustTable[nibble]!));
 
-        if (byteIndex >= dataSize) {
-          channelData[ch]![outputOffset + s] = channelData[ch]![outputOffset + s - 1]!;
-          continue;
-        }
+      this.channelData[ch]![outputOffset + sampleIndex] = predictors[ch]! * INV_32768;
+    };
 
-        const byte = compressed[byteIndex]!;
-        const isLowNibble = nibbleIndex % 2 === 0;
-        const nibble = isLowNibble ? byte & 0x0f : byte >> 4;
+    for (let i = 0; i < compressed.length; i++) {
+      const byte = compressed[i]!;
+      const lowNibble = byte & 0x0f;
+      const highNibble = byte >> 4;
 
-        const step = imaStepTable[stepIndices[ch]!]!;
+      const ch1 = nibbleIndex % channels;
+      processNibble(lowNibble, ch1);
+      if (ch1 === channels - 1) sampleIndex++;
+      nibbleIndex++;
+      if (sampleIndex >= samplesPerBlock) break;
 
-        let diff = step >> 3;
-        if (nibble & 1) diff += step >> 2;
-        if (nibble & 2) diff += step >> 1;
-        if (nibble & 4) diff += step;
-        if (nibble & 8) diff = -diff;
-
-        predictors[ch]! += diff;
-        predictors[ch] = Math.max(-32768, Math.min(32767, predictors[ch]!));
-        stepIndices[ch] = Math.min(88, Math.max(0, stepIndices[ch]! + imaIndexAdjustTable[nibble]!));
-
-        channelData[ch]![outputOffset + s] = Math.max(-1, Math.min(1, predictors[ch]! / 32768));
-      }
+      const ch2 = nibbleIndex % channels;
+      processNibble(highNibble, ch2);
+      if (ch2 === channels - 1) sampleIndex++;
+      nibbleIndex++;
+      if (sampleIndex >= samplesPerBlock) break;
     }
   }
 
@@ -411,14 +608,29 @@ export class WavDecoder implements WavDecoderInterface {
     }
   }
 
+  private decodeFloat32Mono(view: DataView, samples: number): void {
+    const mono = this.channelData[0]!;
+    if (this.isLittleEndian) {
+      decodeFloat32Mono_unrolled(new Float32Array(view.buffer, view.byteOffset, samples), mono, samples);
+    } else {
+      // Big-endian fallback
+      for (let i = 0; i < samples; i++) {
+        mono[i] = Math.max(-1, Math.min(1, view.getFloat32(i * 4, false)));
+      }
+    }
+  }
+
   private decodeFloat32Stereo(view: DataView, samples: number): void {
     const left = this.channelData[0]!;
     const right = this.channelData[1]!;
-    const isLE = this.isLittleEndian;
-    for (let i = 0; i < samples; i++) {
-      const offset = i * 8;
-      left[i] = Math.max(-1, Math.min(1, view.getFloat32(offset, isLE)));
-      right[i] = Math.max(-1, Math.min(1, view.getFloat32(offset + 4, isLE)));
+    if (this.isLittleEndian) {
+      decodeFloat32Stereo_unrolled(new Float32Array(view.buffer, view.byteOffset, samples * 2), left, right, samples);
+    } else {
+      for (let i = 0; i < samples; i++) {
+        const offset = i * 8;
+        left[i] = Math.max(-1, Math.min(1, view.getFloat32(offset, false)));
+        right[i] = Math.max(-1, Math.min(1, view.getFloat32(offset + 4, false)));
+      }
     }
   }
 
@@ -453,31 +665,27 @@ export class WavDecoder implements WavDecoderInterface {
       samplesDecoded = frames.length / blockSize;
     }
 
-    if (this.channelData.length !== channels || (this.channelData[0] && this.channelData[0].length < samplesDecoded)) {
-      this.channelData = Array.from({ length: channels }, () => new Float32Array(samplesDecoded));
-    }
+    this.initChannelData(channels, samplesDecoded);
 
     const view = new DataView(frames.buffer, frames.byteOffset, frames.byteLength);
 
     switch (this.formatTag) {
       case WAVE_FORMAT_PCM: {
-        if (channels === 1 && bitDepth === 16) {
-          this.decodePCM16Mono(view, samplesDecoded);
-        } else if (channels === 2 && bitDepth === 16) {
-          this.decodePCM16Stereo(view, samplesDecoded);
-        } else if (channels === 2 && bitDepth === 24) {
-          this.decodePCM24Stereo(view, samplesDecoded);
-        } else {
-          this.decodeGenericPCM(view, samplesDecoded, bps, bitDepth);
-        }
+        if (channels === 1 && bitDepth === 8) this.decodePCM8Mono(view, samplesDecoded);
+        else if (channels === 2 && bitDepth === 8) this.decodePCM8Stereo(view, samplesDecoded);
+        else if (channels === 1 && bitDepth === 16) this.decodePCM16Mono(view, samplesDecoded);
+        else if (channels === 2 && bitDepth === 16) this.decodePCM16Stereo(view, samplesDecoded);
+        else if (channels === 1 && bitDepth === 24) this.decodePCM24Mono(view, samplesDecoded);
+        else if (channels === 2 && bitDepth === 24) this.decodePCM24Stereo(view, samplesDecoded);
+        else if (channels === 1 && bitDepth === 32) this.decodePCM32Mono(view, samplesDecoded);
+        else if (channels === 2 && bitDepth === 32) this.decodePCM32Stereo(view, samplesDecoded);
+        else this.decodeGenericPCM(view, samplesDecoded, bps, bitDepth);
         break;
       }
       case WAVE_FORMAT_IEEE_FLOAT: {
-        if (channels === 2 && bitDepth === 32) {
-          this.decodeFloat32Stereo(view, samplesDecoded);
-        } else {
-          this.decodeFloat(view, samplesDecoded, bps, bitDepth);
-        }
+        if (channels === 1 && bitDepth === 32) this.decodeFloat32Mono(view, samplesDecoded);
+        else if (channels === 2 && bitDepth === 32) this.decodeFloat32Stereo(view, samplesDecoded);
+        else this.decodeFloat(view, samplesDecoded, bps, bitDepth);
         break;
       }
       case WAVE_FORMAT_ALAW:
@@ -508,14 +716,7 @@ export class WavDecoder implements WavDecoderInterface {
             blockSize - 4 * channels
           );
 
-          this.decodeImaAdpcmBlock(
-            compressedData,
-            headers,
-            samplesPerBlock!,
-            channels,
-            this.channelData,
-            block * samplesPerBlock!
-          );
+          this.decodeImaAdpcmBlock(compressedData, headers, samplesPerBlock!, channels, block * samplesPerBlock!);
         }
         break;
       }
@@ -525,76 +726,121 @@ export class WavDecoder implements WavDecoderInterface {
 
     const errors = [...this.errors];
     this.errors.length = 0;
-
     const outputBitDepth = this.formatTag === WAVE_FORMAT_IMA_ADPCM ? 16 : this.format.bitDepth || 0;
 
     return {
       bitDepth: outputBitDepth,
       channelData: this.channelData.map((arr) => arr.subarray(0, samplesDecoded)),
-      duration: sampleRate > 0 ? samplesDecoded / sampleRate : 0,
       errors,
       sampleRate,
       samplesDecoded,
     };
   }
 
+  private decodePCM8Mono(view: DataView, samples: number): void {
+    const mono = this.channelData[0]!;
+    const input = new Uint8Array(view.buffer, view.byteOffset, samples);
+    decodePCM8Mono_unrolled(input, mono, samples);
+  }
+
+  private decodePCM8Stereo(view: DataView, samples: number): void {
+    const left = this.channelData[0]!;
+    const right = this.channelData[1]!;
+    const input = new Uint8Array(view.buffer, view.byteOffset, samples * 2);
+    decodePCM8Stereo_unrolled(input, left, right, samples);
+  }
+
   private decodePCM16Mono(view: DataView, samples: number): void {
     const mono = this.channelData[0]!;
-    const isLE = this.isLittleEndian;
-    for (let i = 0; i < samples; i++) {
-      const offset = i * 2;
-      mono[i] = view.getInt16(offset, isLE) * 0.000030517578125;
+    if (this.isLittleEndian) {
+      const input = new Int16Array(view.buffer, view.byteOffset, samples);
+      decodePCM16Mono_unrolled(input, mono, samples);
+    } else {
+      for (let i = 0; i < samples; i++) {
+        mono[i] = view.getInt16(i * 2, false) * INV_32768;
+      }
     }
   }
 
   private decodePCM16Stereo(view: DataView, samples: number): void {
     const left = this.channelData[0]!;
     const right = this.channelData[1]!;
-    const isLE = this.isLittleEndian;
-    for (let i = 0; i < samples; i++) {
-      const offset = i * 4;
-      left[i] = view.getInt16(offset, isLE) * 0.000030517578125;
-      right[i] = view.getInt16(offset + 2, isLE) * 0.000030517578125;
+    if (this.isLittleEndian) {
+      const input = new Int16Array(view.buffer, view.byteOffset, samples * 2);
+      decodePCM16Stereo_unrolled(input, left, right, samples);
+    } else {
+      for (let i = 0; i < samples; i++) {
+        const offset = i * 4;
+        left[i] = view.getInt16(offset, false) * INV_32768;
+        right[i] = view.getInt16(offset + 2, false) * INV_32768;
+      }
+    }
+  }
+
+  private decodePCM24Mono(view: DataView, samples: number): void {
+    const mono = this.channelData[0]!;
+    const input = new Uint8Array(view.buffer, view.byteOffset, samples * 3);
+    if (this.isLittleEndian) {
+      decodePCM24Mono_unrolled(input, mono, samples);
+    } else {
+      const k = 1 / 8388608;
+      let offset = 0;
+      for (let i = 0; i < samples; i++) {
+        let val = (input[offset]! << 16) | (input[offset + 1]! << 8) | input[offset + 2]!;
+        val = (val << 8) >> 8;
+        mono[i] = val * k;
+        offset += 3;
+      }
     }
   }
 
   private decodePCM24Stereo(view: DataView, samples: number): void {
     const left = this.channelData[0]!;
     const right = this.channelData[1]!;
-    const isLE = this.isLittleEndian;
-    let offset = 0;
+    const input = new Uint8Array(view.buffer, view.byteOffset, samples * 6);
+    if (this.isLittleEndian) {
+      decodePCM24Stereo_unrolled(input, left, right, samples);
+    } else {
+      const k = 1 / 8388608;
+      let offset = 0;
+      for (let i = 0; i < samples; i++) {
+        let lv = (input[offset]! << 16) | (input[offset + 1]! << 8) | input[offset + 2]!;
+        lv = (lv << 8) >> 8;
+        left[i] = lv * k;
+        offset += 3;
 
-    for (let i = 0; i < samples; i++) {
-      let b0 = view.getUint8(offset);
-      let b1 = view.getUint8(offset + 1);
-      let b2 = view.getUint8(offset + 2);
-      let val: number;
-
-      if (isLE) {
-        val = (b2 << 16) | (b1 << 8) | b0;
-      } else {
-        val = (b0 << 16) | (b1 << 8) | b2;
+        let rv = (input[offset]! << 16) | (input[offset + 1]! << 8) | input[offset + 2]!;
+        rv = (rv << 8) >> 8;
+        right[i] = rv * k;
+        offset += 3;
       }
+    }
+  }
 
-      if (val & 0x800000) val |= 0xff000000;
-      left[i] = val / 8388608;
-
-      offset += 3;
-
-      b0 = view.getUint8(offset);
-      b1 = view.getUint8(offset + 1);
-      b2 = view.getUint8(offset + 2);
-
-      if (isLE) {
-        val = (b2 << 16) | (b1 << 8) | b0;
-      } else {
-        val = (b0 << 16) | (b1 << 8) | b2;
+  private decodePCM32Mono(view: DataView, samples: number): void {
+    const mono = this.channelData[0]!;
+    if (this.isLittleEndian) {
+      const input = new Int32Array(view.buffer, view.byteOffset, samples);
+      decodePCM32Mono_unrolled(input, mono, samples);
+    } else {
+      for (let i = 0; i < samples; i++) {
+        mono[i] = view.getInt32(i * 4, false) * INV_2147483648;
       }
+    }
+  }
 
-      if (val & 0x800000) val |= 0xff000000;
-      right[i] = val / 8388608;
-
-      offset += 3;
+  private decodePCM32Stereo(view: DataView, samples: number): void {
+    const left = this.channelData[0]!;
+    const right = this.channelData[1]!;
+    if (this.isLittleEndian) {
+      const input = new Int32Array(view.buffer, view.byteOffset, samples * 2);
+      decodePCM32Stereo_unrolled(input, left, right, samples);
+    } else {
+      for (let i = 0; i < samples; i++) {
+        const offset = i * 8;
+        left[i] = view.getInt32(offset, false) * INV_2147483648;
+        right[i] = view.getInt32(offset + 4, false) * INV_2147483648;
+      }
     }
   }
 
@@ -673,9 +919,8 @@ export class WavDecoder implements WavDecoderInterface {
     }
 
     if (this.decodeBuffer.byteLength < bytes) {
-      let sz = this.decodeBuffer.byteLength || 4096;
-      while (sz < bytes) sz <<= 1;
-      this.decodeBuffer = new ArrayBuffer(sz);
+      this.releaseScratchBuffer(this.decodeBuffer);
+      this.decodeBuffer = this.getScratchBuffer(bytes);
     }
     const scratch = new Uint8Array(this.decodeBuffer, 0, bytes);
 
@@ -715,27 +960,20 @@ export class WavDecoder implements WavDecoderInterface {
   private readPcm(view: DataView, off: number, bits: number): number {
     switch (bits) {
       case 8:
-        return (view.getUint8(off) - 128) * 0.0078125;
+        return (view.getUint8(off) - 128) * INV_128;
       case 16:
-        return view.getInt16(off, this.isLittleEndian) * 0.000030517578125;
+        return view.getInt16(off, this.isLittleEndian) * INV_32768;
       case 24: {
         if (off + 3 > view.byteLength) return 0;
         const b0 = view.getUint8(off);
         const b1 = view.getUint8(off + 1);
         const b2 = view.getUint8(off + 2);
-        let val: number;
-        if (this.isLittleEndian) {
-          val = (b2 << 16) | (b1 << 8) | b0;
-        } else {
-          val = (b0 << 16) | (b1 << 8) | b2;
-        }
-        if (val & 0x800000) {
-          val |= 0xff000000;
-        }
-        return val / 8388608;
+        let val = this.isLittleEndian ? (b2 << 16) | (b1 << 8) | b0 : (b0 << 16) | (b1 << 8) | b2;
+        val = (val << 8) >> 8;
+        return val * INV_8388608;
       }
       case 32:
-        return view.getInt32(off, this.isLittleEndian) * 4.656612875245797e-10;
+        return view.getInt32(off, this.isLittleEndian) * INV_2147483648;
       default:
         return 0;
     }
@@ -772,30 +1010,23 @@ export class WavDecoder implements WavDecoderInterface {
     const headerData = this.headerBuffer;
     if (headerData.length < 12) return false;
 
-    const tempView = new DataView(headerData.buffer, headerData.byteOffset, headerData.byteLength);
-    const readString = (off: number, len: number) => {
-      if (off + len > headerData.length) return '';
-      return String.fromCharCode(...headerData.subarray(off, off + len));
-    };
+    const view = new DataView(headerData.buffer, headerData.byteOffset, headerData.byteLength);
+    const getUint32 = (off: number) => view.getUint32(off, this.isLittleEndian);
+    const getUint32BE = (off: number) => view.getUint32(off, false);
 
-    const riff = readString(0, 4);
-    if (riff !== 'RIFF' && riff !== 'RIFX') {
+    const riffTag = getUint32BE(0);
+    if (riffTag !== ID_RIFF && riffTag !== ID_RIFX) {
       this.state = DecoderState.ERROR;
-      this.errors.push(this.createError('Invalid WAV file'));
+      this.errors.push(this.createError('Invalid WAV file: missing RIFF/RIFX tag'));
       return false;
     }
-    this.isLittleEndian = riff === 'RIFF';
+    this.isLittleEndian = riffTag === ID_RIFF;
 
-    if (readString(8, 4) !== 'WAVE') {
+    if (getUint32BE(8) !== ID_WAVE) {
       this.state = DecoderState.ERROR;
-      this.errors.push(this.createError('Invalid WAV file'));
+      this.errors.push(this.createError('Invalid WAV file: missing WAVE tag'));
       return false;
     }
-
-    const getUint32 = (off: number) => {
-      if (off + 4 > headerData.length) return 0;
-      return tempView.getUint32(off, this.isLittleEndian);
-    };
 
     let offset = 12;
     let fmtChunk: ChunkInfo | null = null;
@@ -803,11 +1034,11 @@ export class WavDecoder implements WavDecoderInterface {
     const parsedChunks: ChunkInfo[] = [];
 
     while (offset + 8 <= headerData.length) {
-      const id = readString(offset, 4);
+      const id = getUint32BE(offset);
       const size = getUint32(offset + 4);
 
-      if (id === 'data') {
-        dataChunk = { id, size, offset };
+      if (id === ID_DATA) {
+        dataChunk = { id: 'data', size, offset };
         parsedChunks.push(dataChunk);
         break;
       }
@@ -815,9 +1046,13 @@ export class WavDecoder implements WavDecoderInterface {
       const chunkEnd = offset + 8 + size + (size % 2);
       if (chunkEnd > headerData.length) return false;
 
-      const chunkInfo = { id, size, offset };
+      let idStr = '';
+      if (id === ID_FMT) idStr = 'fmt ';
+      else if (id === ID_FACT) idStr = 'fact';
+
+      const chunkInfo = { id: idStr, size, offset };
       parsedChunks.push(chunkInfo);
-      if (id === 'fmt ') fmtChunk = chunkInfo;
+      if (id === ID_FMT) fmtChunk = chunkInfo;
       offset = chunkEnd;
     }
 
@@ -882,7 +1117,6 @@ export class WavDecoder implements WavDecoderInterface {
       }
 
       const { channels, samplesPerBlock } = this.format;
-      // Recalculate and correct block align if it's wrong, using ceil as per spec
       const expectedBlockSize = 4 * channels + Math.ceil(((samplesPerBlock - 1) * channels) / 2);
       if (this.format.blockSize !== expectedBlockSize) {
         this.errors.push(
@@ -893,7 +1127,6 @@ export class WavDecoder implements WavDecoderInterface {
         this.format.blockSize = expectedBlockSize;
       }
 
-      // Recalculate and correct byte rate based on the corrected block size
       const expectedByteRate = Math.ceil((this.format.sampleRate * this.format.blockSize) / samplesPerBlock);
       if (this.format.bytesPerSecond !== expectedByteRate) {
         this.errors.push(

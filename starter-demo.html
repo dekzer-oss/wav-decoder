@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WAV Decoder – Starter Demo</title>
-    <link rel="icon" href="favicon/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="public/favicon/favicon.svg" type="image/svg+xml" />
     <style>
       :root {
         --bg: #f8fafc;
@@ -150,7 +150,7 @@
     <button id="resetBtn" hidden>Decode Another File</button>
 
     <script type="module">
-      import { WavDecoder } from '../src';
+      import { WavDecoder } from './dist/index.js';
 
       const els = {
         drop: document.getElementById('uploadZone'),
@@ -266,7 +266,7 @@
         }
 
         function updateUI(info, newlyDecoded, runningTotal) {
-          if (info.progress) els.bar.value = info.progress;
+          els.bar.value = decoder.progress;
           const elapsed = (performance.now() - state.startTime) / 1000;
           els.bytes.textContent = formatBytes(info.decodedBytes);
           els.samples.textContent = (runningTotal + newlyDecoded).toLocaleString();

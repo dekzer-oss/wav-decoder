@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="public/favicon/favicon.svg" type="image/svg+xml" />
+  <title>WAV Decoder - Streaming Demo</title>
+  <style>
+      :root {
+          --primary: #2563eb;
+          --success: #10b981;
+          --error: #ef4444;
+      }
+
+      body {
+          font-family: 'Segoe UI', system-ui, sans-serif;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 2rem;
+          max-width: 800px;
+          margin: 0 auto;
+          line-height: 1.6;
+      }
+
+      button {
+          padding: 0.75rem 1.5rem;
+          font-size: 1rem;
+          background: var(--primary);
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background 0.2s;
+          min-width: 120px;
+      }
+
+      button:hover {
+          background: #1d4ed8;
+      }
+
+      button:disabled {
+          background: #94a3b8;
+          cursor: not-allowed;
+      }
+
+      progress {
+          width: 100%;
+          height: 12px;
+          border-radius: 6px;
+          margin: 1.5rem 0;
+          overflow: hidden;
+      }
+
+      progress::-webkit-progress-bar {
+          background: #e2e8f0;
+          border-radius: 6px;
+      }
+
+      progress::-webkit-progress-value {
+          background: var(--primary);
+          border-radius: 6px;
+          transition: width 0.3s;
+      }
+
+      .status {
+          padding: 0.75rem;
+          border-radius: 4px;
+          margin-bottom: 1rem;
+          width: 100%;
+          text-align: center;
+      }
+
+      .status-loading {
+          background: #dbeafe;
+          color: var(--primary);
+      }
+
+      .status-playing {
+          background: #dcfce7;
+          color: var(--success);
+      }
+
+      .status-error {
+          background: #fee2e2;
+          color: var(--error);
+      }
+
+      .hidden {
+          display: none;
+      }
+
+      .controls {
+          display: flex;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+      }
+
+      .buffer-info {
+          font-size: 0.9em;
+          color: #666;
+          margin-top: 0.5rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+      }
+
+      .buffer-bar {
+          flex: 1;
+          height: 8px;
+          background: #e2e8f0;
+          border-radius: 4px;
+          overflow: hidden;
+          position: relative;
+      }
+
+      .buffer-fill {
+          height: 100%;
+          background: var(--success);
+          transition: width 0.3s ease;
+          border-radius: 4px;
+      }
+  </style>
+</head>
+<body>
+<div class="controls">
+  <button id="playButton">Play</button>
+  <button id="stopButton" class="hidden" disabled>Stop</button>
+</div>
+
+<progress id="progressBar" value="0" max="1" hidden></progress>
+
+<div id="status" class="status">Ready</div>
+<div id="bufferInfo" class="buffer-info">
+  <span id="bufferText">Buffer: 0.0s</span>
+  <div class="buffer-bar">
+    <div id="bufferFill" class="buffer-fill" style="width: 0%"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { WavDecoder } from './dist/index.js';
+
+  const audioState = {
+    context: /** AudioContext or null */ null,
+    startTime: 0,
+    isPlaying: false,
+    scheduledSources: new Set(),
+    abortController: /** AbortController or null */ null,
+    fileSampleRate: /** number or null */ null,
+    audioBuffer: [],
+    bufferDuration: 0,
+    scheduledDuration: 0,
+    minBufferDuration: 2.0,
+    criticalBufferDuration: 0.5,
+    hasStartedPlayback: false,
+    lastScheduleTime: 0,
+    bufferMonitor: null,
+    streamComplete: false,
+  };
+
+  const els = {
+    play: document.getElementById('playButton'),
+    stop: document.getElementById('stopButton'),
+    prog: document.getElementById('progressBar'),
+    status: document.getElementById('status'),
+    bufferInfo: document.getElementById('bufferInfo'),
+    bufferText: document.getElementById('bufferText'),
+    bufferFill: document.getElementById('bufferFill'),
+  };
+
+  const ui = {
+    setStatus(txt, cls = '') {
+      els.status.textContent = txt;
+      els.status.className = `status ${cls}`;
+    },
+    showProgress(show = true) {
+      els.prog.hidden = !show;
+    },
+    setProgress(frac) {
+      els.prog.value = frac;
+    },
+    toggleButtons(playing) {
+      els.play.disabled = playing;
+      els.stop.disabled = !playing;
+      els.stop.classList.toggle('hidden', !playing);
+    },
+    updateBufferInfo(buffered, threshold) {
+      els.bufferText.textContent = `Buffer: ${buffered.toFixed(1)}s`;
+      const percentage = Math.min(100, (buffered / threshold) * 100);
+      els.bufferFill.style.width = `${percentage}%`;
+      els.bufferFill.classList.remove('critical', 'warning');
+      if (buffered < audioState.criticalBufferDuration) {
+        els.bufferFill.classList.add('critical');
+      } else if (buffered < audioState.minBufferDuration) {
+        els.bufferFill.classList.add('warning');
+      }
+    },
+  };
+
+  async function streamFetch(url, onChunk, onFinish, signal) {
+    const resp = await fetch(url, { signal });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const len = Number(resp.headers.get('Content-Length') || 0);
+    let seen = 0;
+    const rdr = resp.body.getReader();
+    while (true) {
+      const { done, value } = await rdr.read();
+      if (done) break;
+      seen += value.length;
+      onChunk(value, seen, len);
+    }
+    onFinish();
+  }
+
+  function addToBuffer(audioBuffer) {
+    audioState.audioBuffer.push(audioBuffer);
+    audioState.bufferDuration += audioBuffer.duration;
+
+    ui.updateBufferInfo(audioState.bufferDuration, audioState.minBufferDuration);
+
+    if (!audioState.hasStartedPlayback && audioState.bufferDuration >= audioState.minBufferDuration) {
+      audioState.hasStartedPlayback = true;
+      audioState.startTime = audioState.context.currentTime + 0.1;
+      ui.setStatus('Playing...', 'status-playing');
+      scheduleBufferedAudio();
+    }
+
+    if (audioState.hasStartedPlayback && audioState.bufferDuration >= audioState.minBufferDuration) {
+      scheduleBufferedAudio();
+    }
+  }
+
+  function scheduleBufferedAudio() {
+    while (audioState.audioBuffer.length > 0 && audioState.bufferDuration > audioState.criticalBufferDuration) {
+      const buf = audioState.audioBuffer.shift();
+      audioState.bufferDuration -= buf.duration;
+
+      const src = audioState.context.createBufferSource();
+      src.buffer = buf;
+      src.connect(audioState.context.destination);
+
+      const now = audioState.context.currentTime;
+      if (audioState.startTime < now) {
+        audioState.startTime = now + 0.05;
+      }
+
+      src.start(audioState.startTime);
+      audioState.startTime += buf.duration;
+      audioState.scheduledDuration += buf.duration;
+
+      src.addEventListener('ended', () => {
+        audioState.scheduledSources.delete(src);
+        audioState.scheduledDuration -= buf.duration;
+      });
+      audioState.scheduledSources.add(src);
+    }
+
+    ui.updateBufferInfo(audioState.bufferDuration, audioState.minBufferDuration);
+  }
+
+  function stopBufferMonitor() {
+    if (audioState.bufferMonitor) {
+      clearInterval(audioState.bufferMonitor);
+      audioState.bufferMonitor = null;
+    }
+  }
+
+  function handleDecoded({ channelData, sampleRate, samplesDecoded }) {
+    if (!audioState.context || !channelData?.length) return;
+
+    if (sampleRate && !audioState.fileSampleRate) {
+      audioState.fileSampleRate = sampleRate;
+    }
+
+    const buf = audioState.context.createBuffer(
+      channelData.length,
+      channelData[0].length,
+      audioState.fileSampleRate || audioState.context.sampleRate,
+    );
+
+    channelData.forEach((ch, i) => buf.copyToChannel(new Float32Array(ch), i));
+
+    addToBuffer(buf);
+  }
+
+  async function playStream(url) {
+    if (audioState.isPlaying) return;
+    try {
+      audioState.context = new AudioContext({
+        sampleRate: 44100,
+        latencyHint: 'interactive',
+      });
+      audioState.abortController = new AbortController();
+      audioState.startTime = 0;
+      audioState.fileSampleRate = null;
+      audioState.scheduledSources.clear();
+      audioState.isPlaying = true;
+      audioState.audioBuffer = [];
+      audioState.bufferDuration = 0;
+      audioState.hasStartedPlayback = false;
+      audioState.lastScheduleTime = 0;
+
+      ui.toggleButtons(true);
+      ui.showProgress(true);
+      ui.setStatus('Buffering...', 'status-loading');
+      ui.setProgress(0);
+      ui.updateBufferInfo(0, audioState.minBufferDuration);
+
+      const decoder = new WavDecoder();
+      let finalCalled = false;
+
+      await streamFetch(
+        url,
+        (chunk, seen, total) => {
+          if (total) ui.setProgress(seen / total);
+          const result = decoder.decode(chunk);
+          handleDecoded(result);
+        },
+        () => {
+          if (!finalCalled) {
+            finalCalled = true;
+            audioState.streamComplete = true;
+            const last = decoder.flush();
+            if (last.channelData.length) handleDecoded(last);
+
+            // If we never started playback due to insufficient buffer, start now
+            if (!audioState.hasStartedPlayback && audioState.bufferDuration > 0) {
+              audioState.hasStartedPlayback = true;
+              audioState.startTime = audioState.context.currentTime + 0.1;
+              scheduleBufferedAudio();
+              ui.setStatus('Playing...', 'status-playing');
+            }
+          }
+        },
+        audioState.abortController.signal,
+      );
+
+      ui.setStatus('Stream complete', 'status-playing');
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error(err);
+        ui.setStatus(`Error: ${err.message}`, 'status-error');
+      }
+    } finally {
+      ui.showProgress(false);
+      stopBufferMonitor();
+      if (!audioState.isPlaying) cleanup();
+    }
+  }
+
+  function stop() {
+    if (!audioState.isPlaying) return;
+    audioState.isPlaying = false;
+    audioState.abortController?.abort();
+    stopBufferMonitor();
+
+    audioState.scheduledSources.forEach((src) => {
+      try {
+        src.stop();
+        src.disconnect();
+      } catch {
+      }
+    });
+
+    audioState.scheduledSources.clear();
+
+    audioState.audioBuffer = [];
+    audioState.bufferDuration = 0;
+    audioState.scheduledDuration = 0;
+    audioState.hasStartedPlayback = false;
+    audioState.streamComplete = false;
+
+    cleanup();
+    ui.setStatus('Stopped');
+    ui.updateBufferInfo(0, audioState.minBufferDuration);
+  }
+
+  function cleanup() {
+    if (audioState.context && audioState.context.state !== 'closed') {
+      audioState.context.close();
+    }
+    audioState.context = null;
+    ui.toggleButtons(false);
+    ui.showProgress(false);
+  }
+
+  els.play.addEventListener('click', () => {
+    playStream('onclassical_demo.wav');
+  });
+
+  els.stop.addEventListener('click', () => {
+    stop();
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (audioState.isPlaying) {
+      stop();
+    }
+  });
+</script>
+</body>
+</html>
