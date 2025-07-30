@@ -202,13 +202,10 @@ export interface WavDecoderInfo {
   decodedBytes: number;
   errors: DecodeError[];
   format: WavFormat;
-  formatTag: number;
   parsedChunks: ChunkInfo[];
-  progress: number;
   remainingBytes: number;
   state: DecoderState;
   totalBytes: number;
-  totalDuration: number;
   unhandledChunks: ChunkInfo[];
 }
 

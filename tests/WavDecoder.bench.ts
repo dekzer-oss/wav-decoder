@@ -110,13 +110,30 @@ describe('WavDecoder API comparison under looping conditions', () => {
 
       for (let i = 0; i < body.length; i += chunkSize) {
         const chunk = body.subarray(i, i + chunkSize);
-        if (chunk.length > 0) {
-          decoder.decode(chunk);
-        }
+        decoder.decode(chunk);
       }
 
       decoder.free();
     },
     benchOptions
   );
+});
+
+describe('WavDecoder full file macrobench', () => {
+  const files = ['sine_alaw_8bit_le_mono.wav', 'sine_pcm_16bit_le_stereo.wav', 'sine_pcm_24bit_be_stereo.wav'];
+
+  files.forEach((file) => {
+    let fixtureData: Uint8Array;
+
+    beforeAll(() => {
+      fixtureData = loadedFixtures.get(file)!;
+    });
+
+    bench(`${file} - full decode() macrobench`, () => {
+      // Full end-to-end decode lifecycle
+      const decoder = new WavDecoder();
+      decoder.decode(fixtureData);
+      decoder.free();
+    });
+  });
 });
