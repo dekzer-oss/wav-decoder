@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import glob from 'fast-glob';
 
-// Performance thresholds for WAV decoders (MiB/s)
 const PERFORMANCE_THRESHOLDS = {
   EXCELLENT: 400,
   GOOD: 300,
@@ -9,9 +9,6 @@ const PERFORMANCE_THRESHOLDS = {
   POOR: 100,
 };
 
-/**
- * Reads and parses JSON file safely
- */
 async function readJsonFile(filePath) {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
@@ -22,9 +19,6 @@ async function readJsonFile(filePath) {
   }
 }
 
-/**
- * Flattens benchmark data from nested structure
- */
 function flattenBenchmarks(data) {
   return data.files.flatMap((file) =>
     file.groups.flatMap((group) =>
@@ -36,72 +30,52 @@ function flattenBenchmarks(data) {
   );
 }
 
-/**
- * Finds the benchmark with highest Hz (performance)
- */
 function findBestBenchmark(benchmarks) {
   return benchmarks.reduce((best, current) => (current.hz > best.hz ? current : best));
 }
 
-/**
- * Calculates throughput in MiB/s
- */
 function calculateThroughput(hz, fileSizeBytes) {
   return (hz * fileSizeBytes) / 2 ** 20;
 }
 
-/**
- * Determines badge color based on performance
- */
 function getBadgeColor(throughput) {
   if (throughput >= PERFORMANCE_THRESHOLDS.EXCELLENT) {
     return 'brightgreen';
-  } else if (throughput >= PERFORMANCE_THRESHOLDS.AVERAGE) {
-    return 'yellow';
   } else if (throughput >= PERFORMANCE_THRESHOLDS.GOOD) {
     return 'orange';
+  } else if (throughput >= PERFORMANCE_THRESHOLDS.AVERAGE) {
+    return 'yellow';
   } else {
     return 'red';
   }
 }
 
-/**
- * Extracts mode from file path
- */
-function extractMode(filePath) {
-  return path.basename(filePath).includes('browser') ? 'browser' : 'node';
+// NEW: extract browser name from filename, e.g. "bench/bench-browser-chrome.json"
+function extractBrowser(filePath) {
+  const m = path.basename(filePath).match(/bench-browser-([^.]+)\.json$/);
+  return m ? m[1] : null;
 }
 
-/**
- * Creates badge object with performance data
- */
-function createBadge(mode, throughput) {
+function createBadge(label, throughput) {
   return {
     schemaVersion: 1,
-    label: `throughput (${mode})`,
+    label: `throughput (${label})`,
     message: `${throughput.toFixed(1)} MiB/s`,
     color: getBadgeColor(throughput),
   };
 }
 
-/**
- * Writes badge JSON to file
- */
-async function writeBadgeFile(mode, badge) {
-  const outPath = `bench/badge-${mode}.json`;
+async function writeBadgeFile(label, badge) {
+  const outPath = `bench/badge-browser-${label}.json`;
   await fs.writeFile(outPath, JSON.stringify(badge, null, 2));
   console.log(`✅  Wrote ${outPath}`);
 }
 
-/**
- * Processes a single benchmark file
- */
 async function processBenchmarkFile(filePath) {
   const data = await readJsonFile(filePath);
   if (!data) return;
 
   const benchmarks = flattenBenchmarks(data);
-
   if (!benchmarks.length) {
     console.error(`⚠️  No benchmarks in ${filePath}`);
     return;
@@ -110,17 +84,22 @@ async function processBenchmarkFile(filePath) {
   const best = findBestBenchmark(benchmarks);
   const fileSizeBytes = best.fileSize ?? 44100 * 2;
   const throughput = calculateThroughput(best.hz, fileSizeBytes);
-  const mode = extractMode(filePath);
+  const browser = extractBrowser(filePath);
+  if (!browser) {
+    console.warn(`⚠️  Could not extract browser name from: ${filePath}`);
+    return;
+  }
 
-  const badge = createBadge(mode, throughput);
-  await writeBadgeFile(mode, badge);
+  const badge = createBadge(browser, throughput);
+  await writeBadgeFile(browser, badge);
 }
 
-/**
- * Main function to process all benchmark files
- */
 async function main() {
-  const files = ['bench/bench-browser.json', 'bench/bench-node.json'];
+  const files = await glob('bench/bench-browser-*.json');
+  if (!files.length) {
+    console.error('No browser bench JSON files found.');
+    return;
+  }
 
   for (const filePath of files) {
     await processBenchmarkFile(filePath);

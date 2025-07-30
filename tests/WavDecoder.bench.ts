@@ -91,9 +91,7 @@ describe('WavDecoder API comparison under looping conditions', () => {
 
       for (let i = 0; i < body.length; i += chunkSize) {
         const chunk = body.subarray(i, i + chunkSize);
-        if (chunk.length % blockSize === 0) {
-          decoder.decodeFrames(chunk);
-        }
+        decoder.decodeFrames(chunk);
       }
 
       decoder.free();
