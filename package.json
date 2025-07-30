@@ -58,7 +58,7 @@
     "test:node": "vitest run --project node",
     "test:browser": "vitest run --project browser",
     "bench": "pnpm bench:all",
-    "bench:all": "pnpm bench:node && pnpm bench:chrome && pnpm bench:firefox && bench:webkit",
+    "bench:all": "pnpm bench:node && pnpm bench:chrome && pnpm bench:firefox && pnpm bench:webkit",
     "bench:browser": "vitest --run bench --project browser",
     "bench:node": "vitest --run bench --project node",
     "bench:chrome": "vitest bench --project=browser --browser=chromium --run --outputJson bench/bench-browser-chrome.json",

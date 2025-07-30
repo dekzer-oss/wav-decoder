@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
   "label": "throughput (webkit)",
-  "message": "205.8 MiB/s",
-  "color": "yellow"
+  "message": "162.7 MiB/s",
+  "color": "red"
 }

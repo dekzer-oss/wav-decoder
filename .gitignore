@@ -35,4 +35,5 @@ Thumbs.db
 source_code.md
 
 public/samples/*
-#!public/samples/.gitkeep
+
+tests/fixtures/wav/

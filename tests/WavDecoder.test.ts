@@ -97,7 +97,6 @@ describe('WavDecoder', () => {
     const result = decoder.decode(audioData);
     expect(result.errors).toEqual([]);
 
-    // Optimized: Single bulk check per channel
     result.channelData.forEach((channel) => {
       const isSilent = channel.every((sample) => sample === 0);
       expect(isSilent).toBe(true);

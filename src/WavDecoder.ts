@@ -613,7 +613,6 @@ export class WavDecoder implements WavDecoderInterface {
     if (this.isLittleEndian) {
       decodeFloat32Mono_unrolled(new Float32Array(view.buffer, view.byteOffset, samples), mono, samples);
     } else {
-      // Big-endian fallback
       for (let i = 0; i < samples; i++) {
         mono[i] = Math.max(-1, Math.min(1, view.getFloat32(i * 4, false)));
       }
@@ -724,13 +723,15 @@ export class WavDecoder implements WavDecoderInterface {
         this.channelData.forEach((arr) => arr.fill(0));
     }
 
+    const outputBitDepth = this.formatTag === WAVE_FORMAT_IMA_ADPCM ? 16 : this.format.bitDepth;
+    const channelData = this.channelData.map((arr) => arr.subarray(0, samplesDecoded));
+
     const errors = [...this.errors];
     this.errors.length = 0;
-    const outputBitDepth = this.formatTag === WAVE_FORMAT_IMA_ADPCM ? 16 : this.format.bitDepth || 0;
 
     return {
       bitDepth: outputBitDepth,
-      channelData: this.channelData.map((arr) => arr.subarray(0, samplesDecoded)),
+      channelData,
       errors,
       sampleRate,
       samplesDecoded,
@@ -868,6 +869,7 @@ export class WavDecoder implements WavDecoderInterface {
       this.errors.push(this.createError('Format chunk too small'));
       return;
     }
+
     this.format = {
       bitDepth: view.getUint16(offset + 14, this.isLittleEndian),
       blockSize: view.getUint16(offset + 12, this.isLittleEndian),
@@ -875,7 +877,6 @@ export class WavDecoder implements WavDecoderInterface {
       channels: view.getUint16(offset + 2, this.isLittleEndian),
       formatTag: view.getUint16(offset, this.isLittleEndian),
       sampleRate: view.getUint32(offset + 4, this.isLittleEndian),
-      samplesPerBlock: 0,
     };
 
     this.formatTag = this.format.formatTag;

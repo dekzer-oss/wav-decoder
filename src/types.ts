@@ -245,7 +245,7 @@ export interface WavFormat {
   blockSize: number;
   bytesPerSecond: number;
   channels: number;
-  samplesPerBlock: number;
+  samplesPerBlock?: number;
   channelMask?: number;
   extensionSize?: number;
   formatTag: WavFormatTag;

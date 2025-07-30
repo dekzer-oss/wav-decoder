@@ -6,7 +6,7 @@ export interface FixtureProperties {
   formatTag: number;
 }
 
-export const fixtureProperties: Record<string, FixtureProperties> = {
+export const fixtureProperties = {
   'exotic_alt_clipped_silent_stereo.wav': {
     channels: 2,
     sampleRate: 44100,
@@ -161,4 +161,4 @@ export const fixtureProperties: Record<string, FixtureProperties> = {
     samplesPerChannel: 44100,
     formatTag: 0x0001,
   },
-};
+} as const;
