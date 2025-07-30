@@ -151,14 +151,14 @@ export interface DecodedWavAudio {
  * - DECODING: Indicates that decoding is currently in progress.
  * - ENDED: Indicates that decoding has successfully completed.
  * - ERROR: Indicates that an error occurred during decoding.
- * - UNINIT: Represents an uninitialized or default state, typically
+ * - IDLE: Represents an uninitialized or default state, typically
  *   before decoding has started.
  */
 export enum DecoderState {
   DECODING,
   ENDED,
   ERROR,
-  UNINIT,
+  IDLE,
 }
 
 /**

@@ -1,11 +1,11 @@
 # @dekzer/wav-decoder
 
-![Browser throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-browser.json)
+![Chrome throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-browser-chrome.json)
 ![Node throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-node.json)
 
 A small TypeScript/JavaScript library that progressively decodes uncompressed WAV audio as the bytes arrive. It was
 written for in‑house streaming experiments inside Dekzer, but we decided to publish the code because it may save others
-some time. The decoder has been fine‑tuned for peak performance on Chrome’s V8 engine. The API is intentionally minimal;
+some time. The decoder has been fine‑tuned for peak performance on Chrome's V8 engine. The API is intentionally minimal;
 please expect breaking changes until we tag a 1.0.0.
 
 ---
@@ -96,12 +96,12 @@ Try the decoder in your browser or use these as **starter templates**:
 | Demo                                                  | Description                                                             | Source                                              |
 |-------------------------------------------------------|-------------------------------------------------------------------------|-----------------------------------------------------|
 | [Full UI demo](index.html)                   | Drag & drop WAV, see detailed metrics, chunked decoding, playback, logs | [`index.html`](index.html)                 |
-| [Starter demo](public/starter-demo.html)              | 20 lines of code: pure decode, metrics, and progress bar                | [`starter-demo.html`](public/starter-demo.html)     |
-| [Streaming playback demo](public/streaming-demo.html) | Streams a WAV file, progressive decode & low-latency playback           | [`streaming-demo.html`](public/streaming-demo.html) |
+| [Starter demo](starter-demo.html)              | 20 lines of code: pure decode, metrics, and progress bar                | [`starter-demo.html`](starter-demo.html)     |
+| [Streaming playback demo](streaming-demo.html) | Streams a WAV file, progressive decode & low-latency playback           | [`streaming-demo.html`](streaming-demo.html) |
 
 **Pro tip:**
 Fork and modify these to jump-start your integration.
-Each demo is standalone—just “view source” for a ready-made starter.
+Each demo is standalone—just "view source" for a ready-made starter.
 
 ---
 
@@ -153,7 +153,7 @@ enum DecoderState {
   DECODING,
   ENDED,
   ERROR,
-  UNINIT,
+  IDLE,
 }
 ```
 

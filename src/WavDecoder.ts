@@ -273,7 +273,7 @@ export class WavDecoder implements WavDecoderInterface {
   private parsedChunks: ChunkInfo[] = [];
   private remainingBytes = 0;
   private ringBuffer: RingBuffer;
-  private state = DecoderState.UNINIT;
+  private state = DecoderState.IDLE;
   private totalBytes = 0;
   private unhandledChunks: ChunkInfo[] = [];
   private errorTemplate: DecodeError = {
@@ -338,7 +338,7 @@ export class WavDecoder implements WavDecoderInterface {
       return this.createErrorResult('Decoder is in a terminal state.');
     }
     try {
-      if (this.state === DecoderState.UNINIT) {
+      if (this.state === DecoderState.IDLE) {
         if (this.headerBuffer.length + chunk.length > WavDecoder.MAX_HEADER_SIZE) {
           this.state = DecoderState.ERROR;
           return this.createErrorResult('Header size exceeds maximum limit.');
@@ -348,7 +348,7 @@ export class WavDecoder implements WavDecoderInterface {
         combined.set(chunk, this.headerBuffer.length);
         this.headerBuffer = combined;
         this.tryParseHeader();
-        if (this.state === DecoderState.UNINIT) {
+        if (this.state === DecoderState.IDLE) {
           return this.createEmptyResult();
         } else if (this.state === DecoderState.ERROR) {
           return {
@@ -452,7 +452,7 @@ export class WavDecoder implements WavDecoderInterface {
   }
 
   public reset(): void {
-    this.state = DecoderState.UNINIT;
+    this.state = DecoderState.IDLE;
     this.ringBuffer.clear();
     this.errors.length = 0;
     this.format = {} as WavFormat;

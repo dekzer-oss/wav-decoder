@@ -15,9 +15,23 @@ beforeAll(async () => {
 });
 
 const benchOptions: BenchOptions = {
-  warmupIterations: 20,
-  time: 1_000,
+  warmupIterations: 100,
+  iterations: 1000,
+  time: 5_000,
 };
+
+let globalChecksum = 0;
+
+function simpleChecksum(arrays: Float32Array[] | undefined): number {
+  if (!arrays) return 0;
+  let sum = 0;
+  for (const arr of arrays) {
+    for (let i = 0; i < Math.min(arr.length, 256); ++i) {
+      sum += arr[i]!;
+    }
+  }
+  return sum;
+}
 
 describe('WavDecoder full decode() performance', () => {
   bench(
@@ -26,7 +40,8 @@ describe('WavDecoder full decode() performance', () => {
       const data = loadedFixtures.get('sine_alaw_8bit_le_mono.wav');
       if (!data) throw new Error('Fixture not found: sine_alaw_8bit_le_mono.wav');
       const decoder = new WavDecoder();
-      decoder.decode(data);
+      const result = decoder.decode(data);
+      globalChecksum += simpleChecksum(result.channelData);
       decoder.free();
     },
     benchOptions
@@ -38,7 +53,8 @@ describe('WavDecoder full decode() performance', () => {
       const data = loadedFixtures.get('sine_pcm_16bit_le_stereo.wav');
       if (!data) throw new Error('Fixture not found: sine_pcm_16bit_le_stereo.wav');
       const decoder = new WavDecoder();
-      decoder.decode(data);
+      const result = decoder.decode(data);
+      globalChecksum += simpleChecksum(result.channelData);
       decoder.free();
     },
     benchOptions
@@ -50,7 +66,8 @@ describe('WavDecoder full decode() performance', () => {
       const data = loadedFixtures.get('sine_pcm_24bit_be_stereo.wav');
       if (!data) throw new Error('Fixture not found: sine_pcm_24bit_be_stereo.wav');
       const decoder = new WavDecoder();
-      decoder.decode(data);
+      const result = decoder.decode(data);
+      globalChecksum += simpleChecksum(result.channelData);
       decoder.free();
     },
     benchOptions
@@ -88,12 +105,13 @@ describe('WavDecoder API comparison under looping conditions', () => {
       const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
       const { blockSize } = format;
       const chunkSize = blockSize * 512;
-
+      let sum = 0;
       for (let i = 0; i < body.length; i += chunkSize) {
         const chunk = body.subarray(i, i + chunkSize);
-        decoder.decodeFrames(chunk);
+        const result = decoder.decodeFrames(chunk);
+        sum += simpleChecksum(result.channelData);
       }
-
+      globalChecksum += sum;
       decoder.free();
     },
     benchOptions
@@ -105,12 +123,13 @@ describe('WavDecoder API comparison under looping conditions', () => {
       const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
       const { blockSize } = format;
       const chunkSize = blockSize * 512;
-
+      let sum = 0;
       for (let i = 0; i < body.length; i += chunkSize) {
         const chunk = body.subarray(i, i + chunkSize);
-        decoder.decode(chunk);
+        const result = decoder.decode(chunk);
+        sum += simpleChecksum(result.channelData);
       }
-
+      globalChecksum += sum;
       decoder.free();
     },
     benchOptions
@@ -128,9 +147,9 @@ describe('WavDecoder full file macrobench', () => {
     });
 
     bench(`${file} - full decode() macrobench`, () => {
-      // Full end-to-end decode lifecycle
       const decoder = new WavDecoder();
-      decoder.decode(fixtureData);
+      const result = decoder.decode(fixtureData);
+      globalChecksum += simpleChecksum(result.channelData);
       decoder.free();
     });
   });

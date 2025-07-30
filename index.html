@@ -566,9 +566,8 @@
       let lastProgressUpdate = performance.now();
 
       const updateProgressUI = () => {
-        const decoderInfo = this.decoder.info;
-        this.updateProgress(decoderInfo.progress);
-        this.updateMetrics(decoderInfo, totalSamplesDecoded);
+        this.updateProgress(this.decoder.progress);
+        this.updateMetrics(this.decoder.info, totalSamplesDecoded);
       };
 
       while (true) {

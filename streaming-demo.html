@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="./favicon/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="public/favicon/favicon.svg" type="image/svg+xml" />
   <title>WAV Decoder - Streaming Demo</title>
   <style>
       :root {
@@ -139,7 +139,7 @@
 </div>
 
 <script type="module">
-  import { WavDecoder } from '../dist';
+  import { WavDecoder } from './dist/index.js';
 
   const audioState = {
     context: /** AudioContext or null */ null,
@@ -315,16 +315,14 @@
         (chunk, seen, total) => {
           if (total) ui.setProgress(seen / total);
           const result = decoder.decode(chunk);
-          if (result.channelData?.length) {
-            handleDecoded(result);
-          }
+          handleDecoded(result);
         },
         () => {
           if (!finalCalled) {
             finalCalled = true;
             audioState.streamComplete = true;
             const last = decoder.flush();
-            if (last.channelData?.length) handleDecoded(last);
+            if (last.channelData.length) handleDecoded(last);
 
             // If we never started playback due to insufficient buffer, start now
             if (!audioState.hasStartedPlayback && audioState.bufferDuration > 0) {
@@ -388,7 +386,7 @@
   }
 
   els.play.addEventListener('click', () => {
-    playStream('samples/onclassical_demo.wav');
+    playStream('onclassical_demo.wav');
   });
 
   els.stop.addEventListener('click', () => {

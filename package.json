@@ -55,27 +55,20 @@
     "format": "prettier --write .",
     "fixtures:generate": "python3 scripts/gen-wav-fixtures.py",
     "test": "vitest --run --reporter=verbose",
-
-     "test:node": "vitest run --project node",
-     "test:browser": "vitest run --project browser",
-
+    "test:node": "vitest run --project node",
+    "test:browser": "vitest run --project browser",
     "bench": "pnpm bench:all",
-    "bench:all": "pnpm bench:node && pnpm bench:browser:chrome && pnpm bench:browser:firefox && pnpm bench:browser:webkit",
-
+    "bench:all": "pnpm bench:node && pnpm bench:chrome && pnpm bench:firefox && bench:webkit",
     "bench:browser": "vitest --run bench --project browser",
     "bench:node": "vitest --run bench --project node",
-
-    "bench:browser:chrome": "vitest bench --browser=chromium --no-node  --run --outputJson bench/bench-browser-chrome.json",
-    "bench:browser:firefox": "vitest bench --browser=firefox  --no-node --run --outputJson bench/bench-browser-firefox.json",
-    "bench:browser:webkit": "vitest bench --browser=webkit  --no-node --run --outputJson bench/bench-browser-webkit.json",
-
+    "bench:chrome": "vitest bench --project=browser --browser=chromium --run --outputJson bench/bench-browser-chrome.json",
+    "bench:firefox": "vitest bench --project=browser --browser=firefox --run --outputJson bench/bench-browser-firefox.json",
+    "bench:webkit": "vitest bench --project=browser --browser=webkit --run --outputJson bench/bench-browser-webkit.json",
     "bench:compare": "pnpm bench:all && node scripts/compare-bench.js",
     "bench:update": "pnpm bench:all && node scripts/update-badge.js",
-
     "build": "tsup",
     "release": "pnpm build && changeset publish"
   },
-
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "@playwright/test": "^1.53.1",
