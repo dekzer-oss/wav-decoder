@@ -2,12 +2,13 @@ import type { ChunkInfo, DataChunk, WavFormat, WavHeaderParserResult } from './t
 
 export const RIFF_SIGNATURE = 0x46464952 as const;
 export const RIFX_SIGNATURE = 0x52494658 as const;
-export const WAVE_SIGNATURE = 0x45564157 as const;
+export const WAVE_SIGNATURE = 'WAVE';
 export const WAVE_FORMAT_EXTENSIBLE = 0xfffe as const;
 export const WAVE_FORMAT_IMA_ADPCM = 0x0011 as const;
 export const WAVE_FORMAT_PCM = 0x0001 as const;
-export const FMT_CHUNK = 'fmt ' as const;
-export const DATA_CHUNK = 'data' as const;
+export const FMT_CHUNK = 'fmt ';
+export const DATA_CHUNK = 'data';
+
 export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
   const warnings: string[] = [];
   const len = buffer.length;
@@ -33,60 +34,38 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
     warnings.push(`Declared file size (${fileSize + 8} bytes) does not match actual buffer size (${len} bytes)`);
   }
 
-  const waveWord = view.getUint32(8, true);
-  if (waveWord !== WAVE_SIGNATURE) {
+  // Fixed: Use string comparison for endian-neutral WAVE check
+  const waveStr = String.fromCharCode(...buffer.subarray(8, 12));
+  if (waveStr !== WAVE_SIGNATURE) {
     throw new Error('Missing "WAVE" signature at byte 8');
   }
 
   let offset = 12;
   let format: WavFormat | undefined;
-  let dataChunks: DataChunk[] = [];
+  const dataChunks: DataChunk[] = [];
   const parsedChunks: ChunkInfo[] = [];
   const unhandledChunks: ChunkInfo[] = [];
   let isExtensible = false;
 
   while (offset + 8 <= len) {
-    const chunkStr = String.fromCharCode(
-      view.getUint8(offset),
-      view.getUint8(offset + 1),
-      view.getUint8(offset + 2),
-      view.getUint8(offset + 3)
-    );
+    const chunkStr = String.fromCharCode(...buffer.subarray(offset, offset + 4));
     const chunkSize = view.getUint32(offset + 4, isLE);
     const paddedSize = chunkSize + (chunkSize & 1);
+    const available = len - (offset + 8);
+    const actualChunkSize = available < chunkSize ? available : chunkSize;
 
-    if (offset + 8 + chunkSize > len) {
-      const available = Math.max(0, len - (offset + 8));
+    // Always use actual chunk size for parsing
+    parsedChunks.push({ id: chunkStr, offset, size: actualChunkSize });
 
+    if (actualChunkSize < chunkSize) {
       warnings.push(
         `Unexpected end of file in "${chunkStr}" chunk at byte ${offset}. ` +
-          `Expected ${chunkSize} bytes, but only ${available} byte${available !== 1 ? 's' : ''} available.`
+          `Expected ${chunkSize} bytes, but only ${actualChunkSize} byte${actualChunkSize !== 1 ? 's' : ''} available.`
       );
-
-      if (chunkStr === FMT_CHUNK) {
-        throw new Error('Incomplete "fmt " chunk — not enough bytes to parse format');
-      }
-
-      if (chunkStr === DATA_CHUNK) {
-        if (format?.formatTag === WAVE_FORMAT_IMA_ADPCM) {
-          dataChunks.push({ offset: offset + 8, size: chunkSize });
-          parsedChunks.push({ id: chunkStr, offset, size: chunkSize });
-        } else {
-          dataChunks.push({ offset: offset + 8, size: available });
-          parsedChunks.push({ id: chunkStr, offset, size: available });
-        }
-      } else {
-        unhandledChunks.push({ id: chunkStr, offset, size: available });
-        parsedChunks.push({ id: chunkStr, offset, size: available });
-      }
-
-      break;
     }
 
-    parsedChunks.push({ id: chunkStr, offset, size: chunkSize });
-
     if (chunkStr === FMT_CHUNK) {
-      if (chunkSize < 16) {
+      if (actualChunkSize < 16) {
         throw new Error('"fmt " chunk is too small (expected at least 16 bytes)');
       }
 
@@ -105,19 +84,19 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
       let extSize: number | undefined;
       let extraFields: Uint8Array | undefined;
 
-      if (chunkSize >= 18) {
+      if (actualChunkSize >= 18) {
         extSize = view.getUint16(off + 16, isLE);
         const extStart = off + 18;
-        const maxEnd = Math.min(off + chunkSize, buffer.length);
+        const maxEnd = Math.min(off + actualChunkSize, buffer.length);
 
-        if (formatTag === WAVE_FORMAT_EXTENSIBLE && extSize >= 22 && chunkSize >= 40) {
+        if (formatTag === WAVE_FORMAT_EXTENSIBLE && extSize >= 22 && actualChunkSize >= 40) {
           if (extStart + 22 <= maxEnd) {
             isExtensible = true;
             validBitsPerSample = view.getUint16(extStart, isLE);
             channelMask = view.getUint32(extStart + 2, isLE);
             subFormat = buffer.slice(extStart + 6, extStart + 22);
           }
-        } else if (formatTag === WAVE_FORMAT_IMA_ADPCM && extSize >= 2 && chunkSize >= 20) {
+        } else if (formatTag === WAVE_FORMAT_IMA_ADPCM && extSize >= 2 && actualChunkSize >= 20) {
           if (extStart + 2 <= maxEnd) {
             samplesPerBlock = view.getUint16(extStart, isLE);
           }
@@ -145,16 +124,22 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
         extraFields,
       };
     } else if (chunkStr === DATA_CHUNK) {
-      dataChunks.push({ offset: offset + 8, size: chunkSize });
+      dataChunks.push({ offset: offset + 8, size: actualChunkSize });
     } else {
-      unhandledChunks.push({ id: chunkStr, offset, size: chunkSize });
+      unhandledChunks.push({ id: chunkStr, offset, size: actualChunkSize });
     }
 
+    if (actualChunkSize < chunkSize) break;
     offset += 8 + paddedSize;
   }
 
-  if (!format) throw new Error('Missing required "fmt " chunk');
-  if (dataChunks.length === 0) warnings.push('Missing "data" chunk — no audio payload found');
+  if (!format) {
+    throw new Error('Missing required "fmt " chunk');
+  }
+
+  if (dataChunks.length === 0) {
+    warnings.push('Missing "data" chunk — no audio payload found');
+  }
 
   const dataBytes = dataChunks.reduce((n, c) => n + c.size, 0);
   const dataOffset = dataChunks[0]?.offset || 0;
@@ -168,7 +153,7 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
     totalFrames = numBlocks * format.samplesPerBlock;
   }
 
-  const totalSamples = totalFrames * (format.channels || 0);
+  const totalSamples = totalFrames * format.channels;
   const duration = format.sampleRate > 0 ? totalFrames / format.sampleRate : 0;
 
   return {

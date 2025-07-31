@@ -126,11 +126,11 @@ describe('parseWavHeader', () => {
           {
             id: 'fmt ',
             size: 16,
-            data: new Uint8Array(10),
+            data: new Uint8Array(10), // Only 10 bytes instead of 16
           },
         ],
       });
-      expect(() => parseWavHeader(buffer)).toThrow('Incomplete "fmt " chunk — not enough bytes to parse format');
+      expect(() => parseWavHeader(buffer)).toThrow('"fmt " chunk is too small (expected at least 16 bytes)');
     });
   });
 
@@ -224,12 +224,13 @@ describe('parseWavHeader', () => {
           {
             id: 'data',
             size: 100,
-            data: new Uint8Array(50),
+            data: new Uint8Array(50), // Only 50 bytes instead of 100
           },
         ],
       });
 
       const result = parseWavHeader(buffer);
+      // Expect actual available bytes (50) not declared size (100)
       expect(result.dataBytes).toBe(50);
     });
   });
@@ -271,19 +272,22 @@ describe('parseWavHeader', () => {
       const fmtData = new Uint8Array(20);
       const view = new DataView(fmtData.buffer);
 
-      view.setUint16(0, WAVE_FORMAT_IMA_ADPCM, true); // Format tag
-      view.setUint16(2, 1, true); // Channels
-      view.setUint32(4, 44100, true); // Sample rate
-      view.setUint32(8, 22050, true); // Bytes/sec
-      view.setUint16(12, 512, true); // Block align
-      view.setUint16(14, 4, true); // Bits/sample
-      view.setUint16(16, 2, true); // Extension size
-      view.setUint16(18, 505, true); // Samples per block
+      view.setUint16(0, WAVE_FORMAT_IMA_ADPCM, true);
+      view.setUint16(2, 1, true);
+      view.setUint32(4, 44100, true);
+      view.setUint32(8, 22050, true);
+      view.setUint16(12, 512, true);
+      view.setUint16(14, 4, true);
+      view.setUint16(16, 2, true);
+      view.setUint16(18, 505, true);
+
+      // Create actual data for the data chunk (1024 bytes)
+      const dataChunkData = new Uint8Array(1024);
 
       const buffer = createTestBuffer({
         chunks: [
           { id: 'fmt ', size: 20, data: fmtData },
-          { id: 'data', size: 1024 },
+          { id: 'data', size: 1024, data: dataChunkData }, // Add actual data
         ],
       });
 
@@ -291,7 +295,13 @@ describe('parseWavHeader', () => {
       expect(result.format.formatTag).toBe(WAVE_FORMAT_IMA_ADPCM);
       expect(result.format.bitsPerSample).toBe(4);
       expect(result.format.samplesPerBlock).toBe(505);
-      expect(result.totalSamples).toBeGreaterThan(0);
+
+      // Calculate expected values
+      const numBlocks = Math.floor(1024 / 512); // 1024 bytes / 512 block align
+      const totalFrames = numBlocks * 505; // 2 blocks * 505 samples/block
+      const totalSamples = totalFrames * 1; // 1010 samples * 1 channel
+
+      expect(result.totalSamples).toBe(totalSamples);
     });
   });
 

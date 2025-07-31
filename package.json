@@ -57,6 +57,10 @@
     "test": "vitest --run --reporter=verbose",
     "test:node": "vitest run --project node",
     "test:browser": "vitest run --project browser",
+    "test:chrome": "vitest run --project browser --browser=chromium",
+    "test:firefox": "vitest run --project browser --browser=firefox",
+    "test:webkit": "vitest run --project browser --browser=webkit",
+
     "bench": "pnpm bench:all",
     "bench:all": "pnpm bench:node && pnpm bench:chrome && pnpm bench:firefox && pnpm bench:webkit",
     "bench:browser": "vitest --run bench --project browser",
@@ -66,6 +70,7 @@
     "bench:webkit": "vitest bench --project=browser --browser=webkit --run --outputJson bench/bench-browser-webkit.json",
     "bench:compare": "pnpm bench:all && node scripts/compare-bench.js",
     "bench:update": "pnpm bench:all && node scripts/update-badge.js",
+
     "build": "vite build --mode lib",
     "preview": "vite build",
     "release": "pnpm build && changeset publish"
