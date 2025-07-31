@@ -3,7 +3,10 @@
     "target": "ESNext",
     "module": "ESNext",
     "lib": [
-      "ESNext"
+      "ESNext",
+      "DOM",
+      "DOM.Iterable",
+      "WebWorker"
     ],
     "moduleResolution": "bundler",
     "moduleDetection": "force",
@@ -24,7 +27,8 @@
     ]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "tests/**/*.ts",
   ],
   "exclude": [
     "node_modules",

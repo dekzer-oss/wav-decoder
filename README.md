@@ -1,7 +1,6 @@
 # @dekzer/wav-decoder
 
-![Chrome throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-browser-chrome.json)
-![Node throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-node.json)
+![Chrome Throughput Badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-browser-chrome.json)
 
 A small TypeScript/JavaScript library that progressively decodes uncompressed WAV audio as the bytes arrive. It was
 written for in‑house streaming experiments inside Dekzer, but we decided to publish the code because it may save others
@@ -116,7 +115,7 @@ Each demo is standalone—just "view source" for a ready-made starter.
 |------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **constructor()**                              | Allocates internal ring-buffer (default 64 KiB).                                                                                                                                       |
 | **decode(chunk: Uint8Array): DecodedWavAudio** | Feed arbitrary-sized data. Returns samples (may be zero) and non-fatal error list.                                                                                                     |
-| **decodeFrames(chunkAlignedToBlock)**          | Same as `decode`, but *requires* that `chunk.length % format.blockSize === 0` for maximum throughput.                                                                                  |
+| **decodeFrames(chunkAlignedToBlock)**          | Same as `decode`, but *requires* that `chunk.length % format.blockAlign === 0` for maximum throughput.                                                                                  |
 | **decodeFrame(frame)**                         | Decodes *one* interleaved frame and returns a `Float32Array` with `channels` elements, or `null` if the frame is incomplete. Used in performance-critical code paths (see benchmarks). |
 | **flush()**                                    | Drains any remaining bytes (including a partial final block). Useful when the decodeStream closes.                                                                                           |
 | **reset()**                                    | Clears internal state so the instance can be re-used.                                                                                                                                  |
@@ -139,7 +138,7 @@ interface DecodedWavAudio {
 | Field          | Notes                                                                                                   |
 |----------------|---------------------------------------------------------------------------------------------------------|
 | `state`        | `DecoderState.IDLE \| DECODING \| ENDED \| ERROR`.                                                      |
-| `format`       | Populated after the `fmt ` chunk is parsed: `{ formatTag, channels, sampleRate, bitDepth, blockSize }`. |
+| `format`       | Populated after the `fmt ` chunk is parsed: `{ formatTag, channels, sampleRate, bitsPerSample, blockAlign }`. |
 | `decodedBytes` | Total bytes written into PCM output so far.                                                             |
 | `progress`     | Fraction 0–1 based on WAV `data` chunk size (falls back to `NaN` if size unknown).                      |
 | `errors`       | Array of the last few `DecodeError`s; a *fatal* error switches `state` to `ERROR`.                      |

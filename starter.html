@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WAV Decoder – Starter Demo</title>
-    <link rel="icon" href="public/favicon/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="public/favicon.svg" type="image/svg+xml" />
     <style>
       :root {
         --bg: #f8fafc;
@@ -152,6 +152,22 @@
     <script type="module">
       import { WavDecoder } from './dist/index.js';
 
+      let logThreshold = 0;
+      const STEP = 500_000;
+
+      function maybeLog(decoder, newlyDecoded, runningTotal, elapsed) {
+        if (runningTotal + newlyDecoded >= logThreshold) {
+          console.log(decoder);
+          console.table({
+            'Progress %': (decoder.progress * 100).toFixed(1),
+            'Newly Decoded': `${newlyDecoded.toLocaleString()} samples`,
+            'Total Decoded': `${(runningTotal + newlyDecoded).toLocaleString()} samples`,
+            'Elapsed Time': `${elapsed.toFixed(1)}s`
+          });
+          logThreshold += STEP;
+        }
+      }
+
       const els = {
         drop: document.getElementById('uploadZone'),
         input: document.getElementById('fileInput'),
@@ -270,7 +286,8 @@
           const elapsed = (performance.now() - state.startTime) / 1000;
           els.bytes.textContent = formatBytes(info.decodedBytes);
           els.samples.textContent = (runningTotal + newlyDecoded).toLocaleString();
-          if (elapsed > 0) els.speed.textContent = formatSpeed(info.decodedBytes / elapsed);
+          els.speed.textContent = formatSpeed(info.decodedBytes / elapsed);
+          maybeLog(decoder, newlyDecoded, runningTotal, elapsed);
         }
 
         function markTTFA() {

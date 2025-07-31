@@ -7,7 +7,7 @@
  * quality and file size. The type also accepts any custom
  * numerical values.
  */
-export type WavBitDepth = 8 | 16 | 24 | 32 | 64 | (number & {});
+export type BitsPerSample = 4 | 8 | 16 | 24 | 32 | 64 | (number & {});
 
 /**
  * Represents various WAVE file format tags, commonly used to identify the
@@ -66,7 +66,7 @@ export const WavFormatTagNames = {
  *
  * Custom sample rates outside of these predefined values can also be used, represented as any valid number.
  */
-export type WavSampleRate =
+export type CommonSampleRate =
   | 8000
   | 11025
   | 16000
@@ -126,17 +126,17 @@ export interface DecodeError {
  * including its metadata and audio content.
  *
  * Properties:
- * - `bitDepth`: The number of bits used to represent each audio sample.
+ * - `bitsPerSample`: The number of bits used to represent each audio sample.
  * - `channelData`: An array containing Float32Array objects where each array represents the audio data for a channel.
  * - `errors`: An array of decoding errors, if any, encountered during the decoding process.
  * - `sampleRate`: The number of samples per second of the audio (hertz).
  * - `samplesDecoded`: The total number of audio samples decoded from the file.
  */
 export interface DecodedWavAudio {
-  bitDepth: WavBitDepth;
+  bitsPerSample: BitsPerSample;
   channelData: Float32Array[];
   errors: DecodeError[];
-  sampleRate: WavSampleRate;
+  sampleRate: CommonSampleRate;
   samplesDecoded: number;
 }
 
@@ -212,7 +212,7 @@ export interface WavDecoderInfo {
 /**
  * Interface representing a WAV decoder for handling audio data.
  */
-export interface WavDecoderInterface {
+export interface AudioDecoder {
   decode(chunk: Uint8Array): DecodedWavAudio;
   decodeFrame(frame: Uint8Array): Float32Array | null; // todo: refactor to return Float32Array (not null)
   decodeFrames(frames: Uint8Array): DecodedWavAudio; // todo: refactor to accept Uint8Array[]
@@ -228,8 +228,8 @@ export interface WavDecoderInterface {
  * and properties of a WAV file.
  *
  * Properties:
- * - `bitDepth`: Specifies the number of bits used to represent each sample (e.g., 16, 24, 32 bits).
- * - `blockSize`: Defines the size in bytes of each block of audio data.
+ * - `bitsPerSample`: Specifies the number of bits used to represent each sample (e.g., 16, 24, 32 bits).
+ * - `blockAlign`: Defines the size in bytes of each block of audio data.
  * - `bytesPerSecond`: Indicates the average number of bytes processed per second of audio.
  * - `channels`: Number of audio channels (e.g., 1 for mono, 2 for stereo).
  * - `samplesPerBlock`: Specifies the number of audio samples contained in each block of data.
@@ -241,15 +241,36 @@ export interface WavDecoderInterface {
  * - `validBitsPerSample`: (Optional) Indicates the number of valid bits used per sample, useful in certain extended formats.
  */
 export interface WavFormat {
-  bitDepth: WavBitDepth;
-  blockSize: number;
+  bitsPerSample: number;
+  blockAlign: number;
   bytesPerSecond: number;
   channels: number;
+  formatTag: number;
+  sampleRate: number;
   samplesPerBlock?: number;
   channelMask?: number;
   extensionSize?: number;
-  formatTag: WavFormatTag;
-  sampleRate: WavSampleRate;
   subFormat?: Uint8Array;
   validBitsPerSample?: number;
+  extSize?: number;
+  extraFields?: Uint8Array;
+}
+
+export interface DataChunk {
+  offset: number;
+  size: number;
+}
+
+export interface WavHeaderParserResult {
+  format: WavFormat;
+  isExtensible: boolean;
+  dataBytes: number;
+  dataOffset: number;
+  dataChunks: DataChunk[];
+  parsedChunks: ChunkInfo[];
+  unhandledChunks: ChunkInfo[];
+  totalSamples: number;
+  totalFrames: number;
+  duration: number;
+  warnings: string[];
 }

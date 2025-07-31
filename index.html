@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>WAV Decoder - Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <script src="//cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <style>
       html {
@@ -68,7 +68,7 @@
 <div class="max-w-4xl mx-auto py-4 px-3 md:py-4 md:px-6">
   <main>
     <div class="text-center mb-6">
-      <img src="/favicon/favicon.svg" alt="Logo" class="max-w-full h-24 mx-auto mb-4" />
+      <img src="/favicon.svg" alt="Logo" class="max-w-full h-24 mx-auto mb-4" />
       <div>
         <h1 class="text-xl font-bold mb-2">WAV Decoder — Demo</h1>
         <p class="text-gray-600 dark:text-gray-400 text-balance max-w-lg mx-auto">
@@ -213,7 +213,7 @@
             <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Bit Depth
             </div>
-            <div id="bitDepth" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
+            <div id="bitsPerSample" class="font-semibold text-gray-800 dark:text-gray-200 mt-1">-</div>
           </div>
           <div class="spec-item bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700">
             <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Duration</div>
@@ -276,7 +276,7 @@
       entry.className = `mb-1 ${colorMap[level] || colorMap.info}`;
       entry.textContent = `[${timestamp}] ${message}`;
       this.container.appendChild(entry);
-      this.container.scrollTop = this.container.scrollHeight; // Auto-scroll to bottom
+      this.container.scrollTop = this.container.scrollHeight;
     }
   }
 
@@ -341,7 +341,7 @@
         'format',
         'sampleRate',
         'channels',
-        'bitDepth',
+        'bitsPerSample',
         'duration',
         'logs',
         'autoplay',
@@ -443,7 +443,7 @@
         'format',
         'sampleRate',
         'channels',
-        'bitDepth',
+        'bitsPerSample',
         'duration',
       ];
       displayElements.forEach((id) => {
@@ -470,10 +470,11 @@
     }
 
     updateAudioInfo(format, estimatedSamples) {
+      console.log('Updating audio info:', format, estimatedSamples);
       this.elements.format.textContent = WavFormatTagNames[format.formatTag] || `Unknown (${format.formatTag})`;
       this.elements.sampleRate.textContent = `${format.sampleRate.toLocaleString()} Hz`;
       this.elements.channels.textContent = format.channels;
-      this.elements.bitDepth.textContent = `${format.bitDepth}-bit`;
+      this.elements.bitsPerSample.textContent = `${format.bitsPerSample}-bit`;
       if (estimatedSamples > 0 && format.sampleRate > 0) {
         const durationSeconds = estimatedSamples / format.sampleRate;
         this.elements.duration.textContent = formatTime(durationSeconds);
@@ -566,7 +567,7 @@
       let lastProgressUpdate = performance.now();
 
       const updateProgressUI = () => {
-        this.updateProgress(this.decoder.progress);
+        this.updateProgress(this.decoder.info.progress);
         this.updateMetrics(this.decoder.info, totalSamplesDecoded);
       };
 
@@ -622,7 +623,7 @@
             if (!hasAudioFormatInfo && decoderInfo.format.sampleRate) {
               this.updateAudioInfo(decoderInfo.format, this.decoder.estimatedSamples);
               this.logger.log(
-                `Audio Format: ${decoderInfo.format.channels}ch, ${decoderInfo.format.sampleRate}Hz, ${decoderInfo.format.bitDepth}-bit`,
+                `Audio Format: ${decoderInfo.format.channels}ch, ${decoderInfo.format.sampleRate}Hz, ${decoderInfo.format.bitsPerSample}-bit`,
                 'info',
               );
               hasAudioFormatInfo = true;
@@ -641,7 +642,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     try {
-      const app = new App();
+      new App();
     } catch (err) {
       console.error('Application initialization failed:', err);
     }

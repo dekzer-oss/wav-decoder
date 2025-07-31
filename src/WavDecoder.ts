@@ -4,7 +4,7 @@ import {
   type DecodeError,
   type DecoderOptions,
   DecoderState,
-  type WavDecoderInterface,
+  type AudioDecoder,
   type WavFormat,
 } from './types';
 import { RingBuffer } from './RingBuffer';
@@ -253,7 +253,7 @@ const MULAW_TABLE = (() => {
   return table;
 })();
 
-export class WavDecoder implements WavDecoderInterface {
+export class WavDecoder implements AudioDecoder {
   private static readonly MAX_BUFFER_SIZE = 16 * 1024 * 1024;
   private static readonly MAX_CHANNELS = 32;
   private static readonly MAX_HEADER_SIZE = 2 * 1024 * 1024;
@@ -292,12 +292,12 @@ export class WavDecoder implements WavDecoderInterface {
 
   public get estimatedSamples(): number {
     if (this.factChunkSamples > 0) return this.factChunkSamples;
-    if (this.totalBytes > 0 && this.format.blockSize > 0) {
+    if (this.totalBytes > 0 && this.format.blockAlign > 0) {
       if (this.formatTag === WAVE_FORMAT_IMA_ADPCM) {
-        const blocks = Math.floor(this.totalBytes / this.format.blockSize);
+        const blocks = Math.floor(this.totalBytes / this.format.blockAlign);
         return blocks * (this.format.samplesPerBlock ?? 0);
       }
-      return Math.floor(this.totalBytes / this.format.blockSize);
+      return Math.floor(this.totalBytes / this.format.blockAlign);
     }
     return 0;
   }
@@ -352,7 +352,7 @@ export class WavDecoder implements WavDecoderInterface {
           return this.createEmptyResult();
         } else if (this.state === DecoderState.ERROR) {
           return {
-            bitDepth: this.format.bitDepth,
+            bitsPerSample: this.format.bitsPerSample,
             channelData: [],
             errors: [...this.errors],
             sampleRate: 0,
@@ -375,19 +375,19 @@ export class WavDecoder implements WavDecoderInterface {
   }
 
   public decodeFrame(frame: Uint8Array): Float32Array | null {
-    if (this.state !== DecoderState.DECODING || frame.length !== this.format.blockSize) {
+    if (this.state !== DecoderState.DECODING || frame.length !== this.format.blockAlign) {
       return null;
     }
     if (this.formatTag === WAVE_FORMAT_IMA_ADPCM) {
       return null;
     }
-    const { channels, bitDepth } = this.format;
+    const { channels, bitsPerSample } = this.format;
     const output = new Float32Array(channels);
     const view = new DataView(frame.buffer, frame.byteOffset, frame.length);
-    const bytesPerSample = bitDepth / 8;
+    const bytesPerSample = bitsPerSample / 8;
     for (let ch = 0; ch < channels; ch++) {
       const offset = ch * bytesPerSample;
-      output[ch] = this.readSample(view, offset, bitDepth, this.formatTag);
+      output[ch] = this.readSample(view, offset, bitsPerSample, this.formatTag);
     }
     return output;
   }
@@ -399,8 +399,8 @@ export class WavDecoder implements WavDecoderInterface {
     if (frames.length === 0) {
       return this.createEmptyResult();
     }
-    if (this.format.blockSize <= 0 || frames.length % this.format.blockSize !== 0) {
-      return this.createErrorResult('Data for decodeFrames must be a multiple of the `frameLength` (blockSize).');
+    if (this.format.blockAlign <= 0 || frames.length % this.format.blockAlign !== 0) {
+      return this.createErrorResult('Data for decodeFrames must be a multiple of the `frameLength` (blockAlign).');
     }
     try {
       const decoded = this.decodeInterleavedFrames(frames);
@@ -435,7 +435,7 @@ export class WavDecoder implements WavDecoderInterface {
       return { ...result, errors: finalErrors };
     } else {
       return {
-        bitDepth: this.format.bitDepth || 0,
+        bitsPerSample: this.format.bitsPerSample || 0,
         channelData: [],
         errors: finalErrors,
         sampleRate: this.format.sampleRate || 0,
@@ -493,7 +493,7 @@ export class WavDecoder implements WavDecoderInterface {
   }
 
   private createError(message: string): DecodeError {
-    const blockSize = this.format.blockSize ?? 0;
+    const blockSize = this.format.blockAlign ?? 0;
     const error = { ...this.errorTemplate };
     error.frameLength = blockSize;
     error.frameNumber = blockSize > 0 ? Math.floor(this.decodedBytes / blockSize) : 0;
@@ -507,7 +507,7 @@ export class WavDecoder implements WavDecoderInterface {
     const errors = [...this.errors];
     this.errors.length = 0;
     return {
-      bitDepth: this.format.bitDepth,
+      bitsPerSample: this.format.bitsPerSample,
       channelData: [],
       errors,
       sampleRate: this.format.sampleRate,
@@ -575,7 +575,7 @@ export class WavDecoder implements WavDecoderInterface {
 
   private decodeCompressed(view: DataView, samples: number): void {
     const numChannels = this.format.channels;
-    const blockSize = this.format.blockSize;
+    const blockSize = this.format.blockAlign;
     const table = this.formatTag === WAVE_FORMAT_ALAW ? ALAW_TABLE : MULAW_TABLE;
     const src = new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
 
@@ -590,7 +590,7 @@ export class WavDecoder implements WavDecoderInterface {
 
   private decodeFloat(view: DataView, samples: number, bps: number, bitsPerSample: number): void {
     const numChannels = this.format.channels;
-    const blockSize = this.format.blockSize;
+    const blockSize = this.format.blockAlign;
     const is64Bit = bitsPerSample === 64;
 
     for (let i = 0; i < samples; i++) {
@@ -650,7 +650,7 @@ export class WavDecoder implements WavDecoderInterface {
   }
 
   private decodeInterleavedFrames(frames: Uint8Array): DecodedWavAudio {
-    const { blockSize, channels, sampleRate, bitDepth } = this.format;
+    const { blockAlign, channels, sampleRate, bitsPerSample } = this.format;
     let samplesDecoded: number;
     const bps = this.bytesPerSample;
 
@@ -659,9 +659,9 @@ export class WavDecoder implements WavDecoderInterface {
       if (!samplesPerBlock) {
         return this.createErrorResult('Missing samplesPerBlock for IMA ADPCM');
       }
-      samplesDecoded = (frames.length / blockSize) * samplesPerBlock;
+      samplesDecoded = (frames.length / blockAlign) * samplesPerBlock;
     } else {
-      samplesDecoded = frames.length / blockSize;
+      samplesDecoded = frames.length / blockAlign;
     }
 
     this.initChannelData(channels, samplesDecoded);
@@ -670,21 +670,21 @@ export class WavDecoder implements WavDecoderInterface {
 
     switch (this.formatTag) {
       case WAVE_FORMAT_PCM: {
-        if (channels === 1 && bitDepth === 8) this.decodePCM8Mono(view, samplesDecoded);
-        else if (channels === 2 && bitDepth === 8) this.decodePCM8Stereo(view, samplesDecoded);
-        else if (channels === 1 && bitDepth === 16) this.decodePCM16Mono(view, samplesDecoded);
-        else if (channels === 2 && bitDepth === 16) this.decodePCM16Stereo(view, samplesDecoded);
-        else if (channels === 1 && bitDepth === 24) this.decodePCM24Mono(view, samplesDecoded);
-        else if (channels === 2 && bitDepth === 24) this.decodePCM24Stereo(view, samplesDecoded);
-        else if (channels === 1 && bitDepth === 32) this.decodePCM32Mono(view, samplesDecoded);
-        else if (channels === 2 && bitDepth === 32) this.decodePCM32Stereo(view, samplesDecoded);
-        else this.decodeGenericPCM(view, samplesDecoded, bps, bitDepth);
+        if (channels === 1 && bitsPerSample === 8) this.decodePCM8Mono(view, samplesDecoded);
+        else if (channels === 2 && bitsPerSample === 8) this.decodePCM8Stereo(view, samplesDecoded);
+        else if (channels === 1 && bitsPerSample === 16) this.decodePCM16Mono(view, samplesDecoded);
+        else if (channels === 2 && bitsPerSample === 16) this.decodePCM16Stereo(view, samplesDecoded);
+        else if (channels === 1 && bitsPerSample === 24) this.decodePCM24Mono(view, samplesDecoded);
+        else if (channels === 2 && bitsPerSample === 24) this.decodePCM24Stereo(view, samplesDecoded);
+        else if (channels === 1 && bitsPerSample === 32) this.decodePCM32Mono(view, samplesDecoded);
+        else if (channels === 2 && bitsPerSample === 32) this.decodePCM32Stereo(view, samplesDecoded);
+        else this.decodeGenericPCM(view, samplesDecoded, bps, bitsPerSample);
         break;
       }
       case WAVE_FORMAT_IEEE_FLOAT: {
-        if (channels === 1 && bitDepth === 32) this.decodeFloat32Mono(view, samplesDecoded);
-        else if (channels === 2 && bitDepth === 32) this.decodeFloat32Stereo(view, samplesDecoded);
-        else this.decodeFloat(view, samplesDecoded, bps, bitDepth);
+        if (channels === 1 && bitsPerSample === 32) this.decodeFloat32Mono(view, samplesDecoded);
+        else if (channels === 2 && bitsPerSample === 32) this.decodeFloat32Stereo(view, samplesDecoded);
+        else this.decodeFloat(view, samplesDecoded, bps, bitsPerSample);
         break;
       }
       case WAVE_FORMAT_ALAW:
@@ -694,10 +694,10 @@ export class WavDecoder implements WavDecoderInterface {
       }
       case WAVE_FORMAT_IMA_ADPCM: {
         const { samplesPerBlock } = this.format;
-        const numBlocks = frames.length / blockSize;
+        const numBlocks = frames.length / blockAlign;
 
         for (let block = 0; block < numBlocks; block++) {
-          const blockOffset = block * blockSize;
+          const blockOffset = block * blockAlign;
           const headers: { predictor: number; stepIndex: number }[] = [];
           let headerOffset = blockOffset;
 
@@ -712,7 +712,7 @@ export class WavDecoder implements WavDecoderInterface {
           const compressedData = new Uint8Array(
             frames.buffer,
             frames.byteOffset + headerOffset,
-            blockSize - 4 * channels
+            blockAlign - 4 * channels
           );
 
           this.decodeImaAdpcmBlock(compressedData, headers, samplesPerBlock!, channels, block * samplesPerBlock!);
@@ -723,14 +723,14 @@ export class WavDecoder implements WavDecoderInterface {
         this.channelData.forEach((arr) => arr.fill(0));
     }
 
-    const outputBitDepth = this.formatTag === WAVE_FORMAT_IMA_ADPCM ? 16 : this.format.bitDepth;
+    const outputBitDepth = this.formatTag === WAVE_FORMAT_IMA_ADPCM ? 16 : this.format.bitsPerSample;
     const channelData = this.channelData.map((arr) => arr.subarray(0, samplesDecoded));
 
     const errors = [...this.errors];
     this.errors.length = 0;
 
     return {
-      bitDepth: outputBitDepth,
+      bitsPerSample: outputBitDepth,
       channelData,
       errors,
       sampleRate,
@@ -871,8 +871,8 @@ export class WavDecoder implements WavDecoderInterface {
     }
 
     this.format = {
-      bitDepth: view.getUint16(offset + 14, this.isLittleEndian),
-      blockSize: view.getUint16(offset + 12, this.isLittleEndian),
+      bitsPerSample: view.getUint16(offset + 14, this.isLittleEndian),
+      blockAlign: view.getUint16(offset + 12, this.isLittleEndian),
       bytesPerSecond: view.getUint32(offset + 8, this.isLittleEndian),
       channels: view.getUint16(offset + 2, this.isLittleEndian),
       formatTag: view.getUint16(offset, this.isLittleEndian),
@@ -898,17 +898,17 @@ export class WavDecoder implements WavDecoderInterface {
         }
       }
     } else {
-      this.bytesPerSample = this.format.bitDepth / 8;
+      this.bytesPerSample = this.format.bitsPerSample / 8;
     }
   }
 
   private processBufferedBlocks(): DecodedWavAudio {
-    const { blockSize } = this.format;
-    if (this.state !== DecoderState.DECODING || !blockSize || this.ringBuffer.available < blockSize)
+    const { blockAlign } = this.format;
+    if (this.state !== DecoderState.DECODING || !blockAlign || this.ringBuffer.available < blockAlign)
       return this.createEmptyResult();
 
-    const blocks = Math.floor(this.ringBuffer.available / blockSize);
-    const bytes = blocks * blockSize;
+    const blocks = Math.floor(this.ringBuffer.available / blockAlign);
+    const bytes = blocks * blockAlign;
 
     const tail = this.ringBuffer.peekContiguous();
     if (tail.length >= bytes) {
@@ -1084,7 +1084,7 @@ export class WavDecoder implements WavDecoderInterface {
   }
 
   private validateFormat(): boolean {
-    if (this.format.bitDepth === 0 || this.format.channels === 0 || this.format.sampleRate === 0) {
+    if (this.format.bitsPerSample === 0 || this.format.channels === 0 || this.format.sampleRate === 0) {
       this.errors.push(this.createError('Invalid format: zero values in required fields'));
       return false;
     }
@@ -1104,9 +1104,9 @@ export class WavDecoder implements WavDecoderInterface {
     }
 
     const validBitDepths = this.getValidBitDepths(this.formatTag);
-    if (!validBitDepths.includes(this.format.bitDepth)) {
+    if (!validBitDepths.includes(this.format.bitsPerSample)) {
       this.errors.push(
-        this.createError(`Invalid bit depth: ${this.format.bitDepth} for format 0x${this.formatTag.toString(16)}`)
+        this.createError(`Invalid bit depth: ${this.format.bitsPerSample} for format 0x${this.formatTag.toString(16)}`)
       );
       return false;
     }
@@ -1119,16 +1119,16 @@ export class WavDecoder implements WavDecoderInterface {
 
       const { channels, samplesPerBlock } = this.format;
       const expectedBlockSize = 4 * channels + Math.ceil(((samplesPerBlock - 1) * channels) / 2);
-      if (this.format.blockSize !== expectedBlockSize) {
+      if (this.format.blockAlign !== expectedBlockSize) {
         this.errors.push(
           this.createError(
-            `Corrected invalid blockAlign for IMA ADPCM: was ${this.format.blockSize}, now ${expectedBlockSize}`
+            `Corrected invalid blockAlign for IMA ADPCM: was ${this.format.blockAlign}, now ${expectedBlockSize}`
           )
         );
-        this.format.blockSize = expectedBlockSize;
+        this.format.blockAlign = expectedBlockSize;
       }
 
-      const expectedByteRate = Math.ceil((this.format.sampleRate * this.format.blockSize) / samplesPerBlock);
+      const expectedByteRate = Math.ceil((this.format.sampleRate * this.format.blockAlign) / samplesPerBlock);
       if (this.format.bytesPerSecond !== expectedByteRate) {
         this.errors.push(
           this.createError(
@@ -1138,17 +1138,17 @@ export class WavDecoder implements WavDecoderInterface {
         this.format.bytesPerSecond = expectedByteRate;
       }
     } else {
-      const expectedBlockAlign = (this.format.bitDepth / 8) * this.format.channels;
-      if (this.format.blockSize !== expectedBlockAlign && expectedBlockAlign > 0) {
+      const expectedBlockAlign = (this.format.bitsPerSample / 8) * this.format.channels;
+      if (this.format.blockAlign !== expectedBlockAlign && expectedBlockAlign > 0) {
         this.errors.push(
           this.createError(
-            `Corrected invalid blockAlign: header value was ${this.format.blockSize}, but is now ${expectedBlockAlign}`
+            `Corrected invalid blockAlign: header value was ${this.format.blockAlign}, but is now ${expectedBlockAlign}`
           )
         );
-        this.format.blockSize = expectedBlockAlign;
+        this.format.blockAlign = expectedBlockAlign;
       }
 
-      const expectedByteRate = this.format.sampleRate * this.format.blockSize;
+      const expectedByteRate = this.format.sampleRate * this.format.blockAlign;
       if (this.format.bytesPerSecond !== expectedByteRate && expectedByteRate > 0) {
         this.errors.push(
           this.createError(

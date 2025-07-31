@@ -1,6 +1,6 @@
 {
   "name": "@dekzer/wav-decoder",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.0",
   "description": "A robust, streaming-capable WAV audio decoder with full PCM, float, A-law, and µ-law support — zero dependencies, works in browsers and Node.js.",
   "author": "Maikel Eckelboom",
   "license": "MIT",
@@ -66,20 +66,23 @@
     "bench:webkit": "vitest bench --project=browser --browser=webkit --run --outputJson bench/bench-browser-webkit.json",
     "bench:compare": "pnpm bench:all && node scripts/compare-bench.js",
     "bench:update": "pnpm bench:all && node scripts/update-badge.js",
-    "build": "tsup",
+    "build": "vite build --mode lib",
+    "preview": "vite build",
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "@playwright/test": "^1.53.1",
+    "@rollup/plugin-json": "^6.1.0",
     "@types/node": "^24.0.5",
     "@vitest/browser": "4.0.0-beta.5",
     "fast-glob": "^3.3.3",
     "happy-dom": "^18.0.1",
     "prettier": "^3.6.2",
-    "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "vite": "^7.0.0",
-    "vitest": "4.0.0-beta.5"
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "4.0.0-beta.5",
+    "wavefile": "^11.0.0"
   }
 }

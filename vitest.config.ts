@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     projects: [
       {
+        extends: './vite.config.ts',
         test: {
           name: 'node',
           environment: 'node',
@@ -12,12 +13,11 @@ export default defineConfig({
         },
       },
       {
+        extends: './vite.config.ts',
         test: {
           name: 'browser',
           environment: 'happy-dom',
           globals: true,
-          hookTimeout: 120_000,
-          testTimeout: 60_000,
           include: ['tests/**/*.test.ts'],
           browser: {
             enabled: true,
