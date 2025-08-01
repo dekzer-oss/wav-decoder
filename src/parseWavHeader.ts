@@ -51,10 +51,10 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
     }
   }
 
-  const fileSize = view.getUint32(4, isLittleEndian);
-  if (fileSize + 8 !== len) {
-    warnings.push(`Declared file size (${fileSize + 8} bytes) does not match actual buffer size (${len} bytes)`);
-  }
+  // const fileSize = view.getUint32(4, isLittleEndian);
+  // if (fileSize + 8 !== len) {
+  //   warnings.push(`Declared file size (${fileSize + 8} bytes) does not match actual buffer size (${len} bytes)`);
+  // }
 
   const waveStr = String.fromCharCode(...buffer.subarray(8, 12));
   if (waveStr !== WAVE_SIGNATURE) {

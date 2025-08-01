@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { WavDecoder } from '../src/WavDecoder';
+import { WavDecoder, DecoderState } from '../src';
 import { fixtureKeys, fixtureProperties } from './fixtures';
 import { loadFixture } from './fixtures/helpers';
-import { DecoderState } from '../src';
 
 const loadedFixtures = new Map<string, Uint8Array>();
 
@@ -20,17 +19,14 @@ describe('WavDecoder', () => {
     const decoder = new WavDecoder();
     const result = decoder.decode(wav!);
 
-    // Basic structure checks
     expect(result.errors).toEqual([]);
     expect(decoder.info.state).toBe(DecoderState.DECODING);
 
-    // Format field checks
     expect(decoder.info.format.channels).toBe(expected.channels);
     expect(decoder.info.format.sampleRate).toBe(expected.sampleRate);
     expect(decoder.info.format.bitsPerSample).toBe(expected.bitDepth);
     expect(decoder.info.format.formatTag).toBe(expected.formatTag);
 
-    // Audio shape checks
     expect(result.channelData.length).toBe(expected.channels);
     for (let i = 0; i < result.channelData.length; i++) {
       expect(result.channelData[i]?.length).toBe(expected.samplesPerChannel);

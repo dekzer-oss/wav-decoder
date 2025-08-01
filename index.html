@@ -235,7 +235,7 @@
   </main>
 </div>
 <script type="module">
-  import { WavDecoder, WavFormatTagNames } from './dist/index.js';
+  import { WavDecoder, WavFormatTagNames } from './src';
 
   const formatBytes = (bytes) => {
     if (bytes === 0) return '0 bytes';
@@ -470,15 +470,10 @@
     }
 
     updateAudioInfo(format, estimatedSamples) {
-      console.log('Updating audio info:', format, estimatedSamples);
       this.elements.format.textContent = WavFormatTagNames[format.formatTag] || `Unknown (${format.formatTag})`;
       this.elements.sampleRate.textContent = `${format.sampleRate.toLocaleString()} Hz`;
       this.elements.channels.textContent = format.channels;
       this.elements.bitsPerSample.textContent = `${format.bitsPerSample}-bit`;
-      if (estimatedSamples > 0 && format.sampleRate > 0) {
-        const durationSeconds = estimatedSamples / format.sampleRate;
-        this.elements.duration.textContent = formatTime(durationSeconds);
-      }
     }
 
     enqueuePlayback(channelData, sampleRate) {
@@ -567,8 +562,24 @@
       let lastProgressUpdate = performance.now();
 
       const updateProgressUI = () => {
-        this.updateProgress(this.decoder.info.progress);
+        this.updateProgress(this.decoder.progress);
         this.updateMetrics(this.decoder.info, totalSamplesDecoded);
+
+        // console.log({
+        //   channels: this.decoder.format.channels,
+        //   bitsPerSample: this.decoder.format.bitsPerSample,
+        //   sampleRate: this.decoder.format.sampleRate,
+        //   blockAlign: this.decoder.format.blockAlign,
+        //   totalBytes: this.decoder.totalBytes,
+        //   factChunkSamples: this.decoder.format.factChunkSamples,
+        //   totalFrames: this.decoder.totalFrames,
+        //   duration: this.decoder.totalDuration,
+        //   progress: this.decoder.progress,
+        //   decodedBytes: this.decoder.info.decodedBytes,
+        //   errors: this.decoder.info.errors,
+        //   formatTag: this.decoder.info.format.formatTag,
+        // });
+
       };
 
       while (true) {
@@ -621,7 +632,13 @@
             }
 
             if (!hasAudioFormatInfo && decoderInfo.format.sampleRate) {
-              this.updateAudioInfo(decoderInfo.format, this.decoder.estimatedSamples);
+
+              if (this.decoder.totalFrames > 0 && this.decoder.format.channels > 0 && this.decoder.format.sampleRate > 0) {
+                const durationSeconds = this.decoder.totalFrames / (this.decoder.format.channels * this.decoder.format.sampleRate);
+                this.elements.duration.textContent = formatTime(durationSeconds);
+              }
+
+              this.updateAudioInfo(decoderInfo.format, this.decoder.totalFrames);
               this.logger.log(
                 `Audio Format: ${decoderInfo.format.channels}ch, ${decoderInfo.format.sampleRate}Hz, ${decoderInfo.format.bitsPerSample}-bit`,
                 'info',

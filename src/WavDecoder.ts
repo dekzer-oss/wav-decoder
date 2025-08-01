@@ -25,21 +25,21 @@ import {
 } from './utils/decode-fns.ts';
 import {
   ALAW_TABLE,
-  INV_128,
-  INV_32768,
-  INV_8388608,
-  INV_2147483648,
   IMA_INDEX_ADJUST_TABLE,
   IMA_STEP_TABLE,
+  INV_128,
+  INV_2147483648,
+  INV_32768,
+  INV_8388608,
   KSDATAFORMAT_SUBTYPE_IEEE_FLOAT,
   KSDATAFORMAT_SUBTYPE_PCM,
   MULAW_TABLE,
-  WAVE_FORMAT_IMA_ADPCM,
-  WAVE_FORMAT_PCM,
-  WAVE_FORMAT_IEEE_FLOAT,
   WAVE_FORMAT_ALAW,
-  WAVE_FORMAT_MULAW,
   WAVE_FORMAT_EXTENSIBLE,
+  WAVE_FORMAT_IEEE_FLOAT,
+  WAVE_FORMAT_IMA_ADPCM,
+  WAVE_FORMAT_MULAW,
+  WAVE_FORMAT_PCM,
 } from './constants';
 
 interface ErrorWarningCollector {
@@ -59,7 +59,7 @@ export class WavDecoder implements AudioDecoder {
   private static readonly MAX_CHANNELS = 32;
   private static readonly MAX_HEADER_SIZE = 2 * 1024 * 1024;
   private static readonly MAX_SAMPLE_RATE = 384000;
-  private static readonly DEFAULT_HISTORY_SIZE = 1000;
+  private static readonly DEFAULT_HISTORY_SIZE = 0;
 
   private state = DecoderState.IDLE;
   private format: ExtendedWavFormat = {} as ExtendedWavFormat;
@@ -119,12 +119,15 @@ export class WavDecoder implements AudioDecoder {
   }
 
   get totalDuration(): number {
-    return this.estimatedSamples / (this.format.sampleRate || 1);
+    if (!this.format?.sampleRate || this.format.sampleRate <= 0) return 0;
+    return this.totalFrames / this.format.sampleRate;
   }
 
-  get estimatedSamples(): number {
-    if (this.format.factChunkSamples > 0) return this.format.factChunkSamples;
-    if (this.totalBytes > 0 && this.format.blockAlign > 0) {
+  get totalFrames(): number {
+    if (this.format?.factChunkSamples > 0) {
+      return this.format.factChunkSamples;
+    }
+    if (this.totalBytes > 0 && this.format?.blockAlign > 0) {
       if (this.format.resolvedFormatTag === WAVE_FORMAT_IMA_ADPCM) {
         const blocks = Math.floor(this.totalBytes / this.format.blockAlign);
         return blocks * (this.format.samplesPerBlock ?? 0);
@@ -275,7 +278,6 @@ export class WavDecoder implements AudioDecoder {
       return this.createEmptyResult();
     }
 
-    // Clear current errors/warnings to ensure flush only returns errors from this operation
     this.clearCurrentErrorsAndWarnings();
 
     const result = this.processBufferedBlocks();
@@ -411,7 +413,7 @@ export class WavDecoder implements AudioDecoder {
       frameLength: blockSize,
       frameNumber: blockSize > 0 ? Math.floor(this.decodedBytes / blockSize) : 0,
       inputBytes: this.decodedBytes,
-      outputSamples: this.estimatedSamples,
+      outputSamples: this.totalFrames,
     };
     this.currentErrors.push(error);
     this.addToHistory(this._errorHistory, error);
@@ -486,14 +488,14 @@ export class WavDecoder implements AudioDecoder {
       this.format = {
         ...result.format,
         factChunkSamples: 0,
-        dataChunks: result.dataChunks || [],
+        dataChunks: result.dataChunks,
         isLittleEndian: result.isLittleEndian,
         resolvedFormatTag: result.format.formatTag,
         bytesPerSample: 0,
       };
 
-      this.parsedChunks = result.parsedChunks || [];
-      this.unhandledChunks = result.unhandledChunks || [];
+      this.parsedChunks = result.parsedChunks;
+      this.unhandledChunks = result.unhandledChunks;
 
       if (this.format.formatTag === WAVE_FORMAT_EXTENSIBLE) {
         this.format.resolvedFormatTag = this.resolveExtensibleFormat();
@@ -526,7 +528,10 @@ export class WavDecoder implements AudioDecoder {
         if (chunkData.length > 0) {
           const written = this.ringBuffer.write(chunkData);
           if (written < chunkData.length) {
-            throw new Error('Ring buffer full during header parsing');
+            this.failHard(
+              `Ring buffer full during header parse: tried to write ${chunkData.length} bytes at offset ${start}, only ${written} bytes could be written`
+            );
+            return false;
           }
         }
       }
@@ -1022,7 +1027,10 @@ export class WavDecoder implements AudioDecoder {
 
   private decodeImaAdpcmBlock(
     compressed: Uint8Array,
-    headers: { predictor: number; stepIndex: number }[],
+    headers: {
+      predictor: number;
+      stepIndex: number;
+    }[],
     samplesPerBlock: number,
     channels: number,
     outputOffset: number,

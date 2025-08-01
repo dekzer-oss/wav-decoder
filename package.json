@@ -69,10 +69,9 @@
     "test:firefox": "vitest run --project browser --browser=firefox",
     "test:webkit": "vitest run --project browser --browser=webkit",
 
-    "bench": "vitest bench --run --reporter=verbose",
-    "bench:all": "pnpm bench:node && pnpm bench:chrome && pnpm bench:firefox && pnpm bench:webkit",
+    "bench": "pnpm bench:node && pnpm bench:chrome && pnpm bench:firefox && pnpm bench:webkit",
     "bench:node": "vitest --run bench --project node",
-    "bench:browser": "vitest --run bench --project browser",
+    "bench:browser": "pnpm bench:chrome && pnpm bench:firefox && pnpm bench:webkit",
     "bench:chrome": "vitest bench --project=browser --browser=chromium --run --outputJson bench/bench-browser-chrome.json",
     "bench:firefox": "vitest bench --project=browser --browser=firefox --run --outputJson bench/bench-browser-firefox.json",
     "bench:webkit": "vitest bench --project=browser --browser=webkit --run --outputJson bench/bench-browser-webkit.json",
