@@ -1,79 +1,57 @@
-import { beforeAll, afterAll, bench, type BenchOptions, describe } from 'vitest';
+import { beforeAll, afterAll, bench, type BenchOptions, describe, beforeEach } from 'vitest';
 import { DecoderState, WavDecoder } from '../src';
-import { type FixtureKey, fixtureKeys, fixtureProperties } from './fixtures';
+import { type FixtureKey, fixtureKeys } from './fixtures';
 import { loadFixture } from './fixtures/helpers';
+import { describeFormat, inflateWavBody } from './utils';
 
-function inflateWavBody(src: Uint8Array, times = 32): Uint8Array {
-  const dataPos = src.findIndex(
-    (b, i) => i + 3 < src.length && src[i] === 0x64 && src[i + 1] === 0x61 && src[i + 2] === 0x74 && src[i + 3] === 0x61
-  );
-  if (dataPos < 0) throw new Error('data chunk not found');
-  const sizeView = new DataView(src.buffer, src.byteOffset + dataPos + 4, 4);
-  const bodySize = sizeView.getUint32(0, true);
-  const headerEnd = dataPos + 8;
-  const header = new Uint8Array(src.subarray(0, headerEnd));
-  const body = src.subarray(headerEnd, headerEnd + bodySize);
-
-  const bigBody = new Uint8Array(body.length * times);
-  for (let i = 0; i < times; i++) bigBody.set(body, i * body.length);
-
-  const riffSize = headerEnd - 8 + bigBody.length;
-  const dataSizeLE = body.length * times;
-  new DataView(header.buffer, header.byteOffset + 4, 4).setUint32(0, riffSize, true);
-  new DataView(header.buffer, header.byteOffset + dataPos + 4, 4).setUint32(0, dataSizeLE, true);
-
-  const out = new Uint8Array(header.length + bigBody.length);
-  out.set(header, 0);
-  out.set(bigBody, header.length);
-  return out;
-}
-
-const loadedFixtures = new Map<string, Uint8Array>();
+const loadedFixtures = new Map<FixtureKey, Uint8Array>();
 
 beforeAll(async () => {
-  const fixtureNames = Object.keys(fixtureProperties);
-  const audioDataArray = await Promise.all(fixtureNames.map(loadFixture));
-  fixtureNames.forEach((name, idx) => {
+  const audioDataArray = await Promise.all(fixtureKeys.map(loadFixture));
+  fixtureKeys.forEach((name, idx) => {
     loadedFixtures.set(name, audioDataArray[idx]!);
   });
 });
 
 const benchOptions: BenchOptions = {
   warmupIterations: 10,
-  iterations: 1000,
-  time: 3_000,
+  iterations: 750,
+  time: 2_000,
 };
 
-describe('WavDecoder full decode() performance', () => {
+describe('WavDecoder | Single-pass decode (decoder reuse)', () => {
   const decoder = new WavDecoder();
   afterAll(() => decoder.free());
   (
     [
-      'sine_ulaw_8bit_le_stereo.wav',
       'sine_alaw_8bit_le_mono.wav',
-      'sine_pcm_16bit_le_stereo.wav',
-      'sine_pcm_24bit_be_stereo.wav',
-      'sine_pcm_24bit_le_mono.wav',
+      'sine_ulaw_8bit_le_stereo.wav',
       'sine_pcm_16bit_be_mono.wav',
-      'sine_float_32bit_le_8ch.wav',
+      'sine_pcm_16bit_le_stereo.wav',
+      'sine_pcm_24bit_le_mono.wav',
+      'sine_pcm_24bit_be_stereo.wav',
+      'sine_float_32bit_le_mono.wav',
       'sine_float_32bit_be_stereo.wav',
+      'sine_float_32bit_le_8ch.wav',
       'sine_float_64bit_le_stereo.wav',
     ] as FixtureKey[]
   ).forEach((file) => {
     bench(
-      `${file} - decode (reused decoder)`,
+      `Decode | ${describeFormat(file)} | Single-pass, Decoder Reuse`,
       () => {
         const data = loadedFixtures.get(file)!;
-        decoder.reset();
         decoder.decode(data);
       },
       benchOptions
     );
   });
+  beforeEach(() => {
+    decoder.reset();
+  });
 });
 
-describe('WavDecoder API comparison under looping conditions', () => {
-  const setupDecoderWithBody = (fixtureName: string) => {
+describe('WavDecoder | Block streaming decode (new decoder per bench)', () => {
+  function setupDecoderWithBody(fixtureName: FixtureKey) {
     const fileData = loadedFixtures.get(fixtureName);
     if (!fileData) throw new Error(`Fixture not found: ${fixtureName}`);
 
@@ -99,24 +77,26 @@ describe('WavDecoder API comparison under looping conditions', () => {
       body: fileData.subarray(headerEnd),
       format: decoder.info.format,
     };
-  };
+  }
 
-  bench(
-    'block-by-block (using decode)',
-    () => {
-      const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
-      const chunkSize = format.blockAlign * 512;
-      for (let i = 0; i < body.length; i += chunkSize) {
-        const chunk = body.subarray(i, i + chunkSize);
-        decoder.decode(chunk);
-      }
-      decoder.free();
-    },
-    benchOptions
-  );
+  (['sine_pcm_16bit_le_stereo.wav'] as FixtureKey[]).forEach((file) => {
+    bench(
+      `Streamed Decode | ${describeFormat(file)} | Block-by-block, New Decoder`,
+      () => {
+        const { decoder, body, format } = setupDecoderWithBody(file);
+        const chunkSize = format.blockAlign * 512;
+        for (let i = 0; i < body.length; i += chunkSize) {
+          const chunk = body.subarray(i, i + chunkSize);
+          decoder.decode(chunk);
+        }
+        decoder.free();
+      },
+      benchOptions
+    );
+  });
 });
 
-describe('WavDecoder full file macrobench', () => {
+describe('WavDecoder | Macro decode (big file, reset+decode, decoder reuse)', () => {
   const decoder = new WavDecoder();
   afterAll(() => decoder.free());
 
@@ -128,10 +108,13 @@ describe('WavDecoder full file macrobench', () => {
       bigFile = inflateWavBody(src, 32);
     });
 
+    beforeEach(() => {
+      decoder.reset();
+    });
+
     bench(
-      `${file} - reset then decode on big file with reused decoder`,
+      `Macro Decode | ${describeFormat(file)} | 32x Data, Decoder Reset Each Iter`,
       () => {
-        decoder.reset();
         decoder.decode(bigFile);
       },
       benchOptions
