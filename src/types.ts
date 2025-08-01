@@ -135,9 +135,10 @@ export interface DecodeError {
 export interface DecodedWavAudio {
   bitsPerSample: WavBitsPerSample;
   channelData: Float32Array[];
-  errors: DecodeError[];
   sampleRate: WavSampleRate;
   samplesDecoded: number;
+  errors: DecodeError[];
+  warnings: string[];
 }
 
 /**
@@ -168,7 +169,8 @@ export enum DecoderState {
  * @property {number} [maxBufferSize] - The maximum buffer size allowed for decoding. This property is optional.
  */
 export interface DecoderOptions {
-  maxBufferSize?: number;
+  bufferSize?: number;
+  historySize?: number;
 }
 
 /**

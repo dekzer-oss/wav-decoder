@@ -52,7 +52,10 @@
   "scripts": {
     "demo": "vite",
     "format": "prettier --write .",
-    "fixtures:generate": "python3 scripts/gen-wav-fixtures.py",
+
+    "fixtures:wav": "python3 scripts/gen-wav-fixtures.py",
+    "fixtures:evil": "python3 scripts/gen_evil_wav_fixtures.py",
+    "fixtures:generate": "pnpm fixtures:wav && pnpm fixtures:evil",
 
     "dev": "vitest",
     "dev:chrome": "vitest --project browser --browser=chromium",
@@ -73,6 +76,7 @@
     "bench:chrome": "vitest bench --project=browser --browser=chromium --run --outputJson bench/bench-browser-chrome.json",
     "bench:firefox": "vitest bench --project=browser --browser=firefox --run --outputJson bench/bench-browser-firefox.json",
     "bench:webkit": "vitest bench --project=browser --browser=webkit --run --outputJson bench/bench-browser-webkit.json",
+
     "bench:compare": "pnpm bench:all && node scripts/compare-bench.js",
     "bench:update": "pnpm bench:all && node scripts/update-badge.js",
 

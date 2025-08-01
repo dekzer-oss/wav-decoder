@@ -195,8 +195,9 @@ def generate_frequency_sweep_files():
         )
 
         data_chunk_header = struct.pack(f'{endian_char}4sI', b'data', data_size)
-        chunks_size = len(fmt_chunk) + len(data_chunk_header) + data_size + 4
-        file_size = 4 + chunks_size
+        # FIXED: Corrected RIFF chunk size calculation - removed the extra +4
+        chunks_size = len(fmt_chunk) + len(data_chunk_header) + data_size
+        file_size = 4 + chunks_size  # RIFF size is (total file size minus 8 bytes for RIFF header)
 
         filename = f"sweep_{codec}_{bit_depth}bit_{get_endian_description(endian)}_{get_channel_description(channels)}.wav"
         filepath = OUTPUT_DIR / filename

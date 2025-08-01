@@ -8,6 +8,7 @@ import {
   type ExtendedWavFormat,
   type WavDecoderInfo,
 } from './types';
+
 import { RingBuffer } from './RingBuffer';
 import { parseWavHeader } from './parseWavHeader.ts';
 import {
@@ -41,11 +42,24 @@ import {
   WAVE_FORMAT_EXTENSIBLE,
 } from './constants';
 
+interface ErrorWarningCollector {
+  errors: DecodeError[];
+  warnings: string[];
+}
+
+interface HistoryRingBuffer<T> {
+  items: T[];
+  maxSize: number;
+  currentIndex: number;
+  isFull: boolean;
+}
+
 export class WavDecoder implements AudioDecoder {
   private static readonly MAX_BUFFER_SIZE = 16 * 1024 * 1024;
   private static readonly MAX_CHANNELS = 32;
   private static readonly MAX_HEADER_SIZE = 2 * 1024 * 1024;
   private static readonly MAX_SAMPLE_RATE = 384000;
+  private static readonly DEFAULT_HISTORY_SIZE = 1000;
 
   private state = DecoderState.IDLE;
   private format: ExtendedWavFormat = {} as ExtendedWavFormat;
@@ -54,7 +68,15 @@ export class WavDecoder implements AudioDecoder {
   private totalBytes = 0;
   private remainingBytes = 0;
 
-  private errors: DecodeError[] = [];
+  private currentErrors: DecodeError[] = [];
+  private currentWarnings: string[] = [];
+
+  private _lastError: Error | null = null;
+
+  private readonly _errorHistory: HistoryRingBuffer<DecodeError> | null = null;
+  private readonly _warningHistory: HistoryRingBuffer<string> | null = null;
+
+  private warnedAboutBounds = false;
 
   private ringBuffer: RingBuffer;
   private headerBuffer = new Uint8Array(0);
@@ -65,9 +87,15 @@ export class WavDecoder implements AudioDecoder {
   private unhandledChunks: DataChunk[] = [];
 
   constructor(options: DecoderOptions = {}) {
-    const bufferSize = options.maxBufferSize ?? WavDecoder.MAX_BUFFER_SIZE;
+    const bufferSize = options.bufferSize ?? WavDecoder.MAX_BUFFER_SIZE;
     this.ringBuffer = new RingBuffer(bufferSize);
     this.decodeBuffer = this.getScratchBuffer(4096);
+
+    const historySize = options.historySize ?? WavDecoder.DEFAULT_HISTORY_SIZE;
+    if (historySize > 0) {
+      this._errorHistory = this.createHistoryBuffer<DecodeError>(historySize);
+      this._warningHistory = this.createHistoryBuffer<string>(historySize);
+    }
   }
 
   get info(): WavDecoderInfo {
@@ -76,7 +104,7 @@ export class WavDecoder implements AudioDecoder {
     }
     return {
       decodedBytes: this.decodedBytes,
-      errors: [...this.errors],
+      errors: [...this.currentErrors],
       format: this.format,
       parsedChunks: this.parsedChunks,
       remainingBytes: this.remainingBytes,
@@ -104,6 +132,18 @@ export class WavDecoder implements AudioDecoder {
       return Math.floor(this.totalBytes / this.format.blockAlign);
     }
     return 0;
+  }
+
+  get lastError(): Error | null {
+    return this._lastError;
+  }
+
+  get errorHistory(): readonly DecodeError[] {
+    return this._errorHistory ? this.getHistoryItems(this._errorHistory) : [];
+  }
+
+  get warningHistory(): readonly string[] {
+    return this._warningHistory ? this.getHistoryItems(this._warningHistory) : [];
   }
 
   public static supports(formatTag: number): boolean {
@@ -150,8 +190,9 @@ export class WavDecoder implements AudioDecoder {
       return this.processBufferedBlocks();
     } catch (err) {
       this.state = DecoderState.ERROR;
-      const message = err instanceof Error ? err.message : String(err);
-      this.addError(`Decode error: ${message}`);
+      const error = err instanceof Error ? err : new Error(String(err));
+      this._lastError = error;
+      this.addError(`Decode error: ${error.message}`);
       return this.createErrorResult('Decode error');
     }
   }
@@ -177,28 +218,28 @@ export class WavDecoder implements AudioDecoder {
   }
 
   public decodeFrames(frames: Uint8Array[]): DecodedWavAudio {
+    const collector = this.createErrorWarningCollector();
     const { blockAlign, channels, bitsPerSample, sampleRate } = this.format;
     const nFrames = frames.length;
     const output = Array.from({ length: channels }, () => new Float32Array(nFrames));
-    const errors: DecodeError[] = [];
 
     let validFrames = 0;
     for (let i = 0; i < nFrames; ++i) {
       const frame = frames[i]!;
       if (frame.length !== blockAlign) {
-        errors.push({
+        this.addErrorToCollector(collector, {
           frameLength: frame.length,
           frameNumber: i,
           inputBytes: validFrames * blockAlign,
           outputSamples: validFrames,
-          message: `Dropped partial/malformed frame at index ${i} (got ${frame.length}, expected ${blockAlign} bytes)`,
+          message: `Dropped partial or malformed frame at index ${i} (got ${frame.length}, expected ${blockAlign} bytes)`,
         });
         continue;
       }
 
       const decoded = this.decodeFrame(frame);
       if (!decoded) {
-        errors.push({
+        this.addErrorToCollector(collector, {
           frameLength: frame.length,
           frameNumber: i,
           inputBytes: validFrames * blockAlign,
@@ -217,12 +258,15 @@ export class WavDecoder implements AudioDecoder {
       output[ch] = output[ch]!.subarray(0, validFrames);
     }
 
+    this.mergeCollectorIntoCurrentErrors(collector);
+
     return {
       bitsPerSample,
-      channelData: output,
-      errors,
       sampleRate,
+      errors: this.drainCurrentErrors(),
+      channelData: output,
       samplesDecoded: validFrames,
+      warnings: this.drainCurrentWarnings(),
     };
   }
 
@@ -230,6 +274,9 @@ export class WavDecoder implements AudioDecoder {
     if (this.state === DecoderState.ENDED || this.state === DecoderState.ERROR) {
       return this.createEmptyResult();
     }
+
+    // Clear current errors/warnings to ensure flush only returns errors from this operation
+    this.clearCurrentErrorsAndWarnings();
 
     const result = this.processBufferedBlocks();
     const leftoverBytes = this.ringBuffer.available;
@@ -242,17 +289,23 @@ export class WavDecoder implements AudioDecoder {
 
     this.state = DecoderState.ENDED;
 
-    const finalErrors = [...result.errors, ...this.errors];
-    this.errors.length = 0;
+    // Only return errors/warnings from this flush operation
+    const flushErrors = this.drainCurrentErrors();
+    const flushWarnings = this.drainCurrentWarnings();
 
     if (result.samplesDecoded > 0) {
-      return { ...result, errors: finalErrors };
+      return {
+        ...result,
+        errors: [...result.errors, ...flushErrors],
+        warnings: [...result.warnings, ...flushWarnings],
+      };
     } else {
       return {
-        bitsPerSample: this.format.bitsPerSample || 0,
+        bitsPerSample: this.format.bitsPerSample,
         channelData: [],
-        errors: finalErrors,
-        sampleRate: this.format.sampleRate || 0,
+        errors: flushErrors,
+        warnings: flushWarnings,
+        sampleRate: this.format.sampleRate,
         samplesDecoded: 0,
       };
     }
@@ -268,13 +321,73 @@ export class WavDecoder implements AudioDecoder {
   public reset(): void {
     this.state = DecoderState.IDLE;
     this.ringBuffer.clear();
-    this.errors.length = 0;
+    this.clearCurrentErrorsAndWarnings();
     this.format = {} as ExtendedWavFormat;
     this.remainingBytes = 0;
     this.decodedBytes = 0;
     this.totalBytes = 0;
     this.headerBuffer = new Uint8Array(0);
     this.channelData = [];
+    this._lastError = null;
+    this.warnedAboutBounds = false;
+  }
+
+  private createHistoryBuffer<T>(maxSize: number): HistoryRingBuffer<T> {
+    return {
+      items: new Array(maxSize),
+      maxSize,
+      currentIndex: 0,
+      isFull: false,
+    };
+  }
+
+  private addToHistory<T>(buffer: HistoryRingBuffer<T> | null, item: T): void {
+    if (!buffer) return;
+
+    buffer.items[buffer.currentIndex] = item;
+    buffer.currentIndex = (buffer.currentIndex + 1) % buffer.maxSize;
+    if (buffer.currentIndex === 0) {
+      buffer.isFull = true;
+    }
+  }
+
+  private getHistoryItems<T>(buffer: HistoryRingBuffer<T>): T[] {
+    if (!buffer.isFull && buffer.currentIndex === 0) {
+      return [];
+    }
+
+    const result: T[] = [];
+    const startIndex = buffer.isFull ? buffer.currentIndex : 0;
+    const itemCount = buffer.isFull ? buffer.maxSize : buffer.currentIndex;
+
+    for (let i = 0; i < itemCount; i++) {
+      const index = (startIndex + i) % buffer.maxSize;
+      result.push(buffer.items[index]!);
+    }
+
+    return result;
+  }
+
+  private createErrorWarningCollector(): ErrorWarningCollector {
+    return {
+      errors: [],
+      warnings: [],
+    };
+  }
+
+  private addErrorToCollector(collector: ErrorWarningCollector, error: DecodeError): void {
+    collector.errors.push(error);
+    this.addToHistory(this._errorHistory, error);
+  }
+
+  private addWarningToCollector(collector: ErrorWarningCollector, warning: string): void {
+    collector.warnings.push(warning);
+    this.addToHistory(this._warningHistory, warning);
+  }
+
+  private mergeCollectorIntoCurrentErrors(collector: ErrorWarningCollector): void {
+    this.currentErrors.push(...collector.errors);
+    this.currentWarnings.push(...collector.warnings);
   }
 
   private getScratchBuffer(size: number): ArrayBuffer {
@@ -293,22 +406,47 @@ export class WavDecoder implements AudioDecoder {
 
   private addError(message: string): void {
     const blockSize = this.format.blockAlign ?? 0;
-    this.errors.push({
+    const error: DecodeError = {
       message,
       frameLength: blockSize,
       frameNumber: blockSize > 0 ? Math.floor(this.decodedBytes / blockSize) : 0,
       inputBytes: this.decodedBytes,
       outputSamples: this.estimatedSamples,
-    });
+    };
+    this.currentErrors.push(error);
+    this.addToHistory(this._errorHistory, error);
+  }
+
+  private addWarning(message: string): void {
+    this.currentWarnings.push(message);
+    this.addToHistory(this._warningHistory, message);
+  }
+
+  private clearCurrentErrorsAndWarnings(): void {
+    this.currentErrors.length = 0;
+    this.currentWarnings.length = 0;
+  }
+
+  private drainCurrentErrors(): DecodeError[] {
+    const errors = [...this.currentErrors];
+    this.currentErrors.length = 0;
+    return errors;
+  }
+
+  private drainCurrentWarnings(): string[] {
+    const warnings = [...this.currentWarnings];
+    this.currentWarnings.length = 0;
+    return warnings;
   }
 
   private createEmptyResult(): DecodedWavAudio {
-    const errors = [...this.errors];
-    this.errors.length = 0;
+    const errors = this.drainCurrentErrors();
+    const warnings = this.drainCurrentWarnings();
     return {
       bitsPerSample: this.format.bitsPerSample || 0,
       channelData: [],
       errors,
+      warnings,
       sampleRate: this.format.sampleRate || 0,
       samplesDecoded: 0,
     };
@@ -318,27 +456,30 @@ export class WavDecoder implements AudioDecoder {
     this.addError(msg);
     return this.createEmptyResult();
   }
+
+  private failHard(message: string): void {
+    this.state = DecoderState.ERROR;
+    this._lastError = new Error(message);
+    this.addError(message);
+  }
+
   private tryParseHeader(): boolean {
     const headerData = this.headerBuffer;
 
-    // Quick sanity: WAV header needs at least RIFF (12) + fmt chunk header (8)
     if (headerData.length < 20) {
-      this.state = DecoderState.ERROR;
-      this.addError('Truncated or incomplete header: too few bytes to parse WAV header'); // matches /header|chunk|eof|fmt/i
+      this.failHard('Truncated or incomplete header: too few bytes to parse WAV header');
       return false;
     }
 
     try {
       const result = parseWavHeader(headerData);
 
-      // Warnings from parser should be exposed but not fatal unless they indicate missing fmt
       for (const warning of result.warnings) {
-        this.addError(warning);
+        this.addWarning(warning);
       }
 
       if (!result.format) {
-        this.addError('No valid "fmt " chunk found in WAV header'); // covers fmt missing
-        this.state = DecoderState.ERROR;
+        this.failHard('No valid "fmt " chunk found in WAV header');
         return false;
       }
 
@@ -362,12 +503,10 @@ export class WavDecoder implements AudioDecoder {
         this.format.resolvedFormatTag === WAVE_FORMAT_IMA_ADPCM ? 0 : this.format.bitsPerSample / 8;
 
       if (!this.validateFormat()) {
-        // validateFormat already pushed an appropriate error message
         this.state = DecoderState.ERROR;
         return false;
       }
 
-      // Extract fact chunk samples if present
       const allChunks = [...result.parsedChunks, ...result.unhandledChunks];
       const factChunk = allChunks.find((chunk) => chunk.id === 'fact');
       if (factChunk && factChunk.size >= 4) {
@@ -380,7 +519,6 @@ export class WavDecoder implements AudioDecoder {
       this.totalBytes = result.dataBytes;
       this.remainingBytes = this.totalBytes;
 
-      // Push any already-present data chunks into ring buffer
       for (const dataChunk of this.format.dataChunks) {
         const start = dataChunk.offset;
         const end = start + dataChunk.size;
@@ -397,9 +535,8 @@ export class WavDecoder implements AudioDecoder {
       this.state = DecoderState.DECODING;
       return true;
     } catch (err) {
-      this.state = DecoderState.ERROR;
-      const message = err instanceof Error ? err.message : String(err);
-      this.addError(`Header parse failure: ${message}`); // clearer prefix
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.failHard(`Header parse failure: ${error.message}`);
       return false;
     }
   }
@@ -535,6 +672,7 @@ export class WavDecoder implements AudioDecoder {
     this.remainingBytes = Math.max(0, this.remainingBytes - bytes);
     return out;
   }
+
   private decodeInterleavedFrames(frames: Uint8Array): DecodedWavAudio {
     const { blockAlign, channels, sampleRate, bitsPerSample, resolvedFormatTag } = this.format;
 
@@ -543,63 +681,87 @@ export class WavDecoder implements AudioDecoder {
     }
 
     let samplesDecoded: number;
+    let outputBitDepth = resolvedFormatTag === WAVE_FORMAT_IMA_ADPCM ? 16 : bitsPerSample;
 
-    if (resolvedFormatTag === WAVE_FORMAT_IMA_ADPCM) {
-      const { samplesPerBlock } = this.format;
-      if (!samplesPerBlock) {
-        return this.createErrorResult('Missing samplesPerBlock for IMA ADPCM');
+    try {
+      if (resolvedFormatTag === WAVE_FORMAT_IMA_ADPCM) {
+        const { samplesPerBlock } = this.format;
+        if (!samplesPerBlock) {
+          throw new Error('Missing samplesPerBlock for IMA ADPCM');
+        }
+        samplesDecoded = Math.floor((frames.length / blockAlign) * samplesPerBlock);
+      } else {
+        samplesDecoded = Math.floor(frames.length / blockAlign);
       }
-      samplesDecoded = Math.floor((frames.length / blockAlign) * samplesPerBlock);
-    } else {
-      samplesDecoded = Math.floor(frames.length / blockAlign);
+
+      if (samplesDecoded <= 0) {
+        return this.createEmptyResult();
+      }
+
+      this.initChannelData(channels, samplesDecoded);
+      if (this.channelData.length !== channels || this.channelData[0]!.length < samplesDecoded) {
+        throw new Error('Failed to initialize channel buffers');
+      }
+
+      const view = new DataView(frames.buffer, frames.byteOffset, frames.byteLength);
+      const collector = this.createErrorWarningCollector();
+
+      switch (resolvedFormatTag) {
+        case WAVE_FORMAT_PCM:
+          this.dispatchPCMDecode(view, samplesDecoded, bitsPerSample, channels, collector);
+          break;
+        case WAVE_FORMAT_IEEE_FLOAT:
+          this.dispatchFloatDecode(view, samplesDecoded, bitsPerSample, channels, collector);
+          break;
+        case WAVE_FORMAT_ALAW:
+        case WAVE_FORMAT_MULAW:
+          this.decodeCompressed(view, samplesDecoded, collector);
+          break;
+        case WAVE_FORMAT_IMA_ADPCM:
+          this.decodeImaAdpcm(frames, samplesDecoded, collector);
+          break;
+        default:
+          this.channelData.forEach((arr) => arr.fill(0));
+      }
+
+      this.mergeCollectorIntoCurrentErrors(collector);
+      const channelData = this.channelData.map((arr) => arr.subarray(0, samplesDecoded));
+      const errors = this.drainCurrentErrors();
+      const warnings = this.drainCurrentWarnings();
+
+      return {
+        bitsPerSample: outputBitDepth,
+        channelData,
+        errors,
+        warnings,
+        sampleRate,
+        samplesDecoded,
+      };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      this._lastError = error;
+      this.addError(
+        `Frame decode error: ${error.message} (frameLength=${frames.length}, decodedBytes=${this.decodedBytes})`
+      );
+
+      return {
+        bitsPerSample: outputBitDepth,
+        channelData: Array.from({ length: channels }, () => new Float32Array(0)),
+        errors: this.drainCurrentErrors(),
+        warnings: this.drainCurrentWarnings(),
+        sampleRate,
+        samplesDecoded: 0,
+      };
     }
-
-    if (samplesDecoded <= 0) {
-      return this.createEmptyResult();
-    }
-
-    // Ensure channelData is sized correctly
-    this.initChannelData(channels, samplesDecoded);
-    if (this.channelData.length !== channels || this.channelData[0]!.length < samplesDecoded) {
-      return this.createErrorResult('Failed to initialize channel buffers');
-    }
-
-    const view = new DataView(frames.buffer, frames.byteOffset, frames.byteLength);
-
-    switch (resolvedFormatTag) {
-      case WAVE_FORMAT_PCM:
-        this.dispatchPCMDecode(view, samplesDecoded, bitsPerSample, channels);
-        break;
-      case WAVE_FORMAT_IEEE_FLOAT:
-        this.dispatchFloatDecode(view, samplesDecoded, bitsPerSample, channels);
-        break;
-      case WAVE_FORMAT_ALAW:
-      case WAVE_FORMAT_MULAW:
-        this.decodeCompressed(view, samplesDecoded);
-        break;
-      case WAVE_FORMAT_IMA_ADPCM:
-        this.decodeImaAdpcm(frames, samplesDecoded);
-        break;
-      default:
-        this.channelData.forEach((arr) => arr.fill(0));
-    }
-
-    const outputBitDepth = resolvedFormatTag === WAVE_FORMAT_IMA_ADPCM ? 16 : bitsPerSample;
-    const channelData = this.channelData.map((arr) => arr.subarray(0, samplesDecoded));
-
-    const errors = [...this.errors];
-    this.errors.length = 0;
-
-    return {
-      bitsPerSample: outputBitDepth,
-      channelData,
-      errors,
-      sampleRate,
-      samplesDecoded,
-    };
   }
 
-  private dispatchPCMDecode(view: DataView, samples: number, bitsPerSample: number, channels: number): void {
+  private dispatchPCMDecode(
+    view: DataView,
+    samples: number,
+    bitsPerSample: number,
+    channels: number,
+    collector: ErrorWarningCollector
+  ): void {
     if (channels === 1) {
       switch (bitsPerSample) {
         case 8:
@@ -663,10 +825,16 @@ export class WavDecoder implements AudioDecoder {
           return;
       }
     }
-    this.decodeGenericPCM(view, samples, bitsPerSample / 8, bitsPerSample);
+    this.decodeGenericPCM(view, samples, bitsPerSample / 8, bitsPerSample, collector);
   }
 
-  private dispatchFloatDecode(view: DataView, samples: number, bitsPerSample: number, channels: number): void {
+  private dispatchFloatDecode(
+    view: DataView,
+    samples: number,
+    bitsPerSample: number,
+    channels: number,
+    collector: ErrorWarningCollector
+  ): void {
     if (channels === 1 && bitsPerSample === 32) {
       if (this.format.isLittleEndian) {
         decodeFloat32Mono_unrolled(
@@ -675,7 +843,7 @@ export class WavDecoder implements AudioDecoder {
           samples
         );
       } else {
-        this.decodeFloat(view, samples, 4, 32);
+        this.decodeFloat(view, samples, 4, 32, collector);
       }
       return;
     }
@@ -689,15 +857,21 @@ export class WavDecoder implements AudioDecoder {
           samples
         );
       } else {
-        this.decodeFloat(view, samples, 4, 32);
+        this.decodeFloat(view, samples, 4, 32, collector);
       }
       return;
     }
 
-    this.decodeFloat(view, samples, bitsPerSample / 8, bitsPerSample);
+    this.decodeFloat(view, samples, bitsPerSample / 8, bitsPerSample, collector);
   }
 
-  private decodeFloat(view: DataView, samples: number, bps: number, bitsPerSample: number): void {
+  private decodeFloat(
+    view: DataView,
+    samples: number,
+    bps: number,
+    bitsPerSample: number,
+    collector: ErrorWarningCollector
+  ): void {
     const numChannels = this.format.channels;
     const blockSize = this.format.blockAlign;
     const is64Bit = bitsPerSample === 64;
@@ -707,68 +881,142 @@ export class WavDecoder implements AudioDecoder {
       for (let ch = 0; ch < numChannels; ch++) {
         const offset = base + ch * bps;
         let value: number;
-        if (is64Bit) {
-          value = view.getFloat64(offset, this.format.isLittleEndian);
-        } else {
-          value = view.getFloat32(offset, this.format.isLittleEndian);
+        try {
+          if (is64Bit) {
+            value = view.getFloat64(offset, this.format.isLittleEndian);
+          } else {
+            value = view.getFloat32(offset, this.format.isLittleEndian);
+          }
+          this.channelData[ch]![i] = Math.max(-1, Math.min(1, value));
+        } catch (err) {
+          if (!this.warnedAboutBounds) {
+            this.addWarningToCollector(
+              collector,
+              `Float decode: out-of-bounds access at offset ${offset}, filling with silence`
+            );
+            this.warnedAboutBounds = true;
+          }
+          this.channelData[ch]![i] = 0;
         }
-        this.channelData[ch]![i] = Math.max(-1, Math.min(1, value));
       }
     }
   }
 
-  private decodeGenericPCM(view: DataView, samples: number, bytesPerSample: number, bitsPerSample: number): void {
+  private decodeGenericPCM(
+    view: DataView,
+    samples: number,
+    bytesPerSample: number,
+    bitsPerSample: number,
+    collector: ErrorWarningCollector
+  ): void {
     const numChannels = this.format.channels;
     let offset = 0;
+    let outOfBoundsCount = 0;
 
     for (let i = 0; i < samples; i++) {
       for (let ch = 0; ch < numChannels; ch++) {
         if (offset + bytesPerSample > view.byteLength) {
           this.channelData[ch]![i] = 0;
+          outOfBoundsCount++;
+          offset += bytesPerSample; // Continue advancing offset for consistency
           continue;
         }
-        this.channelData[ch]![i] = this.readPcm(view, offset, bitsPerSample);
+        try {
+          this.channelData[ch]![i] = this.readPcm(view, offset, bitsPerSample);
+        } catch (err) {
+          this.channelData[ch]![i] = 0;
+          outOfBoundsCount++;
+        }
         offset += bytesPerSample;
       }
     }
+
+    if (outOfBoundsCount > 0 && !this.warnedAboutBounds) {
+      this.addWarningToCollector(
+        collector,
+        `PCM decode: ${outOfBoundsCount} out-of-bounds samples filled with silence`
+      );
+      this.warnedAboutBounds = true;
+    }
   }
 
-  private decodeCompressed(view: DataView, samples: number): void {
+  private decodeCompressed(view: DataView, samples: number, collector: ErrorWarningCollector): void {
     const numChannels = this.format.channels;
     const blockSize = this.format.blockAlign;
     const table = this.format.resolvedFormatTag === WAVE_FORMAT_ALAW ? ALAW_TABLE : MULAW_TABLE;
     const src = new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
+    let outOfBoundsCount = 0;
 
     for (let i = 0; i < samples; i++) {
       const base = i * blockSize;
       for (let ch = 0; ch < numChannels; ch++) {
         const offset = base + ch;
-        this.channelData[ch]![i] = table[src[offset]!]!;
+        if (offset >= src.length) {
+          this.channelData[ch]![i] = 0;
+          outOfBoundsCount++;
+          continue;
+        }
+        this.channelData[ch]![i] = table[src[offset]!] ?? 0;
       }
+    }
+
+    if (outOfBoundsCount > 0 && !this.warnedAboutBounds) {
+      this.addWarningToCollector(
+        collector,
+        `Compressed decode: ${outOfBoundsCount} out-of-bounds samples filled with silence`
+      );
+      this.warnedAboutBounds = true;
     }
   }
 
-  private decodeImaAdpcm(frames: Uint8Array, samplesDecoded: number): void {
+  private decodeImaAdpcm(frames: Uint8Array, samplesDecoded: number, collector: ErrorWarningCollector): void {
     const { channels, blockAlign, samplesPerBlock } = this.format;
     const numBlocks = frames.length / blockAlign;
     const view = new DataView(frames.buffer, frames.byteOffset, frames.byteLength);
 
-    for (let block = 0; block < numBlocks; block++) {
-      const blockOffset = block * blockAlign;
-      const headers: { predictor: number; stepIndex: number }[] = [];
-      let headerOffset = blockOffset;
+    try {
+      for (let block = 0; block < numBlocks; block++) {
+        const blockOffset = block * blockAlign;
+        const headers: { predictor: number; stepIndex: number }[] = [];
+        let headerOffset = blockOffset;
 
-      for (let ch = 0; ch < channels; ch++) {
-        headers.push({
-          predictor: view.getInt16(headerOffset, this.format.isLittleEndian),
-          stepIndex: view.getUint8(headerOffset + 2),
-        });
-        headerOffset += 4;
+        for (let ch = 0; ch < channels; ch++) {
+          if (headerOffset + 4 > frames.length) {
+            this.addWarningToCollector(collector, `IMA ADPCM: incomplete header for block ${block}, channel ${ch}`);
+            return;
+          }
+          headers.push({
+            predictor: view.getInt16(headerOffset, this.format.isLittleEndian),
+            stepIndex: view.getUint8(headerOffset + 2),
+          });
+          headerOffset += 4;
+        }
+
+        const compressedSize = blockAlign - 4 * channels;
+        if (headerOffset + compressedSize > frames.length) {
+          this.addWarningToCollector(collector, `IMA ADPCM: incomplete compressed data for block ${block}`);
+          return;
+        }
+
+        const compressedData = new Uint8Array(frames.buffer, frames.byteOffset + headerOffset, compressedSize);
+        this.decodeImaAdpcmBlock(
+          compressedData,
+          headers,
+          samplesPerBlock!,
+          channels,
+          block * samplesPerBlock!,
+          collector
+        );
       }
-
-      const compressedData = new Uint8Array(frames.buffer, frames.byteOffset + headerOffset, blockAlign - 4 * channels);
-
-      this.decodeImaAdpcmBlock(compressedData, headers, samplesPerBlock!, channels, block * samplesPerBlock!);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.addErrorToCollector(collector, {
+        message: `IMA ADPCM decode error: ${error.message}`,
+        frameLength: frames.length,
+        frameNumber: 0,
+        inputBytes: frames.length,
+        outputSamples: samplesDecoded,
+      });
     }
   }
 
@@ -777,7 +1025,8 @@ export class WavDecoder implements AudioDecoder {
     headers: { predictor: number; stepIndex: number }[],
     samplesPerBlock: number,
     channels: number,
-    outputOffset: number
+    outputOffset: number,
+    collector: ErrorWarningCollector
   ): void {
     const predictors = headers.map((h) => h.predictor);
     const stepIndices = headers.map((h) => Math.min(88, Math.max(0, h.stepIndex)));
@@ -790,7 +1039,7 @@ export class WavDecoder implements AudioDecoder {
     let nibbleIndex = 0;
 
     const processNibble = (nibble: number, ch: number) => {
-      const step = IMA_STEP_TABLE[stepIndices[ch]!]!;
+      const step = IMA_STEP_TABLE[stepIndices[ch]!] ?? 0;
       let diff = step >> 3;
       if (nibble & 1) diff += step >> 2;
       if (nibble & 2) diff += step >> 1;
@@ -799,9 +1048,11 @@ export class WavDecoder implements AudioDecoder {
 
       predictors[ch]! += diff;
       predictors[ch] = Math.max(-32768, Math.min(32767, predictors[ch]!));
-      stepIndices[ch] = Math.min(88, Math.max(0, stepIndices[ch]! + IMA_INDEX_ADJUST_TABLE[nibble]!));
+      stepIndices[ch] = Math.min(88, Math.max(0, stepIndices[ch]! + (IMA_INDEX_ADJUST_TABLE[nibble] ?? 0)));
 
-      this.channelData[ch]![outputOffset + sampleIndex] = predictors[ch]! * INV_32768;
+      if (outputOffset + sampleIndex < this.channelData[ch]!.length) {
+        this.channelData[ch]![outputOffset + sampleIndex] = predictors[ch]! * INV_32768;
+      }
     };
 
     for (let i = 0; i < compressed.length; i++) {
@@ -837,7 +1088,11 @@ export class WavDecoder implements AudioDecoder {
         default:
           return 0;
       }
-    } catch {
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.addError(
+        `Sample read error: ${error.message} ` + `(offset=${offset}, bits=${bits}, fmt=0x${fmt.toString(16)})`
+      );
       return 0;
     }
   }

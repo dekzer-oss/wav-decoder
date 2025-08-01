@@ -11,3 +11,29 @@ beforeAll(async () => {
     loadedFixtures.set(key, await loadFixture(key));
   }
 });
+
+describe('WavDecoder', () => {
+  it.each(Object.entries(fixtureProperties))('should decode %s and match expected format', (fixtureName, expected) => {
+    const wav = loadedFixtures.get(fixtureName);
+    expect(wav, `Fixture "${fixtureName}" not loaded`).toBeDefined();
+
+    const decoder = new WavDecoder();
+    const result = decoder.decode(wav!);
+
+    // Basic structure checks
+    expect(result.errors).toEqual([]);
+    expect(decoder.info.state).toBe(DecoderState.DECODING);
+
+    // Format field checks
+    expect(decoder.info.format.channels).toBe(expected.channels);
+    expect(decoder.info.format.sampleRate).toBe(expected.sampleRate);
+    expect(decoder.info.format.bitsPerSample).toBe(expected.bitDepth);
+    expect(decoder.info.format.formatTag).toBe(expected.formatTag);
+
+    // Audio shape checks
+    expect(result.channelData.length).toBe(expected.channels);
+    for (let i = 0; i < result.channelData.length; i++) {
+      expect(result.channelData[i]?.length).toBe(expected.samplesPerChannel);
+    }
+  });
+});
