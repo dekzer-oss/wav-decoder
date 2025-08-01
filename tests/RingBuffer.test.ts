@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RingBuffer } from '../src/RingBuffer';
+import { RingBuffer } from '../src/core/RingBuffer';
 
 describe('RingBuffer', () => {
   describe('Basic Validations', () => {

@@ -186,35 +186,98 @@ export interface DecoderOptions {
  * @property {DataChunk[]} unhandledChunks - Chunks found in the file but not processed by the decoder.
  */
 export interface WavDecoderInfo {
-  decodedBytes: number;
+  state: DecoderState;
   format: WavFormat;
   parsedChunks: DataChunk[];
-  remainingBytes: number;
-  state: DecoderState;
-  totalBytes: number;
   unhandledChunks: DataChunk[];
+  decodedBytes: number;
+  remainingBytes: number;
+  totalBytes: number;
 }
 
 /**
- * Interface representing a generic streaming-capable WAV audio decoder.
- *
- * @interface AudioDecoder
- * @method decode - Incrementally decodes the given chunk of WAV data, returning decoded audio.
- * @method decodeFrame - Decodes a single frame of audio data into floating-point samples.
- * @method decodeFrames - Decodes a batch of frames (array of Uint8Array) in one call.
- * @method free - Releases internal resources/buffers held by the decoder.
- * @method flush - Finalizes decoding and flushes any remaining buffered audio.
- * @property info - Exposes diagnostic information and decoder status.
- * @method reset - Resets the decoder to its initial state for reuse.
+ * Main universal streaming audio decoder interface for WAV and beyond.
+ * All properties are always up-to-date and “live”.
  */
 export interface AudioDecoder {
+  /** Incrementally decode a chunk of audio data (Uint8Array or Buffer). */
   decode(chunk: Uint8Array): DecodedWavAudio;
-  decodeFrame(frame: Uint8Array): Float32Array;
-  decodeFrames(frames: Uint8Array[]): DecodedWavAudio;
-  free(): void;
+
+  /** Flush remaining buffered data and finalize decoding. */
   flush(): DecodedWavAudio;
-  info: WavDecoderInfo;
+
+  /** Decode a single frame of audio data. */
+  decodeFrame(frame: Uint8Array): Float32Array;
+
+  /** Decode multiple frames at once. */
+  decodeFrames(frames: Uint8Array[]): DecodedWavAudio;
+
+  /** Reset decoder state for a new stream/file. */
   reset(): void;
+
+  /** Release all buffers/resources for GC. */
+  free(): void;
+
+  /** Info about the decoder and file. Always up-to-date. */
+  readonly info: WavDecoderInfo;
+
+  /** Current decoder state (IDLE, DECODING, ENDED, ERROR). */
+  state: DecoderState;
+
+  /** Progress as a 0..1 fraction. */
+  readonly progress: number;
+
+  /** Total duration in seconds (if known). */
+  readonly totalDuration: number;
+
+  /** Total number of audio frames (if known). */
+  readonly totalFrames: number;
+
+  /** Sample rate in Hz. */
+  readonly sampleRate: number;
+
+  /** Number of audio channels. */
+  readonly channels: number;
+
+  /** Bit depth (bits per sample). */
+  readonly bitsPerSample: number;
+
+  /** Any errors or warnings encountered so far. */
+  readonly errors: DecodeError[];
+
+  /** Parsed chunks from the file (headers, data, etc). */
+  readonly parsedChunks: DataChunk[];
+
+  /** Unhandled or unknown chunks (for debugging/forensics). */
+  readonly unhandledChunks: DataChunk[];
+
+  /** Bytes available in streamBuffer (audio data, not header). */
+  readonly available: number;
+
+  /** Total number of bytes decoded. */
+  readonly decodedBytes: number;
+
+  /**
+   * Async streaming API: yields DecodedWavAudio as data arrives.
+   * Accepts ReadableStream<Uint8Array> (browser) or Node stream.Readable.
+   */
+  stream(input: ReadableStream<Uint8Array> | NodeJS.ReadableStream): AsyncIterableIterator<DecodedWavAudio>;
+
+  /**
+   * Node/CLI convenience: decode a whole file at once.
+   * Accepts a file path or Buffer (Node only).
+   */
+  decodeFile?(file: string | Buffer): Promise<DecodedWavAudio>;
+
+  /**
+   * Static helper: returns true if a WAVE format tag is supported.
+   */
+  supports(formatTag: number): boolean;
+
+  /**
+   * Pure, stateless function: parse and introspect any WAV header.
+   */
+  parseHeader(header: Uint8Array): WavHeaderParserResult;
 }
 
 /**
@@ -297,3 +360,6 @@ export interface WavHeaderParserResult {
   duration: number;
   errors: string[];
 }
+
+export type AudioChunk = Uint8Array | Buffer;
+export type InputStream = ReadableStream<Uint8Array> | NodeJS.ReadableStream;
