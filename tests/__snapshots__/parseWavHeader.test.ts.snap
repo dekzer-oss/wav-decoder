@@ -1,0 +1,47 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`parseWavHeader > structure sanity snapshot (basic PCM) 1`] = `
+{
+  "dataBytes": 14,
+  "dataChunks": [
+    {
+      "offset": 44,
+      "size": 14,
+    },
+  ],
+  "dataOffset": 44,
+  "duration": 0.00006802721088435374,
+  "errors": [],
+  "format": {
+    "bitsPerSample": 16,
+    "blockAlign": 4,
+    "bytesPerSecond": 176400,
+    "channelMask": undefined,
+    "channels": 2,
+    "extSize": undefined,
+    "extraFields": undefined,
+    "formatTag": 1,
+    "sampleRate": 44100,
+    "samplesPerBlock": undefined,
+    "subFormat": undefined,
+    "validBitsPerSample": undefined,
+  },
+  "isExtensible": false,
+  "isLittleEndian": true,
+  "parsedChunks": [
+    {
+      "id": "fmt ",
+      "offset": 12,
+      "size": 16,
+    },
+    {
+      "id": "data",
+      "offset": 36,
+      "size": 14,
+    },
+  ],
+  "totalFrames": 3,
+  "totalSamples": 6,
+  "unhandledChunks": [],
+}
+`;

@@ -10,23 +10,20 @@ import {
 } from './constants.ts';
 
 export interface ParseOptions {
-  /** Maximum number of chunks to parse (for safety) */
   maxChunks?: number;
-  /** Whether to perform strict validation */
-  strict?: boolean;
 }
 
 export const EMPTY_WAV_HEADER_RESULT: WavHeaderParserResult = {
   isLittleEndian: true,
-  format: null,
   isExtensible: false,
+  format: null,
   dataBytes: 0,
   dataOffset: 0,
-  parsedChunks: [],
-  unhandledChunks: [],
   totalSamples: 0,
   totalFrames: 0,
   duration: 0,
+  parsedChunks: [],
+  unhandledChunks: [],
   dataChunks: [],
   errors: [],
 } as const;
@@ -150,7 +147,7 @@ export function calculateTotalFrames(format: WavFormat | null, dataBytes: number
 /**
  * Performs strict validation on the parsed format
  */
-export function validateFormat(format: WavFormat | null, strict: boolean): string[] {
+export function validateFormat(format: WavFormat | null = null, strict: boolean = true): string[] {
   const errors: string[] = [];
 
   if (!format) return errors;
@@ -185,7 +182,6 @@ export function validateFormat(format: WavFormat | null, strict: boolean): strin
 
 export function parseWavHeader(buffer: Uint8Array, options: ParseOptions = {}): WavHeaderParserResult {
   const maxChunks = options.maxChunks ?? Number.POSITIVE_INFINITY;
-  const strict = options.strict ?? false;
   const errors: string[] = [];
   const len = buffer.length;
 
@@ -201,9 +197,6 @@ export function parseWavHeader(buffer: Uint8Array, options: ParseOptions = {}): 
   if (riffErrors.length > 0) {
     return { ...EMPTY_WAV_HEADER_RESULT, errors };
   }
-
-  // --- REMOVE file size validation in streaming mode
-  // (skip validateFileSize)
 
   const waveStr = String.fromCharCode(...buffer.subarray(8, 12));
   if (waveStr !== WAVE_SIGNATURE) {
@@ -264,7 +257,7 @@ export function parseWavHeader(buffer: Uint8Array, options: ParseOptions = {}): 
     errors.push('Missing required "fmt " chunk');
   }
 
-  const formatValidationErrors = validateFormat(format, strict);
+  const formatValidationErrors = validateFormat(format);
   errors.push(...formatValidationErrors);
 
   const dataBytes = dataChunks.reduce((n, c) => n + c.size, 0);

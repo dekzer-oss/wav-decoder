@@ -59,8 +59,6 @@ export class WavDecoder implements AudioDecoder {
   private totalBytes = 0;
   private remainingBytes = 0;
 
-  private readonly isStrict: boolean = false;
-
   private ringBuffer: RingBuffer;
   private headerBuffer = new Uint8Array(0);
   private channelData: Float32Array[] = [];
@@ -73,8 +71,6 @@ export class WavDecoder implements AudioDecoder {
     const bufferSize = options.bufferSize ?? WavDecoder.MAX_BUFFER_SIZE;
     this.ringBuffer = new RingBuffer(bufferSize);
     this.decodeBuffer = this.getScratchBuffer(4096);
-
-    this.isStrict = options.strictValidation ?? false;
   }
 
   get info(): WavDecoderInfo {
@@ -322,8 +318,7 @@ export class WavDecoder implements AudioDecoder {
 
     try {
       const result = parseWavHeader(headerData, {
-        strict: this.isStrict,
-        maxChunks: 50,
+        // maxChunks: 50,
       });
 
       if (result.errors.length > 0) {

@@ -279,9 +279,8 @@ export interface ExtendedWavFormat extends WavFormat {
  * @property {DataChunk[]} parsedChunks - All recognized and parsed chunks (headers and data).
  * @property {DataChunk[]} unhandledChunks - Chunks seen in the file but not parsed or handled.
  * @property {number} totalSamples - Total sample count, if calculable.
- * @property {number} totalFrames - Total frame count (multi-channel).
+ * @property {number} totalFrames - Total frame count (multichannel).
  * @property {number} duration - Duration in seconds (float).
- * @property {string[]} warnings - Any parsing warnings encountered (non-fatal).
  * @property {string[]} errors - Any fatal parsing errors encountered.
  */
 export interface WavHeaderParserResult {

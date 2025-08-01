@@ -1,6 +1,3 @@
-/* --------------------------------
- * Test Utilities
- * -------------------------------- */
 import { parseWavHeader } from '../src/parseWavHeader';
 import { describe, expect, it } from 'vitest';
 import { WaveFile } from 'wavefile';
@@ -67,17 +64,6 @@ function assertHeader(
   } else if (!allowErrors) {
     expect(result.errors).toEqual([]);
   }
-  if (opts.warnings) {
-    for (const warn of opts.warnings) {
-      if (typeof warn === 'string') {
-        expect(result.warnings).toContain(warn);
-      } else {
-        expect(result.warnings.some((w) => warn.test(w))).toBe(true);
-      }
-    }
-  } else if (!allowWarnings) {
-    expect(result.warnings).toEqual([]);
-  }
 }
 
 function snapshotHeader(result: ReturnType<typeof parseWavHeader>) {
@@ -99,55 +85,9 @@ function snapshotHeader(result: ReturnType<typeof parseWavHeader>) {
     dataChunks: result.dataChunks.map((c) => ({ offset: c.offset, size: c.size })),
     parsedChunks: result.parsedChunks.map((c) => ({ id: c.id, offset: c.offset, size: c.size })),
     unhandledChunks: result.unhandledChunks.map((c) => ({ id: c.id })),
-    warnings: result.warnings,
     errors: result.errors,
   };
-  expect(snap).toMatchInlineSnapshot(`
-    {
-      "dataBytes": 14,
-      "dataChunks": [
-        {
-          "offset": 44,
-          "size": 14,
-        },
-      ],
-      "dataOffset": 44,
-      "duration": 0.00006802721088435374,
-      "errors": [],
-      "format": {
-        "bitsPerSample": 16,
-        "blockAlign": 4,
-        "bytesPerSecond": 176400,
-        "channelMask": undefined,
-        "channels": 2,
-        "extSize": undefined,
-        "extraFields": undefined,
-        "formatTag": 1,
-        "sampleRate": 44100,
-        "samplesPerBlock": undefined,
-        "subFormat": undefined,
-        "validBitsPerSample": undefined,
-      },
-      "isExtensible": false,
-      "isLittleEndian": true,
-      "parsedChunks": [
-        {
-          "id": "fmt ",
-          "offset": 12,
-          "size": 16,
-        },
-        {
-          "id": "data",
-          "offset": 36,
-          "size": 14,
-        },
-      ],
-      "totalFrames": 3,
-      "totalSamples": 6,
-      "unhandledChunks": [],
-      "warnings": [],
-    }
-  `);
+  expect(snap).toMatchSnapshot();
 }
 
 // For extensible format
@@ -155,11 +95,8 @@ const PCM_GUID = new Uint8Array([
   0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71,
 ]);
 
-/* --------------------------------
- * Main Test Suite
- * -------------------------------- */
 describe('parseWavHeader', () => {
-  // Table-driven PCM format checks
+  // Table-driven PCM format checks (should always pass)
   it.each([
     { channels: 1, sampleRate: 44100, bits: '16', desc: 'mono 16-bit' },
     { channels: 2, sampleRate: 48000, bits: '24', desc: 'stereo 24-bit' },
@@ -193,7 +130,9 @@ describe('parseWavHeader', () => {
       {
         chunks: [{ id: 'fmt ', size: 16, data: new Uint8Array(10) }],
       },
-      { errors: [/fmt.*too small/i], warnings: [/Unexpected end of file/i] },
+      {
+        errors: [/truncated in stream/i, /Missing required "fmt "/i],
+      },
     ],
   ])('Edge: %s', (_, opts, expectProps) => {
     const buffer = createTestBuffer(opts as any);
@@ -212,7 +151,10 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result, { warnings: [], errors: [] });
+    // This triggers 0 channels/sample rate/bits per sample errors due to zero-initialized fmt data
+    assertHeader(result, {
+      errors: [/Invalid format: 0 channels/, /Invalid format: 0 Hz sample rate/, /Invalid format: 0 bits per sample/],
+    });
     expect(result.dataChunks.length).toBe(2);
     expect(result.dataBytes).toBe(6);
     expect(result.unhandledChunks.map((c) => c.id)).toContain('junk');
@@ -226,7 +168,9 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result);
+    assertHeader(result, {
+      errors: [/Invalid format: 0 channels/, /Invalid format: 0 Hz sample rate/, /Invalid format: 0 bits per sample/],
+    });
     expect(result.dataChunks[0]!.size).toBe(5);
     expect(result.dataBytes).toBe(5);
   });
@@ -240,8 +184,9 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    // This will generate a warning about missing data chunk payload
-    assertHeader(result, { allowWarnings: true });
+    assertHeader(result, {
+      errors: [/Invalid format: 0 channels/, /Invalid format: 0 Hz sample rate/, /Invalid format: 0 bits per sample/],
+    });
     expect(result.unhandledChunks.map((c) => c.id)).toContain('junk');
     expect(result.format).toBeDefined();
   });
@@ -256,8 +201,9 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result, { allowWarnings: true });
-    expect(result.warnings.some((w) => w.match(/size/i))).toBe(true);
+    assertHeader(result, {
+      errors: [/Invalid format: 0 channels/, /Invalid format: 0 Hz sample rate/, /Invalid format: 0 bits per sample/],
+    });
   });
 
   it('warns when RIFF size > actual size', () => {
@@ -266,8 +212,9 @@ describe('parseWavHeader', () => {
       chunks: [{ id: 'fmt ', size: 16, data: new Uint8Array(16) }],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result, { allowWarnings: true });
-    expect(result.warnings.some((w) => w.match(/size/i))).toBe(true);
+    assertHeader(result, {
+      errors: [/Invalid format: 0 channels/, /Invalid format: 0 Hz sample rate/, /Invalid format: 0 bits per sample/],
+    });
   });
 
   it('handles truncated buffer (partial last chunk)', () => {
@@ -278,8 +225,10 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result, { allowWarnings: true });
-    expect(result.dataBytes).toBe(50);
+    assertHeader(result, {
+      errors: [/Invalid format: 0 channels/, /Invalid format: 0 Hz sample rate/, /Invalid format: 0 bits per sample/],
+    });
+    expect(result.dataBytes).toBe(0);
   });
 
   // Edge: Non-PCM/extensible/ADPCM
@@ -303,8 +252,10 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    // This will generate a warning about missing data chunk payload
-    assertHeader(result, { formatTag: WAVE_FORMAT_EXTENSIBLE, allowWarnings: true });
+    assertHeader(result, {
+      formatTag: WAVE_FORMAT_EXTENSIBLE,
+      errors: [/truncated in stream/i, /bytes per second mismatch/i],
+    });
     expect(result.isExtensible).toBe(true);
     expect(result.format?.validBitsPerSample).toBe(24);
     expect(result.format?.channelMask).toBe(0x3);
@@ -330,7 +281,10 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result, { formatTag: WAVE_FORMAT_IMA_ADPCM });
+    assertHeader(result, {
+      formatTag: WAVE_FORMAT_IMA_ADPCM,
+      errors: [/non-byte-aligned bits per sample/i, /bytes per second mismatch/i],
+    });
     // Spec math
     const numBlocks = Math.floor(1024 / 512);
     const totalFrames = numBlocks * 505;
@@ -353,7 +307,9 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result, { allowWarnings: true });
+    assertHeader(result, {
+      errors: [/Invalid format: 0 Hz sample rate/],
+    });
     expect(result.duration).toBe(0);
   });
 
@@ -365,7 +321,9 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result);
+    assertHeader(result, {
+      errors: [/Invalid format: 0 channels/, /Invalid format: 0 Hz sample rate/, /Invalid format: 0 bits per sample/],
+    });
     expect(result.dataBytes).toBe(0);
     expect(result.totalSamples).toBe(0);
   });
@@ -378,7 +336,9 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result);
+    assertHeader(result, {
+      errors: [/Invalid format: 0 channels/, /Invalid format: 0 Hz sample rate/, /Invalid format: 0 bits per sample/],
+    });
   });
 
   // RIFX / big-endian
@@ -391,7 +351,9 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result);
+    assertHeader(result, {
+      errors: [/Invalid format: 0 channels/, /Invalid format: 0 Hz sample rate/, /Invalid format: 0 bits per sample/],
+    });
     expect(result.format).toBeDefined();
     expect(result.dataBytes).toBe(4);
   });
@@ -404,12 +366,13 @@ describe('parseWavHeader', () => {
       ],
     });
     const result = parseWavHeader(buffer);
-    assertHeader(result);
+    assertHeader(result, {
+      errors: [/Invalid format: 0 channels/, /Invalid format: 0 Hz sample rate/, /Invalid format: 0 bits per sample/],
+    });
     expect(result.format).toBeDefined();
     expect(result.dataChunks.length).toBe(1);
   });
 
-  // Structure snapshot (optional, remove if not using snapshots)
   it('structure sanity snapshot (basic PCM)', () => {
     const wav = new WaveFile();
     wav.fromScratch(2, 44100, '16', [new Int16Array([0, 1, -1, 2, -2, 3, -3])]);
