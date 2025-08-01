@@ -138,7 +138,6 @@ export interface DecodedWavAudio {
   sampleRate: WavSampleRate;
   samplesDecoded: number;
   errors: DecodeError[];
-  warnings: string[];
 }
 
 /**
@@ -169,6 +168,7 @@ export enum DecoderState {
  * @property {number} [maxBufferSize] - The maximum buffer size allowed for decoding. This property is optional.
  */
 export interface DecoderOptions {
+  strictValidation?: boolean;
   bufferSize?: number;
   historySize?: number;
 }
@@ -187,7 +187,6 @@ export interface DecoderOptions {
  */
 export interface WavDecoderInfo {
   decodedBytes: number;
-  errors: DecodeError[];
   format: WavFormat;
   parsedChunks: DataChunk[];
   remainingBytes: number;
@@ -297,6 +296,5 @@ export interface WavHeaderParserResult {
   totalSamples: number;
   totalFrames: number;
   duration: number;
-  warnings: string[];
   errors: string[];
 }

@@ -1,4 +1,4 @@
-function decodePCM8Mono_unrolled(input: Uint8Array, out: Float32Array, frames: number): void {
+function decodePCM8Mono(input: Uint8Array, out: Float32Array, frames: number): void {
   const k = 1 / 128;
   let i = 0;
   for (; i + 4 <= frames; i += 4) {
@@ -10,7 +10,7 @@ function decodePCM8Mono_unrolled(input: Uint8Array, out: Float32Array, frames: n
   for (; i < frames; ++i) out[i] = (input[i]! - 128) * k;
 }
 
-function decodePCM8Stereo_unrolled(input: Uint8Array, left: Float32Array, right: Float32Array, frames: number): void {
+function decodePCM8Stereo(input: Uint8Array, left: Float32Array, right: Float32Array, frames: number): void {
   const k = 1 / 128;
   let i = 0,
     j = 0;
@@ -30,7 +30,7 @@ function decodePCM8Stereo_unrolled(input: Uint8Array, left: Float32Array, right:
   }
 }
 
-function decodePCM16Mono_unrolled(input: Int16Array, out: Float32Array, frames: number): void {
+function decodePCM16Mono(input: Int16Array, out: Float32Array, frames: number): void {
   const k = 1 / 32768;
   let i = 0;
   for (; i + 4 <= frames; i += 4) {
@@ -42,7 +42,7 @@ function decodePCM16Mono_unrolled(input: Int16Array, out: Float32Array, frames: 
   for (; i < frames; ++i) out[i] = input[i]! * k;
 }
 
-function decodePCM16Stereo_unrolled(input: Int16Array, left: Float32Array, right: Float32Array, frames: number): void {
+function decodePCM16Stereo(input: Int16Array, left: Float32Array, right: Float32Array, frames: number): void {
   const k = 1 / 32768;
   let i = 0,
     j = 0;
@@ -62,7 +62,7 @@ function decodePCM16Stereo_unrolled(input: Int16Array, left: Float32Array, right
   }
 }
 
-function decodePCM24Mono_unrolled(input: Uint8Array, out: Float32Array, frames: number): void {
+function decodePCM24Mono(input: Uint8Array, out: Float32Array, frames: number): void {
   const k = 1 / 8388608;
   let i = 0,
     ofs = 0;
@@ -81,7 +81,7 @@ function decodePCM24Mono_unrolled(input: Uint8Array, out: Float32Array, frames: 
   }
 }
 
-function decodePCM24Stereo_unrolled(input: Uint8Array, left: Float32Array, right: Float32Array, frames: number): void {
+function decodePCM24Stereo(input: Uint8Array, left: Float32Array, right: Float32Array, frames: number): void {
   const k = 1 / 8388608;
   let i = 0,
     ofs = 0;
@@ -106,7 +106,7 @@ function decodePCM24Stereo_unrolled(input: Uint8Array, left: Float32Array, right
   }
 }
 
-function decodePCM32Mono_unrolled(input: Int32Array, out: Float32Array, frames: number): void {
+function decodePCM32Mono(input: Int32Array, out: Float32Array, frames: number): void {
   const k = 1 / 2147483648;
   let i = 0;
   for (; i + 4 <= frames; i += 4) {
@@ -118,7 +118,7 @@ function decodePCM32Mono_unrolled(input: Int32Array, out: Float32Array, frames: 
   for (; i < frames; ++i) out[i] = input[i]! * k;
 }
 
-function decodePCM32Stereo_unrolled(input: Int32Array, left: Float32Array, right: Float32Array, frames: number): void {
+function decodePCM32Stereo(input: Int32Array, left: Float32Array, right: Float32Array, frames: number): void {
   const k = 1 / 2147483648;
   let i = 0,
     j = 0;
@@ -138,7 +138,7 @@ function decodePCM32Stereo_unrolled(input: Int32Array, left: Float32Array, right
   }
 }
 
-function decodeFloat32Mono_unrolled(input: Float32Array, out: Float32Array, frames: number): void {
+function decodeFloat32Mono(input: Float32Array, out: Float32Array, frames: number): void {
   let i = 0;
   for (; i + 4 <= frames; i += 4) {
     out[i] = input[i]!;
@@ -149,12 +149,7 @@ function decodeFloat32Mono_unrolled(input: Float32Array, out: Float32Array, fram
   for (; i < frames; ++i) out[i] = input[i]!;
 }
 
-function decodeFloat32Stereo_unrolled(
-  input: Float32Array,
-  left: Float32Array,
-  right: Float32Array,
-  frames: number
-): void {
+function decodeFloat32Stereo(input: Float32Array, left: Float32Array, right: Float32Array, frames: number): void {
   let i = 0,
     j = 0;
   for (; i + 4 <= frames; i += 4, j += 8) {
@@ -174,14 +169,14 @@ function decodeFloat32Stereo_unrolled(
 }
 
 export {
-  decodePCM8Mono_unrolled,
-  decodePCM8Stereo_unrolled,
-  decodePCM16Mono_unrolled,
-  decodePCM16Stereo_unrolled,
-  decodePCM24Mono_unrolled,
-  decodePCM24Stereo_unrolled,
-  decodePCM32Mono_unrolled,
-  decodePCM32Stereo_unrolled,
-  decodeFloat32Mono_unrolled,
-  decodeFloat32Stereo_unrolled,
+  decodePCM8Mono,
+  decodePCM8Stereo,
+  decodePCM16Mono,
+  decodePCM16Stereo,
+  decodePCM24Mono,
+  decodePCM24Stereo,
+  decodePCM32Mono,
+  decodePCM32Stereo,
+  decodeFloat32Mono,
+  decodeFloat32Stereo,
 };

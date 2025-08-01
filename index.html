@@ -564,22 +564,6 @@
       const updateProgressUI = () => {
         this.updateProgress(this.decoder.progress);
         this.updateMetrics(this.decoder.info, totalSamplesDecoded);
-
-        // console.log({
-        //   channels: this.decoder.format.channels,
-        //   bitsPerSample: this.decoder.format.bitsPerSample,
-        //   sampleRate: this.decoder.format.sampleRate,
-        //   blockAlign: this.decoder.format.blockAlign,
-        //   totalBytes: this.decoder.totalBytes,
-        //   factChunkSamples: this.decoder.format.factChunkSamples,
-        //   totalFrames: this.decoder.totalFrames,
-        //   duration: this.decoder.totalDuration,
-        //   progress: this.decoder.progress,
-        //   decodedBytes: this.decoder.info.decodedBytes,
-        //   errors: this.decoder.info.errors,
-        //   formatTag: this.decoder.info.format.formatTag,
-        // });
-
       };
 
       while (true) {

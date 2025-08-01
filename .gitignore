@@ -33,6 +33,7 @@ Thumbs.db
 
 # Custom files
 source_code.md
+aggregated_files.txt
 
 public/samples/*
 
