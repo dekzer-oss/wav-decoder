@@ -1,7 +1,7 @@
 {
   "name": "@dekzer/wav-decoder",
   "version": "0.1.0",
-  "description": "A robust, streaming-capable WAV audio decoder with full PCM, float, A-law, and µ-law support — zero dependencies, works in browsers and Node.js.",
+  "description": "A robust, streaming-capable WAV audio decoder with full PCM, float, A-law and µ-law support.",
   "author": "Maikel Eckelboom",
   "license": "MIT",
   "homepage": "https://github.com/dekzer-oss/wav-decoder#readme",
@@ -50,10 +50,15 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "dev": "vitest",
     "demo": "vite",
     "format": "prettier --write .",
     "fixtures:generate": "python3 scripts/gen-wav-fixtures.py",
+
+    "dev": "vitest",
+    "dev:chrome": "vitest --project browser --browser=chromium",
+    "dev:firefox": "vitest --project browser --browser=firefox",
+    "dev:webkit": "vitest --project browser --browser=webkit",
+
     "test": "vitest --run --reporter=verbose",
     "test:node": "vitest run --project node",
     "test:browser": "vitest run --project browser",
@@ -61,10 +66,10 @@
     "test:firefox": "vitest run --project browser --browser=firefox",
     "test:webkit": "vitest run --project browser --browser=webkit",
 
-    "bench": "pnpm bench:all",
+    "bench": "vitest bench --run --reporter=verbose",
     "bench:all": "pnpm bench:node && pnpm bench:chrome && pnpm bench:firefox && pnpm bench:webkit",
-    "bench:browser": "vitest --run bench --project browser",
     "bench:node": "vitest --run bench --project node",
+    "bench:browser": "vitest --run bench --project browser",
     "bench:chrome": "vitest bench --project=browser --browser=chromium --run --outputJson bench/bench-browser-chrome.json",
     "bench:firefox": "vitest bench --project=browser --browser=firefox --run --outputJson bench/bench-browser-firefox.json",
     "bench:webkit": "vitest bench --project=browser --browser=webkit --run --outputJson bench/bench-browser-webkit.json",

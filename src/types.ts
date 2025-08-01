@@ -7,7 +7,7 @@
  * quality and file size. The type also accepts any custom
  * numerical values.
  */
-export type BitsPerSample = 4 | 8 | 16 | 24 | 32 | 64 | (number & {});
+export type WavBitsPerSample = 4 | 8 | 12 | 16 | 20 | 24 | 32 | 64 | (number & {});
 
 /**
  * Represents various WAVE file format tags, commonly used to identify the
@@ -66,7 +66,7 @@ export const WavFormatTagNames = {
  *
  * Custom sample rates outside of these predefined values can also be used, represented as any valid number.
  */
-export type CommonSampleRate =
+export type WavSampleRate =
   | 8000
   | 11025
   | 16000
@@ -91,7 +91,7 @@ export type CommonSampleRate =
  * - `offset`: The starting position of the chunk.
  * - `size`: The size of the chunk.
  */
-export interface ChunkInfo {
+export interface DataChunk {
   id: string;
   offset: number;
   size: number;
@@ -133,10 +133,10 @@ export interface DecodeError {
  * - `samplesDecoded`: The total number of audio samples decoded from the file.
  */
 export interface DecodedWavAudio {
-  bitsPerSample: BitsPerSample;
+  bitsPerSample: WavBitsPerSample;
   channelData: Float32Array[];
   errors: DecodeError[];
-  sampleRate: CommonSampleRate;
+  sampleRate: WavSampleRate;
   samplesDecoded: number;
 }
 
@@ -172,50 +172,44 @@ export interface DecoderOptions {
 }
 
 /**
- * Represents metadata and progress details of a WAV decoding operation.
+ * Provides detailed metadata and diagnostic information about the WAV decoder state and process.
  *
- * @interface WavDecoderInfo
- *
- * @property {number} decodedBytes - The total number of bytes successfully decoded.
- *
- * @property {DecodeError[]} errors - An array of decoding errors that occurred during the process.
- *
- * @property {WavFormat} format - The format information of the WAV file being decoded.
- *
- * @property {number} formatTag - The format tag that specifies the audio format.
- *
- * @property {ChunkInfo[]} parsedChunks - An array of information objects for parsed chunks in the WAV data.
- *
- * @property {number} progress - The decoding progress expressed as a percentage.
- *
- * @property {number} remainingBytes - The number of bytes yet to be decoded.
- *
- * @property {DecoderState} state - The current state of the decoding operation.
- *
- * @property {number} totalBytes - The total size in bytes of the WAV file being processed.
- *
- * @property {number} totalDuration - The total duration of the WAV file in seconds.
- *
- * @property {ChunkInfo[]} unhandledChunks - An array of chunks that were detected but not processed.
+ * @property {number} decodedBytes - Total number of audio bytes successfully decoded so far.
+ * @property {DecodeError[]} errors - List of non-fatal and fatal decoding errors encountered.
+ * @property {WavFormat} format - Resolved format details for the decoded WAV stream.
+ * @property {DataChunk[]} parsedChunks - All chunks parsed and recognized during header analysis.
+ * @property {number} remainingBytes - Bytes still expected or pending in the main audio data.
+ * @property {DecoderState} state - Current state of the decoder lifecycle.
+ * @property {number} totalBytes - Total length of the audio data (if known).
+ * @property {DataChunk[]} unhandledChunks - Chunks found in the file but not processed by the decoder.
  */
 export interface WavDecoderInfo {
   decodedBytes: number;
   errors: DecodeError[];
   format: WavFormat;
-  parsedChunks: ChunkInfo[];
+  parsedChunks: DataChunk[];
   remainingBytes: number;
   state: DecoderState;
   totalBytes: number;
-  unhandledChunks: ChunkInfo[];
+  unhandledChunks: DataChunk[];
 }
 
 /**
- * Interface representing a WAV decoder for handling audio data.
+ * Interface representing a generic streaming-capable WAV audio decoder.
+ *
+ * @interface AudioDecoder
+ * @method decode - Incrementally decodes the given chunk of WAV data, returning decoded audio.
+ * @method decodeFrame - Decodes a single frame of audio data into floating-point samples.
+ * @method decodeFrames - Decodes a batch of frames (array of Uint8Array) in one call.
+ * @method free - Releases internal resources/buffers held by the decoder.
+ * @method flush - Finalizes decoding and flushes any remaining buffered audio.
+ * @property info - Exposes diagnostic information and decoder status.
+ * @method reset - Resets the decoder to its initial state for reuse.
  */
 export interface AudioDecoder {
   decode(chunk: Uint8Array): DecodedWavAudio;
-  decodeFrame(frame: Uint8Array): Float32Array | null; // todo: refactor to return Float32Array (not null)
-  decodeFrames(frames: Uint8Array): DecodedWavAudio; // todo: refactor to accept Uint8Array[]
+  decodeFrame(frame: Uint8Array): Float32Array;
+  decodeFrames(frames: Uint8Array[]): DecodedWavAudio;
   free(): void;
   flush(): DecodedWavAudio;
   info: WavDecoderInfo;
@@ -223,22 +217,21 @@ export interface AudioDecoder {
 }
 
 /**
- * Represents the WAV file format details.
- * This interface defines properties describing the structure
- * and properties of a WAV file.
+ * Represents the core format properties of a WAV file, as parsed from the 'fmt ' chunk and extensions.
  *
- * Properties:
- * - `bitsPerSample`: Specifies the number of bits used to represent each sample (e.g., 16, 24, 32 bits).
- * - `blockAlign`: Defines the size in bytes of each block of audio data.
- * - `bytesPerSecond`: Indicates the average number of bytes processed per second of audio.
- * - `channels`: Number of audio channels (e.g., 1 for mono, 2 for stereo).
- * - `samplesPerBlock`: Specifies the number of audio samples contained in each block of data.
- * - `channelMask`: (Optional) Bit mask that specifies the mapping of channels to speaker positions.
- * - `extensionSize`: (Optional) Size of the optional format extension data section.
- * - `formatTag`: Describes the encoding format of the WAV file (e.g., PCM, IEEE Float).
- * - `sampleRate`: Number of audio samples per second (frequency in Hz).
- * - `subFormat`: (Optional) Subformat identifier in the form of a unique identifier (GUID).
- * - `validBitsPerSample`: (Optional) Indicates the number of valid bits used per sample, useful in certain extended formats.
+ * @property {number} bitsPerSample - Number of bits per audio sample.
+ * @property {number} blockAlign - Number of bytes per sample frame (all channels).
+ * @property {number} bytesPerSecond - Average data rate of the audio stream (for buffer sizing).
+ * @property {number} channels - Number of audio channels (1 = mono, 2 = stereo, etc.).
+ * @property {number} formatTag - WAVE format code (e.g., 1 = PCM, 3 = IEEE float).
+ * @property {number} sampleRate - Sample rate in Hz.
+ * @property {number} [samplesPerBlock] - Samples per block (used by some compressed formats).
+ * @property {number} [channelMask] - Channel layout bitmask (WAVEFORMATEXTENSIBLE).
+ * @property {number} [extensionSize] - Size in bytes of extra extension fields.
+ * @property {Uint8Array} [subFormat] - Sub-format GUID for extensible WAV formats.
+ * @property {number} [validBitsPerSample] - Actual valid bits per sample (for extensible formats).
+ * @property {number} [extSize] - Extension field size.
+ * @property {Uint8Array} [extraFields] - Any other extension bytes not covered above.
  */
 export interface WavFormat {
   bitsPerSample: number;
@@ -256,21 +249,52 @@ export interface WavFormat {
   extraFields?: Uint8Array;
 }
 
-export interface DataChunk {
-  offset: number;
-  size: number;
+/**
+ * An extended version of WavFormat that includes internal decoder metadata and resolved fields.
+ *
+ * @property {number} factChunkSamples - If present, sample count reported in 'fact' chunk.
+ * @property {DataChunk[]} dataChunks - All 'data' chunks located in the WAV file.
+ * @property {boolean} isLittleEndian - Endianness of the parsed file (true = little-endian).
+ * @property {number} resolvedFormatTag - Final format tag, resolved from extensible formats if needed.
+ * @property {number} bytesPerSample - Number of bytes per channel per sample, after resolving the format.
+ */
+export interface ExtendedWavFormat extends WavFormat {
+  factChunkSamples: number;
+  dataChunks: DataChunk[];
+  isLittleEndian: boolean;
+  resolvedFormatTag: number;
+  bytesPerSample: number;
 }
 
+/**
+ * Result structure returned by parseWavHeader, containing the parsed WAV file structure, chunks, and any issues.
+ *
+ * @property {boolean} isLittleEndian - File endianness (little vs big/RIFX).
+ * @property {WavFormat|null} format - Parsed format, or null if not found/invalid.
+ * @property {boolean} isExtensible - Whether the file uses WAVE_FORMAT_EXTENSIBLE.
+ * @property {number} dataBytes - Total length in bytes of audio data found in the file.
+ * @property {number} dataOffset - Byte offset of the main data chunk.
+ * @property {DataChunk[]} dataChunks - All recognized 'data' chunks.
+ * @property {DataChunk[]} parsedChunks - All recognized and parsed chunks (headers and data).
+ * @property {DataChunk[]} unhandledChunks - Chunks seen in the file but not parsed or handled.
+ * @property {number} totalSamples - Total sample count, if calculable.
+ * @property {number} totalFrames - Total frame count (multi-channel).
+ * @property {number} duration - Duration in seconds (float).
+ * @property {string[]} warnings - Any parsing warnings encountered (non-fatal).
+ * @property {string[]} errors - Any fatal parsing errors encountered.
+ */
 export interface WavHeaderParserResult {
-  format: WavFormat;
+  format: WavFormat | null;
+  isLittleEndian: boolean;
   isExtensible: boolean;
   dataBytes: number;
   dataOffset: number;
   dataChunks: DataChunk[];
-  parsedChunks: ChunkInfo[];
-  unhandledChunks: ChunkInfo[];
+  parsedChunks: DataChunk[];
+  unhandledChunks: DataChunk[];
   totalSamples: number;
   totalFrames: number;
   duration: number;
   warnings: string[];
+  errors: string[];
 }

@@ -1,60 +1,81 @@
-import type { ChunkInfo, DataChunk, WavFormat, WavHeaderParserResult } from './types';
+import type { DataChunk, WavFormat, WavHeaderParserResult } from './types';
+import {
+  DATA_CHUNK,
+  FMT_CHUNK,
+  RIFF_SIGNATURE,
+  RIFX_SIGNATURE,
+  WAVE_FORMAT_EXTENSIBLE,
+  WAVE_FORMAT_IMA_ADPCM,
+  WAVE_SIGNATURE,
+} from './constants.ts';
 
-export const RIFF_SIGNATURE = 0x46464952 as const;
-export const RIFX_SIGNATURE = 0x52494658 as const;
-export const WAVE_SIGNATURE = 'WAVE';
-export const WAVE_FORMAT_EXTENSIBLE = 0xfffe as const;
-export const WAVE_FORMAT_IMA_ADPCM = 0x0011 as const;
-export const WAVE_FORMAT_PCM = 0x0001 as const;
-export const FMT_CHUNK = 'fmt ';
-export const DATA_CHUNK = 'data';
+export const EMPTY_WAV_HEADER_RESULT: WavHeaderParserResult = {
+  isLittleEndian: true,
+  format: null,
+  isExtensible: false,
+  dataBytes: 0,
+  dataOffset: 0,
+  parsedChunks: [],
+  unhandledChunks: [],
+  totalSamples: 0,
+  totalFrames: 0,
+  duration: 0,
+  dataChunks: [],
+  warnings: [],
+  errors: [],
+} as const;
 
 export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
+  const errors: string[] = [];
   const warnings: string[] = [];
   const len = buffer.length;
-  if (len < 12) throw new Error('File is too small to be a valid WAV (expected at least 12 bytes)');
+
+  if (len < 12) {
+    errors.push('File is too small to be a valid WAV (expected at least 12 bytes)');
+    return { ...EMPTY_WAV_HEADER_RESULT, errors, warnings };
+  }
 
   const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 
-  let isLE = false;
+  let isLittleEndian = false;
   const riffSig = view.getUint32(0, true);
   if (riffSig === RIFF_SIGNATURE) {
-    isLE = true;
+    isLittleEndian = true;
   } else {
     const rifxSig = view.getUint32(0, false);
     if (rifxSig === RIFX_SIGNATURE) {
-      isLE = false;
+      isLittleEndian = false;
     } else {
-      throw new Error('Missing RIFF or RIFX signature at byte 0');
+      errors.push('Missing RIFF or RIFX signature at byte 0');
+      return { ...EMPTY_WAV_HEADER_RESULT, errors, warnings };
     }
   }
 
-  const fileSize = view.getUint32(4, isLE);
+  const fileSize = view.getUint32(4, isLittleEndian);
   if (fileSize + 8 !== len) {
     warnings.push(`Declared file size (${fileSize + 8} bytes) does not match actual buffer size (${len} bytes)`);
   }
 
-  // Fixed: Use string comparison for endian-neutral WAVE check
   const waveStr = String.fromCharCode(...buffer.subarray(8, 12));
   if (waveStr !== WAVE_SIGNATURE) {
-    throw new Error('Missing "WAVE" signature at byte 8');
+    errors.push('Missing "WAVE" signature at byte 8');
+    return { ...EMPTY_WAV_HEADER_RESULT, errors, warnings };
   }
 
   let offset = 12;
-  let format: WavFormat | undefined;
+  let format: WavFormat | null = null;
   const dataChunks: DataChunk[] = [];
-  const parsedChunks: ChunkInfo[] = [];
-  const unhandledChunks: ChunkInfo[] = [];
+  const parsedChunks: DataChunk[] = [];
+  const unhandledChunks: DataChunk[] = [];
   let isExtensible = false;
 
   while (offset + 8 <= len) {
     const chunkStr = String.fromCharCode(...buffer.subarray(offset, offset + 4));
-    const chunkSize = view.getUint32(offset + 4, isLE);
+    const chunkSize = view.getUint32(offset + 4, isLittleEndian);
     const paddedSize = chunkSize + (chunkSize & 1);
     const available = len - (offset + 8);
     const actualChunkSize = available < chunkSize ? available : chunkSize;
 
-    // Always use actual chunk size for parsing
     parsedChunks.push({ id: chunkStr, offset, size: actualChunkSize });
 
     if (actualChunkSize < chunkSize) {
@@ -66,16 +87,17 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
 
     if (chunkStr === FMT_CHUNK) {
       if (actualChunkSize < 16) {
-        throw new Error('"fmt " chunk is too small (expected at least 16 bytes)');
+        errors.push('"fmt " chunk is too small (expected at least 16 bytes)');
+        break;
       }
 
       const off = offset + 8;
-      const formatTag = view.getUint16(off, isLE);
-      const channels = view.getUint16(off + 2, isLE);
-      const sampleRate = view.getUint32(off + 4, isLE);
-      const bytesPerSecond = view.getUint32(off + 8, isLE);
-      const blockAlign = view.getUint16(off + 12, isLE);
-      const bitsPerSample = view.getUint16(off + 14, isLE);
+      const formatTag = view.getUint16(off, isLittleEndian);
+      const channels = view.getUint16(off + 2, isLittleEndian);
+      const sampleRate = view.getUint32(off + 4, isLittleEndian);
+      const bytesPerSecond = view.getUint32(off + 8, isLittleEndian);
+      const blockAlign = view.getUint16(off + 12, isLittleEndian);
+      const bitsPerSample = view.getUint16(off + 14, isLittleEndian);
 
       let samplesPerBlock: number | undefined;
       let channelMask: number | undefined;
@@ -85,20 +107,20 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
       let extraFields: Uint8Array | undefined;
 
       if (actualChunkSize >= 18) {
-        extSize = view.getUint16(off + 16, isLE);
+        extSize = view.getUint16(off + 16, isLittleEndian);
         const extStart = off + 18;
         const maxEnd = Math.min(off + actualChunkSize, buffer.length);
 
         if (formatTag === WAVE_FORMAT_EXTENSIBLE && extSize >= 22 && actualChunkSize >= 40) {
           if (extStart + 22 <= maxEnd) {
             isExtensible = true;
-            validBitsPerSample = view.getUint16(extStart, isLE);
-            channelMask = view.getUint32(extStart + 2, isLE);
+            validBitsPerSample = view.getUint16(extStart, isLittleEndian);
+            channelMask = view.getUint32(extStart + 2, isLittleEndian);
             subFormat = buffer.slice(extStart + 6, extStart + 22);
           }
         } else if (formatTag === WAVE_FORMAT_IMA_ADPCM && extSize >= 2 && actualChunkSize >= 20) {
           if (extStart + 2 <= maxEnd) {
-            samplesPerBlock = view.getUint16(extStart, isLE);
+            samplesPerBlock = view.getUint16(extStart, isLittleEndian);
           }
         }
 
@@ -124,7 +146,7 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
         extraFields,
       };
     } else if (chunkStr === DATA_CHUNK) {
-      dataChunks.push({ offset: offset + 8, size: actualChunkSize });
+      dataChunks.push({ id: DATA_CHUNK, offset: offset + 8, size: actualChunkSize });
     } else {
       unhandledChunks.push({ id: chunkStr, offset, size: actualChunkSize });
     }
@@ -134,7 +156,7 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
   }
 
   if (!format) {
-    throw new Error('Missing required "fmt " chunk');
+    errors.push('Missing required "fmt " chunk');
   }
 
   if (dataChunks.length === 0) {
@@ -145,18 +167,19 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
   const dataOffset = dataChunks[0]?.offset || 0;
 
   let totalFrames = 0;
-  if (format.blockAlign > 0) {
+  if (format && format.blockAlign > 0) {
     totalFrames = Math.floor(dataBytes / format.blockAlign);
   }
-  if (format.formatTag === WAVE_FORMAT_IMA_ADPCM && format.samplesPerBlock && format.blockAlign > 0) {
+  if (format && format.formatTag === WAVE_FORMAT_IMA_ADPCM && format.samplesPerBlock && format.blockAlign > 0) {
     const numBlocks = Math.floor(dataBytes / format.blockAlign);
     totalFrames = numBlocks * format.samplesPerBlock;
   }
 
-  const totalSamples = totalFrames * format.channels;
-  const duration = format.sampleRate > 0 ? totalFrames / format.sampleRate : 0;
+  const totalSamples = format ? totalFrames * format.channels : 0;
+  const duration = format && format.sampleRate > 0 ? totalFrames / format.sampleRate : 0;
 
   return {
+    isLittleEndian,
     format,
     isExtensible,
     dataBytes,
@@ -168,5 +191,6 @@ export function parseWavHeader(buffer: Uint8Array): WavHeaderParserResult {
     duration,
     dataChunks,
     warnings,
+    errors,
   };
 }

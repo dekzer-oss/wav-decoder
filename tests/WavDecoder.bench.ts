@@ -102,20 +102,6 @@ describe('WavDecoder API comparison under looping conditions', () => {
   };
 
   bench(
-    'block-by-block (using decodeFrames)',
-    () => {
-      const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
-      const chunkSize = format.blockAlign * 512;
-      for (let i = 0; i < body.length; i += chunkSize) {
-        const chunk = body.subarray(i, i + chunkSize);
-        decoder.decodeFrames(chunk);
-      }
-      decoder.free();
-    },
-    benchOptions
-  );
-
-  bench(
     'block-by-block (using decode)',
     () => {
       const { decoder, body, format } = setupDecoderWithBody('sine_pcm_16bit_le_stereo.wav');
