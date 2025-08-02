@@ -1,4 +1,4 @@
-import { IMA_INDEX_ADJUST_TABLE, IMA_STEP_TABLE, INV_32768 } from '../../constants.ts';
+import { IMA_INDEX_ADJUST_TABLE, IMA_STEP_TABLE, INV_32768 } from '../../constants';
 
 /**
  * Decodes a single IMA ADPCM block (WAV standard layout: interleaved nibbles per channel)
@@ -19,26 +19,22 @@ export function decodeIMAADPCMBlock(
   outputOffset: number,
   channelData: Float32Array[]
 ): void {
-  // Guard: buffer setup
   for (let ch = 0; ch < channels; ch++) {
     if (!channelData[ch] || channelData[ch].length < outputOffset + samplesPerBlock) return;
-    // Set first sample (predictor)
     channelData[ch][outputOffset] = headers[ch].predictor * INV_32768;
   }
 
   const predictors = headers.map((h) => h.predictor);
   const stepIndices = headers.map((h) => Math.min(88, Math.max(0, h.stepIndex)));
 
-  let sampleIndex = 1; // First sample already written (predictor)
-  let nibbleIndex = 0; // Advances through every 4 bits in the block
+  let sampleIndex = 1;
+  let nibbleIndex = 0;
 
-  const totalNibbles = (samplesPerBlock - 1) * channels;
+  // const totalNibbles = (samplesPerBlock - 1) * channels;
 
-  // Each nibble yields a sample for its channel in round-robin order
   for (let byteIndex = 0; byteIndex < compressed.length; byteIndex++) {
     const byte = compressed[byteIndex]!;
     for (let n = 0; n < 2; n++) {
-      // low then high nibble
       if (sampleIndex >= samplesPerBlock) break;
 
       const nibble = n === 0 ? byte & 0x0f : (byte >> 4) & 0x0f;
@@ -57,7 +53,6 @@ export function decodeIMAADPCMBlock(
       stepIndices[ch] += IMA_INDEX_ADJUST_TABLE[nibble & 7];
       stepIndices[ch] = Math.max(0, Math.min(88, stepIndices[ch]));
 
-      // Write to output (with protection)
       const outIdx = outputOffset + sampleIndex;
       if (outIdx < channelData[ch].length) {
         channelData[ch][outIdx] = predictors[ch] * INV_32768;
