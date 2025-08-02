@@ -1,4 +1,4 @@
-import { type FixtureKey, fixtureProperties } from './fixtures';
+import { type FixtureKey, fixtureProperties } from './index';
 
 const WAVE_FORMATS: Record<number, string> = {
   0x0001: 'PCM',

@@ -1,7 +1,7 @@
 import struct
 from pathlib import Path
 
-EVIL_DIR = Path("tests/fixtures/evil_wav")
+EVIL_DIR = Path("tests/fixtures/wav")
 EVIL_DIR.mkdir(parents=True, exist_ok=True)
 
 def write_wav(header: bytes, data: bytes, filename: str):

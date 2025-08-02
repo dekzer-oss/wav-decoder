@@ -1,5 +1,5 @@
-import type { DecodeError } from '../types.ts';
-import type { StateManager } from './StateManager.ts';
+import type { DecodeError } from '../types';
+import type { StateManager } from './StateManager';
 
 /**
  * Creates standardized DecodeError objects using context from the state manager.

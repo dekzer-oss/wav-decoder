@@ -38,3 +38,4 @@ aggregated_files.txt
 public/samples/*
 
 tests/fixtures/wav/
+tests/fixtures/evil_wav

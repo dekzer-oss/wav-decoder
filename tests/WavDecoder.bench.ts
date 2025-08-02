@@ -1,8 +1,9 @@
 import { beforeAll, afterAll, bench, type BenchOptions, describe, beforeEach } from 'vitest';
-import { DecoderState, WavDecoder } from '../src';
+import { WavDecoder } from '../src';
 import { type FixtureKey, fixtureKeys } from './fixtures';
 import { loadFixture } from './fixtures/helpers';
-import { describeFormat, inflateWavBody } from './utils';
+import { describeFormat, inflateWavBody } from './fixtures/utils';
+import { DecoderState } from '../src/core/StateMachine';
 
 const loadedFixtures = new Map<FixtureKey, Uint8Array>();
 
@@ -98,7 +99,6 @@ describe('WavDecoder | Block streaming decode (new decoder per bench)', () => {
 
 describe('WavDecoder | Macro decode (big file, reset+decode, decoder reuse)', () => {
   const decoder = new WavDecoder();
-  afterAll(() => decoder.free());
 
   fixtureKeys.forEach((file) => {
     let bigFile: Uint8Array;

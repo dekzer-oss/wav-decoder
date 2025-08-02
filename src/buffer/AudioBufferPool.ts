@@ -2,6 +2,7 @@
  * Manages a pool of Float32Array arrays to reuse memory and reduce GC pressure.
  */
 export class AudioBufferPool {
+  // Each entry in the pool is a set of Float32Arrays for all channels.
   private pool: Float32Array[][] = [];
   private readonly maxSamplesPerBuffer: number;
 
@@ -10,18 +11,23 @@ export class AudioBufferPool {
   }
 
   /**
-   * Acquires a set of channel buffers from the pool.
+   * Acquires a set of channel buffers from the pool or creates a new set.
    * @param channels The number of channels required.
-   * @param samples The number of samples required per channel.
+   * @param samples The minimum number of samples required per channel.
    * @returns An array of Float32Arrays.
    */
   public get(channels: number, samples: number): Float32Array[] {
-    if (this.pool.length > 0) {
-      const buffers = this.pool.pop()!;
-      if (buffers.length === channels && buffers[0]!.length >= samples) {
-        return buffers.map((b) => b.subarray(0, samples));
-      }
+    // Search for a suitable buffer set in the pool.
+    const suitableIndex = this.pool.findIndex(
+      (buffers) => buffers.length === channels && buffers[0]!.length >= samples
+    );
+
+    if (suitableIndex !== -1) {
+      // Remove the found set from the pool and return it.
+      return this.pool.splice(suitableIndex, 1)[0]!;
     }
+
+    // No suitable buffer found, create a new one.
     const size = Math.max(samples, this.maxSamplesPerBuffer);
     return Array.from({ length: channels }, () => new Float32Array(size));
   }
@@ -30,13 +36,12 @@ export class AudioBufferPool {
    * Returns a set of channel buffers to the pool for later reuse.
    * @param buffers The array of Float32Arrays to release.
    */
-  public release(buffers: Float32Array[][]): void {
-    this.pool.push(...buffers);
+  public release(buffers: Float32Array[]): void {
+    // Simply push the entire set back into the pool.
+    this.pool.push(buffers);
   }
 
-  /**
-   * Clears all buffers from the pool.
-   */
+  /** Clears all buffers from the pool. */
   public clear(): void {
     this.pool.length = 0;
   }

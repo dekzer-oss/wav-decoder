@@ -1,4 +1,4 @@
-import type { DataChunk, WavFormat, WavHeaderParserResult } from './types';
+import type { DataChunk, WavFormat, WavHeaderParserResult } from '../types.ts';
 import {
   DATA_CHUNK,
   FMT_CHUNK,
@@ -7,7 +7,7 @@ import {
   WAVE_FORMAT_EXTENSIBLE,
   WAVE_FORMAT_IMA_ADPCM,
   WAVE_SIGNATURE,
-} from './constants.ts';
+} from '../constants.ts';
 
 export interface ParseOptions {
   maxChunks?: number;

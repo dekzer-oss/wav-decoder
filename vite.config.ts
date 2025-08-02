@@ -11,7 +11,6 @@ export default defineConfig(({ mode }) => {
       hookTimeout: 120_000,
       testTimeout: 60_000,
       globals: true,
-      // setupFiles: ['./tests/fixtures/vitest.setup.ts'],
     },
     plugins: isLib
       ? [

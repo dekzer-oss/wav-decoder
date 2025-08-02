@@ -1,3 +1,5 @@
+import { DecoderState } from './core/StateMachine.ts';
+
 /**
  * Represents the bit depth used in a WAV file.
  *
@@ -141,34 +143,12 @@ export interface DecodedWavAudio {
 }
 
 /**
- * Represents various states of a decoding process.
- *
- * The `DecoderState` enum is used to track and manage the current state
- * of a decoding operation. It helps ensure proper handling and transitions
- * during the decoding lifecycle.
- *
- * Enumerated Values:
- * - DECODING: Indicates that decoding is currently in progress.
- * - ENDED: Indicates that decoding has successfully completed.
- * - ERROR: Indicates that an error occurred during decoding.
- * - IDLE: Represents an uninitialized or default state, typically
- *   before decoding has started.
- */
-export enum DecoderState {
-  DECODING,
-  ENDED,
-  ERROR,
-  IDLE,
-}
-
-/**
  * Represents the configuration options for a decoder.
  *
  * @interface DecoderOptions
  * @property {number} [maxBufferSize] - The maximum buffer size allowed for decoding. This property is optional.
  */
 export interface DecoderOptions {
-  strictValidation?: boolean;
   bufferSize?: number;
   historySize?: number;
 }
@@ -188,11 +168,11 @@ export interface DecoderOptions {
 export interface WavDecoderInfo {
   state: DecoderState;
   format: WavFormat;
-  parsedChunks: DataChunk[];
-  unhandledChunks: DataChunk[];
   decodedBytes: number;
   remainingBytes: number;
   totalBytes: number;
+  // parsedChunks: DataChunk[];
+  // unhandledChunks: DataChunk[];
 }
 
 /**
@@ -206,23 +186,17 @@ export interface AudioDecoder {
   /** Flush remaining buffered data and finalize decoding. */
   flush(): DecodedWavAudio;
 
-  /** Decode a single frame of audio data. */
-  decodeFrame(frame: Uint8Array): Float32Array;
-
-  /** Decode multiple frames at once. */
-  decodeFrames(frames: Uint8Array[]): DecodedWavAudio;
-
   /** Reset decoder state for a new stream/file. */
   reset(): void;
 
   /** Release all buffers/resources for GC. */
   free(): void;
 
-  /** Info about the decoder and file. Always up-to-date. */
-  readonly info: WavDecoderInfo;
-
   /** Current decoder state (IDLE, DECODING, ENDED, ERROR). */
   state: DecoderState;
+
+  /** Info about the decoder and file. Always up-to-date. */
+  readonly info: WavDecoderInfo;
 
   /** Progress as a 0..1 fraction. */
   readonly progress: number;
@@ -245,12 +219,6 @@ export interface AudioDecoder {
   /** Any errors or warnings encountered so far. */
   readonly errors: DecodeError[];
 
-  /** Parsed chunks from the file (headers, data, etc). */
-  readonly parsedChunks: DataChunk[];
-
-  /** Unhandled or unknown chunks (for debugging/forensics). */
-  readonly unhandledChunks: DataChunk[];
-
   /** Bytes available in streamBuffer (audio data, not header). */
   readonly available: number;
 
@@ -261,7 +229,7 @@ export interface AudioDecoder {
    * Async streaming API: yields DecodedWavAudio as data arrives.
    * Accepts ReadableStream<Uint8Array> (browser) or Node stream.Readable.
    */
-  stream(input: ReadableStream<Uint8Array> | NodeJS.ReadableStream): AsyncIterableIterator<DecodedWavAudio>;
+  stream?(input: ReadableStream<Uint8Array> | NodeJS.ReadableStream): AsyncIterableIterator<DecodedWavAudio>;
 
   /**
    * Node/CLI convenience: decode a whole file at once.
@@ -291,7 +259,7 @@ export interface AudioDecoder {
  * @property {number} sampleRate - Sample rate in Hz.
  * @property {number} [samplesPerBlock] - Samples per block (used by some compressed formats).
  * @property {number} [channelMask] - Channel layout bitmask (WAVEFORMATEXTENSIBLE).
- * @property {number} [extensionSize] - Size in bytes of extra extension fields.
+ * @property {number} [extSize] - Size in bytes of extra extension fields.
  * @property {Uint8Array} [subFormat] - Sub-format GUID for extensible WAV formats.
  * @property {number} [validBitsPerSample] - Actual valid bits per sample (for extensible formats).
  * @property {number} [extSize] - Extension field size.
@@ -306,28 +274,17 @@ export interface WavFormat {
   sampleRate: number;
   samplesPerBlock?: number;
   channelMask?: number;
-  extensionSize?: number;
-  subFormat?: Uint8Array;
   validBitsPerSample?: number;
+  subFormat?: Uint8Array;
   extSize?: number;
   extraFields?: Uint8Array;
-}
 
-/**
- * An extended version of WavFormat that includes internal decoder metadata and resolved fields.
- *
- * @property {number} factChunkSamples - If present, sample count reported in 'fact' chunk.
- * @property {DataChunk[]} dataChunks - All 'data' chunks located in the WAV file.
- * @property {boolean} isLittleEndian - Endianness of the parsed file (true = little-endian).
- * @property {number} resolvedFormatTag - Final format tag, resolved from extensible formats if needed.
- * @property {number} bytesPerSample - Number of bytes per channel per sample, after resolving the format.
- */
-export interface ExtendedWavFormat extends WavFormat {
-  factChunkSamples: number;
-  dataChunks: DataChunk[];
-  isLittleEndian: boolean;
-  resolvedFormatTag: number;
-  bytesPerSample: number;
+  // --- Runtime fields, always optional
+  resolvedFormatTag?: number;
+  isLittleEndian?: boolean;
+  bytesPerSample?: number;
+  factChunkSamples?: number;
+  dataChunks?: DataChunk[];
 }
 
 /**
@@ -363,3 +320,4 @@ export interface WavHeaderParserResult {
 
 export type AudioChunk = Uint8Array | Buffer;
 export type InputStream = ReadableStream<Uint8Array> | NodeJS.ReadableStream;
+export type InputFile = string | Buffer;

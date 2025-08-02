@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { WavDecoder, DecoderState } from '../src';
+import { WavDecoder } from '../src';
 import { fixtureKeys, fixtureProperties } from './fixtures';
 import { loadFixture } from './fixtures/helpers';
+import { DecoderState } from '../src/core/StateMachine';
 
 const loadedFixtures = new Map<string, Uint8Array>();
 
@@ -13,15 +14,14 @@ beforeAll(async () => {
 
 describe('WavDecoder', () => {
   it.each(Object.entries(fixtureProperties))('should decode %s and match expected format', (fixtureName, expected) => {
-    const wav = loadedFixtures.get(fixtureName);
+    const wav = loadedFixtures.get(fixtureName)!;
     expect(wav, `Fixture "${fixtureName}" not loaded`).toBeDefined();
 
     const decoder = new WavDecoder();
-    const result = decoder.decode(wav!);
+    const result = decoder.decode(wav);
 
     expect(result.errors).toEqual([]);
     expect(decoder.info.state).toBe(DecoderState.DECODING);
-
     expect(decoder.info.format.channels).toBe(expected.channels);
     expect(decoder.info.format.sampleRate).toBe(expected.sampleRate);
     expect(decoder.info.format.bitsPerSample).toBe(expected.bitDepth);

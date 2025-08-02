@@ -1,5 +1,13 @@
-export const INV_128 = 1 / 128;
+export const MAX_BUFFER_SIZE = 16 * 1024 * 1024;
+export const MAX_HEADER_SIZE = 2 * 1024 * 1024;
+export const MAX_SAMPLE_RATE = 384000;
+export const MAX_CHANNELS = 32;
 
+export const MAX_POOL_SIZE = 8;
+export const MIN_POOLED_BUFFER_SIZE = 1024;
+export const MAX_POOLED_BUFFER_SIZE = 16384;
+
+export const INV_128 = 1 / 128;
 export const INV_32768 = 1 / 32768;
 export const INV_8388608 = 1 / 8388608;
 export const INV_2147483648 = 1 / 2147483648;
@@ -11,11 +19,11 @@ export const WAVE_FORMAT_PCM = 0x0001;
 export const WAVE_FORMAT_IMA_ADPCM = 0x0011;
 export const WAVE_FORMAT_ALAW = 0x0006;
 
-export const RIFF_SIGNATURE = 0x46464952 as const;
-export const RIFX_SIGNATURE = 0x52494658 as const;
-export const WAVE_SIGNATURE = 'WAVE' as const;
-export const FMT_CHUNK = 'fmt ' as const;
-export const DATA_CHUNK = 'data' as const;
+export const RIFF_SIGNATURE = 0x46464952;
+export const RIFX_SIGNATURE = 0x52494658;
+export const WAVE_SIGNATURE = 'WAVE';
+export const FMT_CHUNK = 'fmt ';
+export const DATA_CHUNK = 'data';
 
 export const IMA_STEP_TABLE = new Int32Array([
   7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97, 107, 118,

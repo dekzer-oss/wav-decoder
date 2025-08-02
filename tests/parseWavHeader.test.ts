@@ -1,4 +1,4 @@
-import { parseWavHeader } from '../src/parseWavHeader';
+import { parseWavHeader } from '../src/utils/parseWavHeader';
 import { describe, expect, it } from 'vitest';
 import { WaveFile } from 'wavefile';
 import { WAVE_FORMAT_EXTENSIBLE, WAVE_FORMAT_IMA_ADPCM, WAVE_FORMAT_PCM } from '../src/constants';
