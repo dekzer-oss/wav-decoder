@@ -4,14 +4,14 @@
   "description": "A robust, streaming-capable WAV audio decoder with full PCM, float, A-law, and µ-law support — zero dependencies, works in browsers and Node.js.",
   "author": "Maikel Eckelboom",
   "license": "MIT",
-  "homepage": "https://github.com/dekzer-oss/wav-decoder#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dekzer-oss/wav-decoder.git"
+    "url": "https://github.com/dekzer-oss/wav-decoder"
   },
   "bugs": {
     "url": "https://github.com/dekzer-oss/wav-decoder/issues"
   },
+  "homepage": "https://github.com/dekzer-oss/wav-decoder#readme",
   "packageManager": "pnpm@10.13.1",
   "engines": {
     "node": ">=20.0.0"
@@ -19,7 +19,7 @@
   "funding": "https://github.com/sponsors/maikeleckelboom",
   "publishConfig": {
     "access": "public",
-    "registry": "https://registry.npmjs.org/"
+    "registry": "https://npm.pkg.github.com"
   },
   "keywords": [
     "wav-decoder",
