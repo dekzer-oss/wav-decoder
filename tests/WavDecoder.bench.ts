@@ -1,12 +1,8 @@
-// tests/WavDecoder.bench.ts
-import { beforeAll, bench, describe } from 'vitest';
+import { afterEach, beforeAll, bench, describe } from 'vitest';
 import { DecoderState, WavDecoder } from '../src';
 import { fixtureProperties } from './fixtures';
 import { loadFixture } from './fixtures/helpers';
 
-// -------------------------------
-// Fixture loading (once)
-// -------------------------------
 const fixtureData = new Map<string, Uint8Array>();
 
 beforeAll(async () => {
@@ -18,21 +14,6 @@ beforeAll(async () => {
     fixtureData.set(n, buf);
   });
 });
-
-// -------------------------------
-// Helpers
-// -------------------------------
-let globalChecksum = 0;
-
-function simpleChecksum(channelData?: Float32Array[]): number {
-  if (!channelData || channelData.length === 0) return 0;
-  let sum = 0;
-  for (const ch of channelData) {
-    const n = Math.min(256, ch.length);
-    for (let i = 0; i < n; i++) sum += ch[i]!;
-  }
-  return sum;
-}
 
 function readU32LE(a: Uint8Array, off: number): number {
   return (a[off]! | (a[off + 1]! << 8) | (a[off + 2]! << 16) | (a[off + 3]! << 24)) >>> 0;
@@ -58,10 +39,9 @@ function splitHeaderBody(wav: Uint8Array): { header: Uint8Array; body: Uint8Arra
     const id = readTag(wav, off);
     const sz = readU32LE(wav, off + 4);
     const dataStart = off + 8;
-    const next = dataStart + sz + (sz & 1); // chunks are word-aligned
+    const next = dataStart + sz + (sz & 1);
 
     if (id === 'data') {
-      // end just before payload
       const header = wav.slice(0, dataStart + 4); // include 'data'
       const sizeField = wav.slice(off + 4, off + 8); // 4-byte size
       const fullHeader = new Uint8Array(header.length + 4);
@@ -80,7 +60,7 @@ function splitHeaderBody(wav: Uint8Array): { header: Uint8Array; body: Uint8Arra
  */
 function initBlockDecoder(header: Uint8Array) {
   const dec = new WavDecoder();
-  const initRes = dec.decode(header);
+  dec.decode(header);
   if (dec.info.state !== DecoderState.DECODING) {
     dec.free();
     throw new Error('Decoder init failed from header');
@@ -111,11 +91,9 @@ describe('WavDecoder full decode() performance', () => {
     bench(
       `Full decode: ${file}`,
       () => {
-        const data = fixtureData.get(file);
-        if (!data) throw new Error(`Fixture not loaded: ${file}`);
+        const data = fixtureData.get(file)!;
         const decoder = new WavDecoder();
-        const result = decoder.decode(data);
-        globalChecksum += simpleChecksum(result.channelData);
+        decoder.decode(data);
         decoder.free();
       },
       benchOptions
@@ -135,24 +113,16 @@ describe('WavDecoder block processing performance', () => {
   bench(
     'Block processing: decodeFrames()',
     () => {
-      const data = fixtureData.get(file);
-      if (!data) throw new Error(`Fixture not loaded: ${file}`);
+      const data = fixtureData.get(file)!;
       const { header, body } = splitHeaderBody(data);
 
       const { dec, chunkSize } = initBlockDecoder(header);
-      let checksum = 0;
 
       for (let off = 0; off < body.length; off += chunkSize) {
         const chunk = body.slice(off, off + chunkSize);
-        const res = dec.decodeFrames(chunk);
-        checksum += simpleChecksum(res.channelData);
+        dec.decodeFrames(chunk);
       }
 
-      // flush
-      const finalRes = dec.decodeFrames(new Uint8Array(0));
-      checksum += simpleChecksum(finalRes.channelData);
-
-      globalChecksum += checksum;
       dec.free();
     },
     benchOptions
@@ -161,23 +131,15 @@ describe('WavDecoder block processing performance', () => {
   bench(
     'Block processing: decode()',
     () => {
-      const data = fixtureData.get(file);
-      if (!data) throw new Error(`Fixture not loaded: ${file}`);
+      const data = fixtureData.get(file)!;
       const { header, body } = splitHeaderBody(data);
 
       const { dec, chunkSize } = initBlockDecoder(header);
-      let checksum = 0;
-
       for (let off = 0; off < body.length; off += chunkSize) {
         const chunk = body.slice(off, off + chunkSize);
-        const res = dec.decode(chunk);
-        checksum += simpleChecksum(res.channelData);
+        dec.decode(chunk);
       }
 
-      const finalRes = dec.decode(new Uint8Array(0));
-      checksum += simpleChecksum(finalRes.channelData);
-
-      globalChecksum += checksum;
       dec.free();
     },
     benchOptions
