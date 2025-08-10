@@ -253,3 +253,31 @@ export interface WavFormat {
   subFormat?: Uint8Array;
   validBitsPerSample?: number;
 }
+
+/**
+ * Represents the result of a seek operation within an audio stream.
+ *
+ * It contains detailed information about the position reached after seeking,
+ * which may not be an exact sample due to block alignment or other
+ * encoding specifics.
+ *
+ * @interface DecoderSeekResult
+ */
+export interface DecoderSeekResult {
+  /** Where to start reading (container/keyframe safe) */
+  byteOffset: number;
+  /** Decoder's sample rate (samples/sec) */
+  nativeSampleRate: number;
+  /** Requested time in seconds */
+  requestedTime: number;
+  /** Native sample at the container boundary we start decoding */
+  anchorSample: number;
+  /** Native samples to decode but not output (e.g., Opus preroll) */
+  prerollSamples: number;
+  /** Native samples to drop after preroll to land on request */
+  discardSamples: number;
+  /** Anchor + preroll + discard (native sample rate) */
+  firstAudibleSample: number;
+  /** Whether firstAudibleSample == requested time in native domain */
+  isExact: boolean;
+}

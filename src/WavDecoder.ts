@@ -3,6 +3,7 @@ import {
   type DecodedWavAudio,
   type DecodeError,
   type DecoderOptions,
+  type DecoderSeekResult,
   DecoderState,
   type WavDecoderInterface,
   type WavFormat,
@@ -259,10 +260,62 @@ export class WavDecoder implements WavDecoderInterface {
     this.dataStartOffset = 0;
   }
 
-  public seekSeconds(seconds: number): void {
+  public seekSeconds(seconds: number): DecoderSeekResult {
     if (this.state !== DecoderState.DECODING) {
       throw new Error('Decoder must be in DECODING state to seek.');
     }
+    if (!this.format.sampleRate || !this.format.blockSize || !this.dataStartOffset) {
+      throw new Error('WAV header not fully parsed.');
+    }
+
+    const sr = this.format.sampleRate;
+    const blockSize = this.format.blockSize;
+    const dataStart = this.dataStartOffset;
+    const requestedTime = Math.max(0, seconds);
+    const exactSample = Math.max(0, Math.floor(requestedTime * sr));
+
+    let totalSamples: number;
+    if (this.formatTag === WAVE_FORMAT_IMA_ADPCM) {
+      const spb = this.format.samplesPerBlock!;
+      const maxBlocks = Math.floor(this.totalBytes / blockSize);
+      const byFact = this.factChunkSamples > 0 ? this.factChunkSamples : maxBlocks * spb;
+      totalSamples = Math.max(0, byFact);
+    } else {
+      totalSamples = Math.floor(this.totalBytes / blockSize);
+    }
+
+    const effectiveSample = totalSamples > 0 ? Math.min(exactSample, totalSamples - 1) : 0;
+
+    let byteOffset: number;
+    let anchorSample: number;
+    let prerollSamples = 0;
+    let discardSamples = 0;
+
+    if (this.formatTag === WAVE_FORMAT_IMA_ADPCM) {
+      const spb = this.format.samplesPerBlock!;
+      if (!spb || spb <= 0) throw new Error('IMA ADPCM: missing samplesPerBlock');
+      const blockIndex = Math.floor(effectiveSample / spb);
+      anchorSample = blockIndex * spb;
+      discardSamples = effectiveSample - anchorSample;
+      byteOffset = dataStart + blockIndex * blockSize;
+    } else {
+      anchorSample = effectiveSample;
+      byteOffset = dataStart + effectiveSample * blockSize;
+    }
+
+    const firstAudibleSample = anchorSample + prerollSamples + discardSamples;
+    const isExact = firstAudibleSample === exactSample;
+
+    return {
+      byteOffset,
+      nativeSampleRate: sr,
+      requestedTime,
+      anchorSample,
+      prerollSamples,
+      discardSamples,
+      firstAudibleSample,
+      isExact,
+    };
   }
 
   private initDecoderLookup(): void {
