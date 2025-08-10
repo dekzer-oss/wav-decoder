@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="public/favicon/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <title>WAV Decoder - Streaming Demo</title>
   <style>
       :root {
@@ -139,7 +139,7 @@
 </div>
 
 <script type="module">
-  import { WavDecoder } from './src';
+  import { WavDecoder } from './src/index.ts';
 
   const state = {
     context: null,
@@ -273,7 +273,6 @@
       state.fileSampleRate = sampleRate;
     }
 
-    console.log(`Decoded ${samplesDecoded} samples at ${sampleRate || state.context.sampleRate} Hz`);
     const buf = state.context.createBuffer(
       channelData.length,
       channelData[0].length,

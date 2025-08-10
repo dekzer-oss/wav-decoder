@@ -3,6 +3,7 @@
 
 # Build output
 /dist
+/pages
 
 # Logs
 npm-debug.log*
@@ -33,7 +34,4 @@ Thumbs.db
 
 # Custom files
 source_code.md
-
-public/samples/*
-
 tests/fixtures/wav/

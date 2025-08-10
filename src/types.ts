@@ -2,7 +2,7 @@
  * The number of bits of information in each audio sample.
  * Common values are 8, 16, 24, 32, and 64.
  */
-export type WavBitDepth = 8 | 16 | 24 | 32 | 64 | (number & {});
+export type BitsPerSample = 8 | 16 | 24 | 32 | 64 | (number & {});
 
 /**
  * Identifier for the audio encoding format in a WAVE file header.
@@ -80,7 +80,7 @@ export interface DecodeError {
  * @property samplesDecoded - The total number of audio samples successfully decoded.
  */
 export interface DecodedWavAudio {
-  bitsPerSample: WavBitDepth;
+  bitsPerSample: BitsPerSample;
   channelData: Float32Array[];
   errors: DecodeError[];
   sampleRate: WavSampleRate;
@@ -189,7 +189,7 @@ export interface Decoder {
  * @property validBitsPerSample - (Optional) The actual number of valid bits in a sample (e.g., 20 for a 24-bit sample).
  */
 export interface WavFormat {
-  bitsPerSample: WavBitDepth;
+  bitsPerSample: BitsPerSample;
   blockAlign: number;
   avgBytesPerSec: number;
   channels: number;

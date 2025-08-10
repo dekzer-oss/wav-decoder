@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WAV Decoder – Starter Demo</title>
-  <link rel="icon" href="public/favicon/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <style>
       :root {
           --bg: #f8fafc;
@@ -121,7 +121,7 @@
 <button id="resetBtn" hidden>Decode Another File</button>
 
 <script type="module">
-  import { WavDecoder, WavFormatTagNames } from './dist/index.js';
+  import { WavDecoder, WavFormatTagNames } from './src/index.ts';
 
   const els = {
     drop: document.getElementById('uploadZone'),
