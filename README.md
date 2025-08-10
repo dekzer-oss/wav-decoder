@@ -1,71 +1,82 @@
 # @dekzer/wav-decoder
 
-[//]: # (![Chrome throughput]&#40;https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-browser-chrome.json&#41;)
+[![Live Demo](https://img.shields.io/badge/demo-GitHub%20Pages-2ea44f?logo=github)](https://dekzer-oss.github.io/wav-decoder/)
+[![Deploy Pages](https://github.com/dekzer-oss/wav-decoder/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/dekzer-oss/wav-decoder/actions/workflows/deploy.yml)
+[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520-green?logo=node.js)](https://nodejs.org/)
 
-A lightweight TypeScript/JavaScript library for progressive decoding of uncompressed WAV audio as bytes arrive,
-optimized for Chromium but compatible with all modern browsers and Node.js 20+.
-Please expect breaking changes until we tag a 1.0.0.
+[![Browsers](https://img.shields.io/badge/Chrome%20124%2B%20%7C%20Firefox%20110%2B%20%7C%20Edge%20124%2B-blue?logo=googlechrome)](#supported-formats--limits)
+[![Safari](https://img.shields.io/badge/Safari-Reader%20Pattern%20Required-orange?logo=safari)](#supported-formats--limits)
+
+A TypeScript/JavaScript library for **progressive decoding** of uncompressed WAV audio files *as bytes
+arrive*. Optimized for Chromium while maintaining compatibility with all modern browsers and Node.js 20+. Breaking
+changes may occur before **v1.0.0**.
 
 ---
 
-## Table of contents
+## Table of Contents
 
-1. [Status & project goals](#status--project-goals)
+1. [Status & Goals](#status--goals)
 2. [Features](#features)
 3. [Installation](#installation)
-4. [Quick example](#quick-example)
+4. [Quick Example](#quick-example)
 5. [Live Demos](#live-demos)
-6. [Detailed API](#detailed-api)
-7. [Supported formats, platforms & limits](#supported-formats-platforms--limits)
-8. [Development & testing](#development--testing)
-9. [License](#license)
+6. [API](#api)
+7. [Usage Examples](#usage-examples)
+8. [Supported Formats & Limits](#supported-formats--limits)
+9. [Development & Testing](#development--testing)
+10. [License](#license)
 
 ---
 
-## Status & project goals
+## Status & Goals
 
-|                       |                                                                                             |
-|-----------------------|---------------------------------------------------------------------------------------------|
-| **Maturity**          | Internal prototype; usable, but not yet frozen.                                             |
-| **Stability promise** | Semantic-versioning will start at v1.0.0. Until then new releases *might* introduce breaks. |
-| **Road-map**          | Optimize Node through-put. Optional worker/Worklet wrapper.                                 |
+| Aspect        | Status                                                            |
+|---------------|-------------------------------------------------------------------|
+| **Maturity**  | Internal prototype: functional but APIs not finalized             |
+| **Stability** | Pre-v1.0.0 releases may contain breaking API changes              |
+| **Roadmap**   | Node.js throughput optimization, optional Worker/Worklet wrappers |
 
 ---
 
 ## Features
 
-* **Chunk-by-chunk decoding** – start playback before the file is finished downloading.
-* **No runtime dependencies** – the package.json lists only dev-deps and peer-less prod code.
-* **Broad PCM coverage** – 8/16/24/32-bit PCM, 32/64-bit float, A-law and µ-law, little- and big-endian.
-  The unit-tests run those variants against ~20 fixtures.
-* **Works in Node 20+ and modern browsers**; for browsers you can pipe the decoded Float32Arrays straight into an
-  `AudioContext`.
+- **Progressive decoding** - Process audio chunks as they arrive
+- **Zero dependencies** - Runtime dependency-free (dev-only in `package.json`)
+- **Broad format support** - 8/16/24/32-bit PCM, 32/64-bit float, A-law/µ-law (little/big-endian)
+- **Cross-platform** - Compatible with Node.js 20+ and modern browsers
+- **AudioContext-ready** - Directly pipe `Float32Array[]` output to Web Audio API
+- **Rigorous testing** - Validated against ~20 fixture WAV files
 
 ---
 
 ## Installation
 
 ```bash
-# with pnpm
+# pnpm
 pnpm add @dekzer/wav-decoder
 
-# or npm
+# npm
 npm install @dekzer/wav-decoder
-````
+```
 
-No post-install scripts, no optional binaries.
+No post-install scripts or optional binaries.
 
 ---
 
-## Quick example
+## Quick Example
 
 ```ts
 import { WavDecoder } from '@dekzer/wav-decoder';
 
 async function streamAndPlay(url: string) {
   const decoder = new WavDecoder();
+
   const response = await fetch(url);
-  const reader = response.body!.getReader();
+  if (!response.ok || !response.body) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
+
+  const reader = response.body.getReader();
 
   while (true) {
     const { done, value } = await reader.read();
@@ -73,7 +84,6 @@ async function streamAndPlay(url: string) {
 
     const out = decoder.decode(value);
     if (out.samplesDecoded) {
-      // `out.channelData` is Float32Array[]
       playChunk(out.channelData, out.sampleRate);
     }
   }
@@ -89,105 +99,152 @@ async function streamAndPlay(url: string) {
 
 ## Live Demos
 
-Try the decoder in your browser or use these as **starter templates**:
+Explore these interactive examples to accelerate integration:
 
-| Demo                                            | Description                                                             | Source                                        |
-|-------------------------------------------------|-------------------------------------------------------------------------|-----------------------------------------------|
-| [Full UI demo](index.html)                      | Drag & drop WAV, see detailed metrics, chunked decoding, playback, logs | [`index.html`](index.html)                    |
-| [Starter demo](starter.html)                    | 20 lines of code: pure decode, metrics, and progress bar                | [`starter-demo.html`](starter.html)           |
-| [Streaming playback demo](stream-and-play.html) | Streams a WAV file, progressive decode & low-latency playback           | [`streaming-demo.html`](stream-and-play.html) |
-
-**Pro tip:**
-Fork and modify these to jump-start your integration.
-Each demo is standalone—just "view source" for a ready-made starter.
+| Demo                                                                           | Description                                   | Source                                         |
+|--------------------------------------------------------------------------------|-----------------------------------------------|------------------------------------------------|
+| [Full UI Demo](https://dekzer-oss.github.io/wav-decoder)                       | Drag & drop, metrics, playback visualization  | [`index.html`](index.html)                     |
+| [Starter Demo](https://dekzer-oss.github.io/wav-decoder/starter)               | Minimal implementation with progress tracking | [`starter.html`](starter.html)                 |
+| [Streaming Playback](https://dekzer-oss.github.io/wav-decoder/stream-and-play) | Low-latency streaming decode & playback       | [`stream-and-play.html`](stream-and-play.html) |
 
 ---
 
-
----
-
-## Detailed API
+## API
 
 ### `class WavDecoder`
 
-| Member                                         | Description                                                                                        |
-|------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| **constructor()**                              | Allocates internal ring-buffer (default 64 KiB).                                                   |
-| **decode(chunk: Uint8Array): DecodedWavAudio** | Feed arbitrary-sized data. Returns samples (may be zero) and non-fatal error list.                 |
-| **flush()**                                    | Drains any remaining bytes (including a partial final block). Useful when the decodeStream closes. |
-| **reset()**                                    | Clears internal state so the instance can be re-used.                                              |
-| **free()**                                     | Releases the ring-buffer and changes `info.state` to `ENDED`; subsequent calls are no-ops.         |
-| **info** *(read-only)*                         | Live diagnostics object described below.                                                           |
+| Method                        | Description                                                      |
+|-------------------------------|------------------------------------------------------------------|
+| **constructor()**             | Initializes with 64 KiB ring buffer (default)                    |
+| **decode(chunk: Uint8Array)** | Processes incoming bytes; returns decoded samples                |
+| **flush()**                   | Finalizes decoding of remaining bytes (including partial blocks) |
+| **reset()**                   | Clears state for instance reuse                                  |
+| **free()**                    | Releases resources and sets `info.state` to `ENDED`              |
+| **info** *(read-only)*        | Real-time diagnostics object                                     |
 
-#### `DecodedWavAudio`
+#### Output Structure (`DecodedWavAudio`)
 
 ```ts
-interface DecodedWavAudio {
-  channelData: Float32Array[]; // one array per channel
-  samplesDecoded: number;      // samples added by *this* call
-  sampleRate: number;          // independent copy for convenience
-  errors: DecodeError[];       // non-fatal issues (clipped sample, NaN, …)
+{
+  channelData: Float32Array[];  // Per-channel audio buffers
+  samplesDecoded: number;       // Samples decoded in this operation
+  sampleRate: number;           // Extracted from WAV header
+  errors: DecodeError[];        // Non-fatal decoding issues
 }
 ```
 
-#### `decoder.info`
+#### `decoder.info` Properties
 
-| Field          | Notes                                                                                                   |
-|----------------|---------------------------------------------------------------------------------------------------------|
-| `state`        | `DecoderState.IDLE \| DECODING \| ENDED \| ERROR`.                                                      |
-| `format`       | Populated after the `fmt ` chunk is parsed: `{ formatTag, channels, sampleRate, bitsPerSample, blockAlign }`. |
-| `decodedBytes` | Total bytes written into PCM output so far.                                                             |
-| `progress`     | Fraction 0–1 based on WAV `data` chunk size (falls back to `NaN` if size unknown).                      |
-| `errors`       | Array of the last few `DecodeError`s; a *fatal* error switches `state` to `ERROR`.                      |
+| Property       | Description                                                  |
+|----------------|--------------------------------------------------------------|
+| `state`        | `DecoderState.IDLE` \| `DECODING` \| `ENDED` \| `ERROR`      |
+| `format`       | Header details (`formatTag`, `channels`, `sampleRate`, etc.) |
+| `decodedBytes` | Cumulative PCM bytes decoded                                 |
+| `progress`     | Completion ratio (0–1, NaN if unknown)                       |
+| `errors`       | Recent non-fatal errors (fatal errors set `state = ERROR`)   |
 
-#### `enum DecoderState`
+---
 
-Exact numeric values are private – rely only on the names:
+## Usage Examples
+
+### Basic streaming (fetch)
 
 ```ts
-enum DecoderState {
-  DECODING,
-  ENDED,
-  ERROR,
-  IDLE,
+import { WavDecoder } from '@dekzer/wav-decoder';
+
+const decoder = new WavDecoder();
+const response = await fetch(url);
+
+for await (const chunk of response.body) {
+  const { channelData, samplesDecoded, sampleRate } = decoder.decode(chunk);
+  if (samplesDecoded) playChunk(channelData, sampleRate);
 }
+
+const tail = decoder.flush();
+if (tail.samplesDecoded) playChunk(tail.channelData, tail.sampleRate);
+```
+
+### Local file processing (File/Blob)
+
+```ts
+async function processFile(file: File) {
+  const decoder = new WavDecoder();
+
+  for await (const chunk of file.stream()) {
+    const out = decoder.decode(chunk);
+    if (out.samplesDecoded) playChunk(out.channelData, out.sampleRate);
+  }
+
+  const tail = decoder.flush();
+  if (tail.samplesDecoded) playChunk(tail.channelData, tail.sampleRate);
+}
+```
+
+### TransformStream integration
+
+```ts
+function createWavDecoder() {
+  const decoder = new WavDecoder();
+
+  return new TransformStream({
+    transform(chunk, controller) {
+      const out = decoder.decode(chunk);
+      if (out.samplesDecoded) controller.enqueue(out);
+    },
+    flush(controller) {
+      const tail = decoder.flush();
+      if (tail.samplesDecoded) controller.enqueue(tail);
+    }
+  });
+}
+
+await response.body
+  .pipeThrough(createWavDecoder())
+  .pipeTo(new WritableStream({
+    write({ channelData, sampleRate }) {
+      playChunk(channelData, sampleRate);
+    }
+  }));
 ```
 
 ---
 
-## Supported formats, platforms & limits
+## Supported Formats & Limits
 
-| Aspect              | Notes                                                                                 |
-|---------------------|---------------------------------------------------------------------------------------|
-| **Containers**      | RIFF `WAVE` (little-endian) & RIFX (big-endian).                                      |
-| **Codecs**          | 0x0001 PCM, 0x0003 IEEE float, 0x0006 A-law, 0x0007 µ-law.                            |
-| **Bits per sample** | 8/16/24/32-bit integer, 32/64-bit float.                                              |
-| **Channels**        | 1 … 8 tested; more should work, memory permitting.                                    |
-| **Sample-rate**     | Any positive integer ≤ 192 kHz (no fixed list).                                       |
-| **File size**       | Limited only by the host decodeStream; decoding is constant-memory.                   |
-| **Not supported**   | ADPCM, MPEG-encoded “WAV”, broadcast extensions, cue lists.                           |
-| **Browsers**        | Requires `ReadableStream` and `AudioContext` (≈ Chrome 94+, Firefox 92+, Safari 15+). |
-| **Node**            | Node 20 or newer (streams with BYOB readers were simplified in 20).                   |
+| Category        | Support                                                                          |
+|-----------------|----------------------------------------------------------------------------------|
+| **Containers**  | RIFF `WAVE` (LE), RIFX (BE)                                                      |
+| **Encodings**   | PCM, IEEE float, A-law, µ-law                                                    |
+| **Bit Depth**   | 8/16/24/32-bit int, 32/64-bit float                                              |
+| **Channels**    | 1–8 (theoretically unlimited)                                                    |
+| **Sample Rate** | ≤ 192 kHz                                                                        |
+| **Constraints** | Constant-memory streaming (no file size limits)                                  |
+| **Exclusions**  | ADPCM, MPEG-WAV, broadcast extensions, cue lists                                 |
+| **Browsers**    | Requires `ReadableStream` + `AudioContext` (Chrome 94+, Firefox 92+, Safari 15+) |
+| **Node.js**     | Version 20+ (simplified BYOB readers)                                            |
+
+### Browser Compatibility Notes
+
+- **Async iteration over `ReadableStream`**: Chrome 124+, Firefox 110+, Edge 124+
+- **Safari**: Use reader pattern for broader compatibility
+- **All examples** provide fallback patterns for maximum browser support
 
 ---
 
-## Development & testing
-
-Clone and install with **pnpm >= 8**.
+## Development & Testing
 
 ```bash
-pnpm install          # grabs dev-deps only
-pnpm test             # vitest: Node + happy-dom browser suite
-pnpm bench            # micro-benchmarks for several fixtures
-pnpm demo             # vite – opens the browser demos
+pnpm install   # Install dev dependencies
+pnpm test      # Run Vitest (Node + browser)
+pnpm bench     # Execute micro-benchmarks
+pnpm demo      # Launch Vite development server
 ```
 
-CI runs `vitest`, Playwright browser tests and size-limited benchmarks on each PR.&#x20;
-
-Fixtures are generated from pure-Python (`scripts/gen-wav-fixtures.py`) – no copyrighted samples.&#x20;
+- Continuous integration includes Vitest, Playwright tests, and benchmarks
+- Fixtures generated via `scripts/gen-wav-fixtures.py` (no copyrighted material)
 
 ---
 
 ## License
 
-MIT – see [LICENSE](./LICENSE). No warranty.
+MIT - See [LICENSE](./LICENSE)
