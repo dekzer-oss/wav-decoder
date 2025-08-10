@@ -114,7 +114,7 @@ def record_manifest(
     MANIFEST[fname] = {
         "channels": channels,
         "sampleRate": sample_rate,
-        "bitDepth": bit_depth,
+        "bitsPerSample": bit_depth,
         "formatTag": format_tag,
         "samplesPerChannel": samples_per_channel,
     }

@@ -135,7 +135,7 @@ interface DecodedWavAudio {
 | Field          | Notes                                                                                                   |
 |----------------|---------------------------------------------------------------------------------------------------------|
 | `state`        | `DecoderState.IDLE \| DECODING \| ENDED \| ERROR`.                                                      |
-| `format`       | Populated after the `fmt ` chunk is parsed: `{ formatTag, channels, sampleRate, bitDepth, blockSize }`. |
+| `format`       | Populated after the `fmt ` chunk is parsed: `{ formatTag, channels, sampleRate, bitsPerSample, blockAlign }`. |
 | `decodedBytes` | Total bytes written into PCM output so far.                                                             |
 | `progress`     | Fraction 0–1 based on WAV `data` chunk size (falls back to `NaN` if size unknown).                      |
 | `errors`       | Array of the last few `DecodeError`s; a *fatal* error switches `state` to `ERROR`.                      |

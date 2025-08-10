@@ -67,7 +67,8 @@ function initBlockDecoder(header: Uint8Array) {
   }
   const fmt = dec.info.format;
   const blockSize =
-    (fmt?.blockSize && fmt.blockSize > 0 ? fmt.blockSize : (fmt?.channels ?? 0) * ((fmt?.bitDepth ?? 0) / 8)) | 0;
+    (fmt?.blockAlign && fmt.blockAlign > 0 ? fmt.blockAlign : (fmt?.channels ?? 0) * ((fmt?.bitsPerSample ?? 0) / 8)) |
+    0;
 
   if (!Number.isFinite(blockSize) || blockSize <= 0) {
     dec.free();
@@ -111,7 +112,7 @@ describe('WavDecoder block processing performance', () => {
   const file = 'sine_pcm_16bit_le_stereo.wav';
 
   bench(
-    'Block processing: decodeFrames()',
+    'Block processing: decodeFrame()',
     () => {
       const data = fixtureData.get(file)!;
       const { header, body } = splitHeaderBody(data);
@@ -120,7 +121,7 @@ describe('WavDecoder block processing performance', () => {
 
       for (let off = 0; off < body.length; off += chunkSize) {
         const chunk = body.slice(off, off + chunkSize);
-        dec.decodeFrames(chunk);
+        dec.decodeFrame(chunk);
       }
 
       dec.free();

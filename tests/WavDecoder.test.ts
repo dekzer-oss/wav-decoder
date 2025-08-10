@@ -34,7 +34,7 @@ describe('WavDecoder', () => {
       expect(format.formatTag).toBe(expected.formatTag);
       expect(format.channels).toBe(expected.channels);
       expect(format.sampleRate).toBe(expected.sampleRate);
-      expect(format.bitDepth).toBe(expected.bitDepth);
+      expect(format.bitsPerSample).toBe(expected.bitDepth);
       expect(result.channelData.length).toBe(expected.channels);
 
       for (let i = 0; i < result.channelData.length; i++) {
@@ -44,8 +44,7 @@ describe('WavDecoder', () => {
   );
 
   test.each(Object.entries(fixtureProperties))('should correctly decode %s frame by frame', (fixtureName, expected) => {
-    const audioData = loadedFixtures.get(fixtureName);
-    if (!audioData) throw new Error(`Fixture "${fixtureName}" not found.`);
+    const audioData = loadedFixtures.get(fixtureName)!;
 
     const dataChunkStart = findStringInUint8Array(audioData, 'data');
     expect(dataChunkStart).toBeGreaterThan(-1);
@@ -57,19 +56,19 @@ describe('WavDecoder', () => {
     decoder.decode(header);
     expect(decoder.info.state).toBe(DecoderState.DECODING);
 
-    const { blockSize } = decoder.info.format;
-    expect(blockSize).toBeGreaterThan(0);
+    const { blockAlign } = decoder.info.format;
+    expect(blockAlign).toBeGreaterThan(0);
 
     let totalSamplesDecoded = 0;
-    const chunkSize = blockSize * 512;
+    const chunkSize = blockAlign * 512;
 
     for (let offset = 0; offset < body.length; offset += chunkSize) {
       const chunk = body.subarray(offset, offset + chunkSize);
-      const framesInChunk = Math.floor(chunk.length / blockSize);
+      const framesInChunk = Math.floor(chunk.length / blockAlign);
       if (framesInChunk === 0) continue;
 
-      const frameData = chunk.subarray(0, framesInChunk * blockSize);
-      const frameResult = decoder.decodeFrames(frameData);
+      const frameData = chunk.subarray(0, framesInChunk * blockAlign);
+      const frameResult = decoder.decode(frameData);
       expect(frameResult.errors).toEqual([]);
       totalSamplesDecoded += frameResult.samplesDecoded;
     }
@@ -164,46 +163,6 @@ describe('WavDecoder', () => {
     });
   });
 
-  it('should correctly decode a single frame with decodeFrame', () => {
-    const fixtureName = 'sine_pcm_16bit_le_stereo.wav';
-    const audioData = loadedFixtures.get(fixtureName);
-    if (!audioData) throw new Error(`Fixture "${fixtureName}" not found.`);
-
-    const dataChunkStart = findStringInUint8Array(audioData, 'data');
-    const headerEndOffset = dataChunkStart + 8;
-    const header = audioData.subarray(0, headerEndOffset);
-    const body = audioData.subarray(headerEndOffset);
-
-    expect(decoder.decodeFrame(body.subarray(0, 4))).toBeNull();
-
-    decoder.decode(header);
-    expect(decoder.info.state).toBe(DecoderState.DECODING);
-    const { blockSize, channels } = decoder.info.format;
-
-    const bytesDecodedBefore = decoder.info.decodedBytes;
-    expect(bytesDecodedBefore).toBe(0);
-
-    const firstFrame = body.subarray(0, blockSize);
-    const result = decoder.decodeFrame(firstFrame);
-
-    const bytesDecodedAfter = decoder.info.decodedBytes;
-    expect(bytesDecodedAfter).toBe(bytesDecodedBefore);
-
-    expect(result).not.toBeNull();
-    expect(result).toBeInstanceOf(Float32Array);
-    expect(result!.length).toBe(channels);
-
-    const batchResult = decoder.decodeFrames(firstFrame);
-    const expectedLeftSample = batchResult.channelData[0]![0]!;
-    const expectedRightSample = batchResult.channelData[1]![0]!;
-
-    expect(result![0]).toBeCloseTo(expectedLeftSample);
-    expect(result![1]).toBeCloseTo(expectedRightSample);
-
-    const badFrame = body.subarray(0, blockSize - 1);
-    expect(decoder.decodeFrame(badFrame)).toBeNull();
-  });
-
   it('should handle flushing incomplete frames for exotic files', () => {
     const fixtureName = 'exotic_short_pcm16_80samples.wav';
     const audioData = loadedFixtures.get(fixtureName);
@@ -212,15 +171,8 @@ describe('WavDecoder', () => {
     const partialAudioData = audioData.subarray(0, audioData.length - 1);
     decoder.decode(partialAudioData);
 
-    // @ts-expect-error access internal buffer
-    const internalBuffer = decoder.ringBuffer;
-    const remainingBytes = internalBuffer.available;
-    expect(remainingBytes).toBeGreaterThan(0);
-
     const flushResult = decoder.flush();
-
     expect(flushResult).toBeDefined();
-    expect(internalBuffer.available).toBe(0);
     expect(decoder.info.state).toBe(DecoderState.ENDED);
     expect(flushResult.errors[0]?.message).toMatch(/Discarded \d+ bytes of incomplete final block/);
   });

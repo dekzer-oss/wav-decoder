@@ -1,40 +1,21 @@
 /**
- * Represents the bit depth used in a WAV file.
- *
- * The bit depth specifies the number of bits of information
- * in each audio sample. Common bit depths include 8, 16, 24,
- * 32, and 64 bits, representing various levels of audio
- * quality and file size. The type also accepts any custom
- * numerical values.
+ * The number of bits of information in each audio sample.
+ * Common values are 8, 16, 24, 32, and 64.
  */
 export type WavBitDepth = 8 | 16 | 24 | 32 | 64 | (number & {});
 
 /**
- * Represents various WAVE file format tags, commonly used to identify the
- * audio coding type in a WAVE file header.
- *
- * The type supports specific well-known values in addition to extension possibilities with custom numeric values.
- *
- * - `1`: Linear PCM, uncompressed audio data.
- * - `3`: IEEE float, representing audio samples using 32-bit floating-point numbers.
- * - `6`: μ-law, a logarithmic compression encoding format.
- * - `7`: A-law, another logarithmic compression encoding format.
- * - `65534`: WAVE_FORMAT_EXTENSIBLE, a container supporting extensible format specifications.
- *
- * The type also allows other user-defined numerical identifiers represented as `(number & {})`.
+ * Identifier for the audio encoding format in a WAVE file header.
+ * - `1`: PCM (uncompressed)
+ * - `3`: IEEE Float
+ * - `6`: A-law (logarithmic compression)
+ * - `7`: μ-law (logarithmic compression)
+ * - `65534`: Extensible format
  */
 export type WavFormatTag = 1 | 3 | 6 | 7 | 65534 | (number & {});
 
 /**
- * An object containing the mappings of WAV format tag identifiers to their respective human-readable names.
- * This object is defined as a constant and represents specific audio format types for WAV files.
- *
- * The keys are numeric identifiers corresponding to format tags, and the values are string descriptions of those formats:
- * - 1: Represents PCM (Pulse-Code Modulation), a standard audio format for uncompressed audio.
- * - 3: Represents IEEE Float, a format with floating-point samples.
- * - 6: Represents A-Law, a compression format used in telephony.
- * - 7: Represents µ-Law (Mu-Law), another telephony compression format.
- * - 65534: Represents Extensible, a format used to extend the capabilities of the WAV format.
+ * A constant mapping of WAV format tag identifiers to their human-readable names.
  */
 export const WavFormatTagNames = {
   1: 'PCM',
@@ -45,26 +26,8 @@ export const WavFormatTagNames = {
 } as const;
 
 /**
- * Represents the sample rate for a WAV audio file.
- *
- * The sample rate determines the number of samples of audio carried per second,
- * measured in Hz. Common sample rates are defined as specific numeric values,
- * but other custom numeric values are also permissible.
- *
- * Supported predefined sample rates:
- * - 8000 Hz
- * - 11025 Hz
- * - 16000 Hz
- * - 22050 Hz
- * - 32000 Hz
- * - 44100 Hz
- * - 48000 Hz
- * - 88200 Hz
- * - 96000 Hz
- * - 176400 Hz
- * - 192000 Hz
- *
- * Custom sample rates outside of these predefined values can also be used, represented as any valid number.
+ * The number of audio samples per second (in Hertz).
+ * Common values include 8000, 11025, 22050, 44100, and 48000.
  */
 export type WavSampleRate =
   | 8000
@@ -81,15 +44,10 @@ export type WavSampleRate =
   | (number & {});
 
 /**
- * Represents information about a chunk of data.
- *
- * This interface is used to store metadata about a specific chunk,
- * including its unique identifier, starting position, and size.
- *
- * Properties:
- * - `id`: A unique identifier for the chunk.
- * - `offset`: The starting position of the chunk.
- * - `size`: The size of the chunk.
+ * Metadata for a single chunk within a WAV file.
+ * @property id - The unique four-character identifier of the chunk (e.g., 'fmt ', 'data').
+ * @property offset - The starting byte position of the chunk in the file.
+ * @property size - The size of the chunk's data section in bytes.
  */
 export interface ChunkInfo {
   id: string;
@@ -98,18 +56,12 @@ export interface ChunkInfo {
 }
 
 /**
- * Represents an error that occurs during the decoding process.
- *
- * This interface is used to describe the details of a decoding error, including
- * information about the frame where the error occurred, related input/output
- * data, and an error message.
- *
- * Properties:
- * - `frameLength`: The length of the affected frame in the decoding process.
- * - `frameNumber`: The number of the frame where the error occurred.
- * - `inputBytes`: The number of bytes from the input that were processed when the error happened.
- * - `message`: A descriptive message providing details about the error.
- * - `outputSamples`: The number of output samples that were generated prior to the error.
+ * Describes an error that occurred during the decoding process.
+ * @property frameLength - The length of the audio frame where the error occurred.
+ * @property frameNumber - The index of the frame where the error occurred.
+ * @property inputBytes - The total number of bytes processed before the error.
+ * @property message - A descriptive message explaining the error.
+ * @property outputSamples - The number of samples successfully decoded before the error.
  */
 export interface DecodeError {
   frameLength: number;
@@ -120,20 +72,15 @@ export interface DecodeError {
 }
 
 /**
- * Represents the structure of decoded WAV audio data.
- *
- * This interface provides detailed information about a WAV audio file after decoding,
- * including its metadata and audio content.
- *
- * Properties:
- * - `bitDepth`: The number of bits used to represent each audio sample.
- * - `channelData`: An array containing Float32Array objects where each array represents the audio data for a channel.
- * - `errors`: An array of decoding errors, if any, encountered during the decoding process.
- * - `sampleRate`: The number of samples per second of the audio (hertz).
- * - `samplesDecoded`: The total number of audio samples decoded from the file.
+ * The fully decoded audio data and its associated metadata.
+ * @property bitsPerSample - The number of bits used to represent each audio sample.
+ * @property channelData - An array of `Float32Array`, where each array holds the audio data for a single channel.
+ * @property errors - A list of any errors encountered during decoding.
+ * @property sampleRate - The number of samples per second of the audio.
+ * @property samplesDecoded - The total number of audio samples successfully decoded.
  */
 export interface DecodedWavAudio {
-  bitDepth: WavBitDepth;
+  bitsPerSample: WavBitDepth;
   channelData: Float32Array[];
   errors: DecodeError[];
   sampleRate: WavSampleRate;
@@ -141,18 +88,12 @@ export interface DecodedWavAudio {
 }
 
 /**
- * Represents various states of a decoding process.
- *
- * The `DecoderState` enum is used to track and manage the current state
- * of a decoding operation. It helps ensure proper handling and transitions
- * during the decoding lifecycle.
- *
- * Enumerated Values:
- * - DECODING: Indicates that decoding is currently in progress.
- * - ENDED: Indicates that decoding has successfully completed.
- * - ERROR: Indicates that an error occurred during decoding.
- * - IDLE: Represents an uninitialized or default state, typically
- *   before decoding has started.
+ * Represents the lifecycle state of the decoder.
+ * @enum {number}
+ * @property DECODING - The decoder is actively processing data.
+ * @property ENDED - The decoding process has completed successfully.
+ * @property ERROR - An unrecoverable error has occurred during decoding.
+ * @property IDLE - The decoder is initialized but has not yet processed any data.
  */
 export enum DecoderState {
   DECODING,
@@ -162,41 +103,23 @@ export enum DecoderState {
 }
 
 /**
- * Represents the configuration options for a decoder.
- *
- * @interface DecoderOptions
- * @property {number} [maxBufferSize] - The maximum buffer size allowed for decoding. This property is optional.
+ * Configuration options for the WavDecoder.
+ * @property bufferSize - The initial size of the internal ring buffer in bytes. Must be a power of two.
  */
 export interface DecoderOptions {
   bufferSize?: number;
 }
 
 /**
- * Represents metadata and progress details of a WAV decoding operation.
- *
- * @interface WavDecoderInfo
- *
- * @property {number} decodedBytes - The total number of bytes successfully decoded.
- *
- * @property {DecodeError[]} errors - An array of decoding errors that occurred during the process.
- *
- * @property {WavFormat} format - The format information of the WAV file being decoded.
- *
- * @property {number} formatTag - The format tag that specifies the audio format.
- *
- * @property {ChunkInfo[]} parsedChunks - An array of information objects for parsed chunks in the WAV data.
- *
- * @property {number} progress - The decoding progress expressed as a percentage.
- *
- * @property {number} remainingBytes - The number of bytes yet to be decoded.
- *
- * @property {DecoderState} state - The current state of the decoding operation.
- *
- * @property {number} totalBytes - The total size in bytes of the WAV file being processed.
- *
- * @property {number} totalDuration - The total duration of the WAV file in seconds.
- *
- * @property {ChunkInfo[]} unhandledChunks - An array of chunks that were detected but not processed.
+ * Provides detailed metadata and progress information about the decoding process.
+ * @property decodedBytes - The total number of bytes successfully decoded so far.
+ * @property errors - A list of all non-fatal errors that have occurred.
+ * @property format - The parsed format information of the WAV file.
+ * @property parsedChunks - A list of all chunks that have been successfully parsed from the header.
+ * @property remainingBytes - The number of bytes yet to be decoded from the data chunk.
+ * @property state - The current lifecycle state of the decoder.
+ * @property totalBytes - The total size in bytes of the audio data chunk.
+ * @property unhandledChunks - A list of chunks that were found in the header but not processed.
  */
 export interface WavDecoderInfo {
   decodedBytes: number;
@@ -210,40 +133,65 @@ export interface WavDecoderInfo {
 }
 
 /**
- * Interface representing a WAV decoder for handling audio data.
+ * Defines the public interface for a WAV audio decoder.
  */
-export interface WavDecoderInterface {
-  decode(chunk: Uint8Array): DecodedWavAudio;
-  decodeFrame(frame: Uint8Array): Float32Array | null; // todo: refactor to return Float32Array (not null)
-  decodeFrames(frames: Uint8Array): DecodedWavAudio; // todo: refactor to accept Uint8Array[]
-  free(): void;
-  flush(): DecodedWavAudio;
+export interface Decoder {
+  /** Current metadata and progress of the decoding operation. */
   info: WavDecoderInfo;
+
+  /**
+   * Decodes a chunk of WAV file data. This method handles both header parsing and audio data decoding.
+   * @param chunk - A `Uint8Array` containing a piece of the WAV file.
+   * @returns A `DecodedWavAudio` object containing the decoded channel data and metadata.
+   */
+  decode(chunk: Uint8Array): DecodedWavAudio;
+
+  /**
+   * Decodes a single, complete audio frame.
+   * @param frame - A `Uint8Array` representing one audio frame. Its length must match `format.blockAlign`.
+   * @returns A `Float32Array` containing the de-interleaved sample data for the frame.
+   * @throws Will throw an error if the decoder is not in the correct state, the frame length is invalid, or the format is unsupported.
+   */
+  decodeFrame(frame: Uint8Array): Float32Array;
+
+  /**
+   * Decodes an array of complete audio frames.
+   * @param frames - An array of `Uint8Array`, where each element is a single audio frame.
+   * @returns A `DecodedWavAudio` object containing the combined decoded channel data.
+   */
+  decodeFrames(frames: Uint8Array[]): DecodedWavAudio;
+
+  /** Releases internal buffers and puts the decoder in an unusable `ENDED` state. */
+  free(): void;
+
+  /**
+   * Processes any remaining data in the buffer and finalizes the decoding.
+   * @returns A `DecodedWavAudio` object with any remaining samples.
+   */
+  flush(): DecodedWavAudio;
+
+  /** Resets the decoder to its initial `IDLE` state, ready to process a new file. */
   reset(): void;
 }
 
 /**
- * Represents the WAV file format details.
- * This interface defines properties describing the structure
- * and properties of a WAV file.
- *
- * Properties:
- * - `bitDepth`: Specifies the number of bits used to represent each sample (e.g., 16, 24, 32 bits).
- * - `blockSize`: Defines the size in bytes of each block of audio data.
- * - `bytesPerSecond`: Indicates the average number of bytes processed per second of audio.
- * - `channels`: Number of audio channels (e.g., 1 for mono, 2 for stereo).
- * - `samplesPerBlock`: Specifies the number of audio samples contained in each block of data.
- * - `channelMask`: (Optional) Bit mask that specifies the mapping of channels to speaker positions.
- * - `extensionSize`: (Optional) Size of the optional format extension data section.
- * - `formatTag`: Describes the encoding format of the WAV file (e.g., PCM, IEEE Float).
- * - `sampleRate`: Number of audio samples per second (frequency in Hz).
- * - `subFormat`: (Optional) Subformat identifier in the form of a unique identifier (GUID).
- * - `validBitsPerSample`: (Optional) Indicates the number of valid bits used per sample, useful in certain extended formats.
+ * Describes the detailed format of a WAV file, parsed from the `fmt` chunk.
+ * @property bitsPerSample - The number of bits per audio sample (e.g., 16, 24).
+ * @property blockAlign - The size in bytes of a single audio frame across all channels (`channels * bitsPerSample / 8`).
+ * @property avgBytesPerSec - The average byte rate of the audio stream (`sampleRate * blockAlign`).
+ * @property channels - The number of audio channels (1 for mono, 2 for stereo).
+ * @property samplesPerBlock - The number of samples in each block of a compressed format (e.g., IMA ADPCM).
+ * @property channelMask - (Optional) Bitmask specifying the speaker layout for multichannel audio.
+ * @property extensionSize - (Optional) The size of the format extension.
+ * @property formatTag - The numeric code for the audio format (e.g., PCM, IEEE Float).
+ * @property sampleRate - The number of samples per second (in Hertz).
+ * @property subFormat - (Optional) A GUID specifying the sub-format, used with `WAVE_FORMAT_EXTENSIBLE`.
+ * @property validBitsPerSample - (Optional) The actual number of valid bits in a sample (e.g., 20 for a 24-bit sample).
  */
 export interface WavFormat {
-  bitDepth: WavBitDepth; // todo: rename to `bitsPerSample`
-  blockSize: number;
-  bytesPerSecond: number;
+  bitsPerSample: WavBitDepth;
+  blockAlign: number;
+  avgBytesPerSec: number;
   channels: number;
   samplesPerBlock?: number;
   channelMask?: number;
@@ -255,29 +203,23 @@ export interface WavFormat {
 }
 
 /**
- * Represents the result of a seek operation within an audio stream.
- *
- * It contains detailed information about the position reached after seeking,
- * which may not be an exact sample due to block alignment or other
- * encoding specifics.
- *
- * @interface DecoderSeekResult
+ * The result of a seek operation, providing the necessary details to resume decoding from a new position.
+ * @property byteOffset - The exact byte offset in the audio stream to begin reading from.
+ * @property nativeSampleRate - The sample rate of the decoder.
+ * @property requestedTime - The original time in seconds that was requested for the seek.
+ * @property anchorSample - The keyframe or block-aligned sample number that decoding will start from.
+ * @property prerollSamples - The number of samples to decode but discard to prime the decoder (e.g., Opus preroll).
+ * @property discardSamples - The number of samples to discard after the preroll to align with the requested time.
+ * @property firstAudibleSample - The final sample number that will be the first one heard by the user.
+ * @property isExact - A boolean indicating if the `firstAudibleSample` perfectly matches the `requestedTime`.
  */
 export interface DecoderSeekResult {
-  /** Where to start reading (container/keyframe safe) */
   byteOffset: number;
-  /** Decoder's sample rate (samples/sec) */
   nativeSampleRate: number;
-  /** Requested time in seconds */
   requestedTime: number;
-  /** Native sample at the container boundary we start decoding */
   anchorSample: number;
-  /** Native samples to decode but not output (e.g., Opus preroll) */
   prerollSamples: number;
-  /** Native samples to drop after preroll to land on request */
   discardSamples: number;
-  /** Anchor + preroll + discard (native sample rate) */
   firstAudibleSample: number;
-  /** Whether firstAudibleSample == requested time in native domain */
   isExact: boolean;
 }

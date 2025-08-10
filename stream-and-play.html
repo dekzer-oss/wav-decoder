@@ -134,20 +134,20 @@
 <div id="bufferInfo" class="buffer-info">
   <span id="bufferText">Buffer: 0.0s</span>
   <div class="buffer-bar">
-    <div id="bufferFill" class="buffer-fill" style="width: 0%"></div>
+    <div id="bufferFill" class="buffer-fill" style="width: 0"></div>
   </div>
 </div>
 
 <script type="module">
-  import { WavDecoder } from './dist/index.js';
+  import { WavDecoder } from './src';
 
-  const audioState = {
-    context: /** AudioContext or null */ null,
+  const state = {
+    context: null,
     startTime: 0,
     isPlaying: false,
     scheduledSources: new Set(),
-    abortController: /** AbortController or null */ null,
-    fileSampleRate: /** number or null */ null,
+    abortController: null,
+    fileSampleRate: null,
     audioBuffer: [],
     bufferDuration: 0,
     scheduledDuration: 0,
@@ -190,9 +190,9 @@
       const percentage = Math.min(100, (buffered / threshold) * 100);
       els.bufferFill.style.width = `${percentage}%`;
       els.bufferFill.classList.remove('critical', 'warning');
-      if (buffered < audioState.criticalBufferDuration) {
+      if (buffered < state.criticalBufferDuration) {
         els.bufferFill.classList.add('critical');
-      } else if (buffered < audioState.minBufferDuration) {
+      } else if (buffered < state.minBufferDuration) {
         els.bufferFill.classList.add('warning');
       }
     },
@@ -214,101 +214,104 @@
   }
 
   function addToBuffer(audioBuffer) {
-    audioState.audioBuffer.push(audioBuffer);
-    audioState.bufferDuration += audioBuffer.duration;
+    state.audioBuffer.push(audioBuffer);
+    state.bufferDuration += audioBuffer.duration;
 
-    ui.updateBufferInfo(audioState.bufferDuration, audioState.minBufferDuration);
+    ui.updateBufferInfo(state.bufferDuration, state.minBufferDuration);
 
-    if (!audioState.hasStartedPlayback && audioState.bufferDuration >= audioState.minBufferDuration) {
-      audioState.hasStartedPlayback = true;
-      audioState.startTime = audioState.context.currentTime + 0.1;
+    if (!state.hasStartedPlayback && state.bufferDuration >= state.minBufferDuration) {
+      state.hasStartedPlayback = true;
+      state.startTime = state.context.currentTime + 0.1;
       ui.setStatus('Playing...', 'status-playing');
       scheduleBufferedAudio();
     }
 
-    if (audioState.hasStartedPlayback && audioState.bufferDuration >= audioState.minBufferDuration) {
+    if (state.hasStartedPlayback && state.bufferDuration >= state.minBufferDuration) {
       scheduleBufferedAudio();
     }
   }
 
   function scheduleBufferedAudio() {
-    while (audioState.audioBuffer.length > 0 && audioState.bufferDuration > audioState.criticalBufferDuration) {
-      const buf = audioState.audioBuffer.shift();
-      audioState.bufferDuration -= buf.duration;
+    while (state.audioBuffer.length > 0 && state.bufferDuration > state.criticalBufferDuration) {
+      const buf = state.audioBuffer.shift();
+      state.bufferDuration -= buf.duration;
 
-      const src = audioState.context.createBufferSource();
+      const src = state.context.createBufferSource();
       src.buffer = buf;
-      src.connect(audioState.context.destination);
+      src.connect(state.context.destination);
 
-      const now = audioState.context.currentTime;
-      if (audioState.startTime < now) {
-        audioState.startTime = now + 0.05;
+      const now = state.context.currentTime;
+      if (state.startTime < now) {
+        state.startTime = now + 0.05;
       }
 
-      src.start(audioState.startTime);
-      audioState.startTime += buf.duration;
-      audioState.scheduledDuration += buf.duration;
+      src.start(state.startTime);
+      state.startTime += buf.duration;
+      state.scheduledDuration += buf.duration;
 
       src.addEventListener('ended', () => {
-        audioState.scheduledSources.delete(src);
-        audioState.scheduledDuration -= buf.duration;
+        state.scheduledSources.delete(src);
+        state.scheduledDuration -= buf.duration;
       });
-      audioState.scheduledSources.add(src);
+      state.scheduledSources.add(src);
     }
 
-    ui.updateBufferInfo(audioState.bufferDuration, audioState.minBufferDuration);
+    ui.updateBufferInfo(state.bufferDuration, state.minBufferDuration);
   }
 
   function stopBufferMonitor() {
-    if (audioState.bufferMonitor) {
-      clearInterval(audioState.bufferMonitor);
-      audioState.bufferMonitor = null;
+    if (state.bufferMonitor) {
+      clearInterval(state.bufferMonitor);
+      state.bufferMonitor = null;
     }
   }
 
   function handleDecoded({ channelData, sampleRate, samplesDecoded }) {
-    if (!audioState.context || !channelData?.length) return;
+    if (!state.context || !channelData?.length) return;
 
-    if (sampleRate && !audioState.fileSampleRate) {
-      audioState.fileSampleRate = sampleRate;
+    if (sampleRate && !state.fileSampleRate) {
+      state.fileSampleRate = sampleRate;
     }
 
-    const buf = audioState.context.createBuffer(
+    console.log(`Decoded ${samplesDecoded} samples at ${sampleRate || state.context.sampleRate} Hz`);
+    const buf = state.context.createBuffer(
       channelData.length,
       channelData[0].length,
-      audioState.fileSampleRate || audioState.context.sampleRate,
+      state.fileSampleRate || state.context.sampleRate,
     );
 
-    channelData.forEach((ch, i) => buf.copyToChannel(new Float32Array(ch), i));
+    channelData.forEach((ch, i) => buf.copyToChannel(ch, i));
 
     addToBuffer(buf);
   }
 
   async function playStream(url) {
-    if (audioState.isPlaying) return;
+    if (state.isPlaying) return;
     try {
-      audioState.context = new AudioContext({
+      state.context = new AudioContext({
         sampleRate: 44100,
         latencyHint: 'interactive',
       });
-      audioState.abortController = new AbortController();
-      audioState.startTime = 0;
-      audioState.fileSampleRate = null;
-      audioState.scheduledSources.clear();
-      audioState.isPlaying = true;
-      audioState.audioBuffer = [];
-      audioState.bufferDuration = 0;
-      audioState.hasStartedPlayback = false;
-      audioState.lastScheduleTime = 0;
+      state.abortController = new AbortController();
+      state.startTime = 0;
+      state.fileSampleRate = null;
+      state.scheduledSources.clear();
+      state.isPlaying = true;
+      state.audioBuffer = [];
+      state.bufferDuration = 0;
+      state.hasStartedPlayback = false;
+      state.lastScheduleTime = 0;
 
       ui.toggleButtons(true);
       ui.showProgress(true);
       ui.setStatus('Buffering...', 'status-loading');
       ui.setProgress(0);
-      ui.updateBufferInfo(0, audioState.minBufferDuration);
+      ui.updateBufferInfo(0, state.minBufferDuration);
 
       const decoder = new WavDecoder();
       let finalCalled = false;
+
+      console.log(`Starting stream fetch for ${url}`);
 
       await streamFetch(
         url,
@@ -320,20 +323,20 @@
         () => {
           if (!finalCalled) {
             finalCalled = true;
-            audioState.streamComplete = true;
+            state.streamComplete = true;
             const last = decoder.flush();
             if (last.channelData.length) handleDecoded(last);
 
             // If we never started playback due to insufficient buffer, start now
-            if (!audioState.hasStartedPlayback && audioState.bufferDuration > 0) {
-              audioState.hasStartedPlayback = true;
-              audioState.startTime = audioState.context.currentTime + 0.1;
+            if (!state.hasStartedPlayback && state.bufferDuration > 0) {
+              state.hasStartedPlayback = true;
+              state.startTime = state.context.currentTime + 0.1;
               scheduleBufferedAudio();
               ui.setStatus('Playing...', 'status-playing');
             }
           }
         },
-        audioState.abortController.signal,
+        state.abortController.signal,
       );
 
       ui.setStatus('Stream complete', 'status-playing');
@@ -345,17 +348,17 @@
     } finally {
       ui.showProgress(false);
       stopBufferMonitor();
-      if (!audioState.isPlaying) cleanup();
+      if (!state.isPlaying) cleanup();
     }
   }
 
   function stop() {
-    if (!audioState.isPlaying) return;
-    audioState.isPlaying = false;
-    audioState.abortController?.abort();
+    if (!state.isPlaying) return;
+    state.isPlaying = false;
+    state.abortController?.abort();
     stopBufferMonitor();
 
-    audioState.scheduledSources.forEach((src) => {
+    state.scheduledSources.forEach((src) => {
       try {
         src.stop();
         src.disconnect();
@@ -363,38 +366,38 @@
       }
     });
 
-    audioState.scheduledSources.clear();
+    state.scheduledSources.clear();
 
-    audioState.audioBuffer = [];
-    audioState.bufferDuration = 0;
-    audioState.scheduledDuration = 0;
-    audioState.hasStartedPlayback = false;
-    audioState.streamComplete = false;
+    state.audioBuffer = [];
+    state.bufferDuration = 0;
+    state.scheduledDuration = 0;
+    state.hasStartedPlayback = false;
+    state.streamComplete = false;
 
     cleanup();
     ui.setStatus('Stopped');
-    ui.updateBufferInfo(0, audioState.minBufferDuration);
+    ui.updateBufferInfo(0, state.minBufferDuration);
   }
 
   function cleanup() {
-    if (audioState.context && audioState.context.state !== 'closed') {
-      audioState.context.close();
+    if (state.context && state.context.state !== 'closed') {
+      state.context.close();
     }
-    audioState.context = null;
+    state.context = null;
     ui.toggleButtons(false);
     ui.showProgress(false);
   }
 
   els.play.addEventListener('click', () => {
-    playStream('onclassical_demo.wav');
-  });
+    playStream('classical_demo.wav');
+  }, { capture: true });
 
   els.stop.addEventListener('click', () => {
     stop();
   });
 
   window.addEventListener('beforeunload', () => {
-    if (audioState.isPlaying) {
+    if (state.isPlaying) {
       stop();
     }
   });

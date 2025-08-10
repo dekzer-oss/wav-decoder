@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import { execSync } from 'node:child_process';
 
 const THRESHOLD = 0.1;
-const FILES = ['bench/bench-node.json', 'bench/bench-browser.json'];
+const FILES = ['bench/bench-browser-chrome.json'];
 
 /** collect fastest Hz per “suite – benchmark” key */
 function flatten(json) {
