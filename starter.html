@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WAV Decoder – Starter Demo</title>
+  <link rel="icon" href="/wav-decoder/assets/favicon-C7TxPM-p.svg" type="image/svg+xml" />
+  <style>
+      :root {
+          --bg: #f8fafc;
+          --fg: #0f172a;
+          --border: #cbd5e1;
+          --accent: #2563eb;
+      }
+
+      @media (prefers-color-scheme: dark) {
+          :root {
+              --bg: #0f172a;
+              --fg: #f8fafc;
+              --border: #334155;
+              --accent: #3b82f6;
+          }
+      }
+
+      body {
+          font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          background: var(--bg);
+          color: var(--fg);
+          line-height: 1.6;
+          margin: 0;
+          padding: 2rem 1rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+      }
+
+      h1 {
+          font-size: 1.5rem;
+          margin-bottom: 1.5rem;
+          text-align: center;
+      }
+
+      .drop-zone {
+          width: min(420px, 90vw);
+          padding: 3rem 1.5rem;
+          border: 2px dashed var(--border);
+          border-radius: 8px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 150ms ease;
+      }
+
+      .drop-zone:hover, .drop-zone.dragover {
+          background: color-mix(in srgb, var(--accent) 7%, transparent);
+          border-color: var(--accent);
+      }
+
+      .drop-zone[aria-disabled='true'] {
+          opacity: 0.5;
+          cursor: not-allowed;
+      }
+
+      #results {
+          width: min(420px, 90vw);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 1rem;
+          margin-top: 1.25rem;
+          font-size: 0.925rem;
+      }
+
+      #results ul {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: grid;
+          gap: 0.5rem;
+
+          li {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 0.5rem 0;
+          }
+      }
+
+      #results li span {
+          font-weight: 600;
+      }
+
+      button {
+          margin-top: 1.5rem;
+          padding: 0.65rem 1.25rem;
+          font-size: 0.95rem;
+          border: none;
+          border-radius: 6px;
+          color: var(--bg);
+          background: var(--accent);
+          cursor: pointer;
+      }
+  </style>
+  <script type="module" crossorigin src="/wav-decoder/assets/starter-CRCDY9_S.js"></script>
+  <link rel="modulepreload" crossorigin href="/wav-decoder/assets/WavDecoder-DNF98GrN.js">
+</head>
+<body>
+<h1>WAV Decoder — Starter Demo</h1>
+
+<div id="uploadZone" class="drop-zone" role="button" tabindex="0">
+  Drop a .wav file here<br />or click to select
+</div>
+<input id="fileInput" type="file" accept="audio/wav,.wav" hidden />
+
+<section id="results" class="hidden">
+  <ul>
+    <li>Status: <span id="status">-</span></li>
+    <li>Format: <span id="format">-</span></li>
+    <li>Channels: <span id="channels">-</span></li>
+    <li>Sample Rate: <span id="sampleRate">-</span></li>
+    <li>Total Samples: <span id="samples">-</span></li>
+  </ul>
+</section>
+
+<button id="resetBtn" hidden>Decode Another File</button>
+
+</body>
+</html>
