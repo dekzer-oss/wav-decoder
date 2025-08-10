@@ -72,7 +72,7 @@
     "build": "vite build -c vite.lib.config.ts",
     "build:pages": "vite build -c vite.site.config.ts",
     "preview:pages": "vite preview -c vite.site.config.ts --port 3000",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && pnpm changeset version && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
