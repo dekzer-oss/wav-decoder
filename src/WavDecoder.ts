@@ -84,7 +84,7 @@ export class WavDecoder implements WavDecoderInterface {
   };
 
   constructor(options: DecoderOptions = {}) {
-    const bufferSize = options.maxBufferSize ?? WavDecoder.MAX_BUFFER_SIZE;
+    const bufferSize = options.bufferSize ?? WavDecoder.MAX_BUFFER_SIZE;
     this.ringBuffer = new RingBuffer(bufferSize);
     this.decodeBuffer = this.getScratchBuffer(4096);
     this.initDecoderLookup();

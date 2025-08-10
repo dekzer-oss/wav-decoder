@@ -168,7 +168,7 @@ export enum DecoderState {
  * @property {number} [maxBufferSize] - The maximum buffer size allowed for decoding. This property is optional.
  */
 export interface DecoderOptions {
-  maxBufferSize?: number;
+  bufferSize?: number;
 }
 
 /**

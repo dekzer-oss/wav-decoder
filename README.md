@@ -1,12 +1,9 @@
 # @dekzer/wav-decoder
 
 ![Chrome throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-browser-chrome.json)
-![Node throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-node.json)
 
-A small TypeScript/JavaScript library that progressively decodes uncompressed WAV audio as the bytes arrive. It was
-written for in‑house streaming experiments inside Dekzer, but we decided to publish the code because it may save others
-some time. The decoder has been fine‑tuned for peak performance on Chrome's V8 engine. The API is intentionally minimal;
-please expect breaking changes until we tag a 1.0.0.
+A small TypeScript/JavaScript library that progressively decodes uncompressed WAV audio as the bytes arrive.
+Please expect breaking changes until we tag a 1.0.0.
 
 ---
 
@@ -93,10 +90,10 @@ async function streamAndPlay(url: string) {
 
 Try the decoder in your browser or use these as **starter templates**:
 
-| Demo                                                  | Description                                                             | Source                                              |
-|-------------------------------------------------------|-------------------------------------------------------------------------|-----------------------------------------------------|
-| [Full UI demo](index.html)                   | Drag & drop WAV, see detailed metrics, chunked decoding, playback, logs | [`index.html`](index.html)                 |
-| [Starter demo](starter.html)              | 20 lines of code: pure decode, metrics, and progress bar                | [`starter-demo.html`](starter.html)     |
+| Demo                                            | Description                                                             | Source                                        |
+|-------------------------------------------------|-------------------------------------------------------------------------|-----------------------------------------------|
+| [Full UI demo](index.html)                      | Drag & drop WAV, see detailed metrics, chunked decoding, playback, logs | [`index.html`](index.html)                    |
+| [Starter demo](starter.html)                    | 20 lines of code: pure decode, metrics, and progress bar                | [`starter-demo.html`](starter.html)           |
 | [Streaming playback demo](stream-and-play.html) | Streams a WAV file, progressive decode & low-latency playback           | [`streaming-demo.html`](stream-and-play.html) |
 
 **Pro tip:**
@@ -112,16 +109,14 @@ Each demo is standalone—just "view source" for a ready-made starter.
 
 ### `class WavDecoder`
 
-| Member                                         | Description                                                                                                                                                                            |
-|------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **constructor()**                              | Allocates internal ring-buffer (default 64 KiB).                                                                                                                                       |
-| **decode(chunk: Uint8Array): DecodedWavAudio** | Feed arbitrary-sized data. Returns samples (may be zero) and non-fatal error list.                                                                                                     |
-| **decodeFrames(chunkAlignedToBlock)**          | Same as `decode`, but *requires* that `chunk.length % format.blockSize === 0` for maximum throughput.                                                                                  |
-| **decodeFrame(frame)**                         | Decodes *one* interleaved frame and returns a `Float32Array` with `channels` elements, or `null` if the frame is incomplete. Used in performance-critical code paths (see benchmarks). |
-| **flush()**                                    | Drains any remaining bytes (including a partial final block). Useful when the decodeStream closes.                                                                                           |
-| **reset()**                                    | Clears internal state so the instance can be re-used.                                                                                                                                  |
-| **free()**                                     | Releases the ring-buffer and changes `info.state` to `ENDED`; subsequent calls are no-ops.                                                                                             |
-| **info** *(read-only)*                         | Live diagnostics object described below.                                                                                                                                               |
+| Member                                         | Description                                                                                        |
+|------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| **constructor()**                              | Allocates internal ring-buffer (default 64 KiB).                                                   |
+| **decode(chunk: Uint8Array): DecodedWavAudio** | Feed arbitrary-sized data. Returns samples (may be zero) and non-fatal error list.                 |
+| **flush()**                                    | Drains any remaining bytes (including a partial final block). Useful when the decodeStream closes. |
+| **reset()**                                    | Clears internal state so the instance can be re-used.                                              |
+| **free()**                                     | Releases the ring-buffer and changes `info.state` to `ENDED`; subsequent calls are no-ops.         |
+| **info** *(read-only)*                         | Live diagnostics object described below.                                                           |
 
 #### `DecodedWavAudio`
 
@@ -168,7 +163,7 @@ enum DecoderState {
 | **Bits per sample** | 8/16/24/32-bit integer, 32/64-bit float.                                              |
 | **Channels**        | 1 … 8 tested; more should work, memory permitting.                                    |
 | **Sample-rate**     | Any positive integer ≤ 192 kHz (no fixed list).                                       |
-| **File size**       | Limited only by the host decodeStream; decoding is constant-memory.                         |
+| **File size**       | Limited only by the host decodeStream; decoding is constant-memory.                   |
 | **Not supported**   | ADPCM, MPEG-encoded “WAV”, broadcast extensions, cue lists.                           |
 | **Browsers**        | Requires `ReadableStream` and `AudioContext` (≈ Chrome 94+, Firefox 92+, Safari 15+). |
 | **Node**            | Node 20 or newer (streams with BYOB readers were simplified in 20).                   |
