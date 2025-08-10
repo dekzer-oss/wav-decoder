@@ -35,3 +35,5 @@ Thumbs.db
 # Custom files
 source_code.md
 tests/fixtures/wav/
+
+.npmrc
