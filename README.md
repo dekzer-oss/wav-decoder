@@ -2,7 +2,8 @@
 
 ![Chrome throughput](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dekzer-oss/wav-decoder/main/bench/badge-browser-chrome.json)
 
-A small TypeScript/JavaScript library that progressively decodes uncompressed WAV audio as the bytes arrive.
+A lightweight TypeScript/JavaScript library for progressive decoding of uncompressed WAV audio as bytes arrive,
+optimized for Chromium but compatible with all modern browsers and Node.js 20+.
 Please expect breaking changes until we tag a 1.0.0.
 
 ---

@@ -241,7 +241,7 @@ export interface WavDecoderInterface {
  * - `validBitsPerSample`: (Optional) Indicates the number of valid bits used per sample, useful in certain extended formats.
  */
 export interface WavFormat {
-  bitDepth: WavBitDepth;
+  bitDepth: WavBitDepth; // todo: rename to `bitsPerSample`
   blockSize: number;
   bytesPerSecond: number;
   channels: number;
